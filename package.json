@@ -1,6 +1,6 @@
 {
-	"name": "ngo",
-	"description": "ngo community website",
+	"name": "platform",
+	"description": "lead-forward platform",
 	"private": true,
 	"type": "module",
 	"scripts": {
