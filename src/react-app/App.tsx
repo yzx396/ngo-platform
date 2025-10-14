@@ -48,7 +48,10 @@ function App() {
           onClick={() => {
             fetch("/api/")
               .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name));
+              .then((data) => setName(data.name))
+              .catch((error) => {
+                console.error("Failed to fetch name:", error);
+              });
           }}
           aria-label="get name"
         >
