@@ -35,7 +35,160 @@ npm run cf-typegen
 
 # Monitor deployed worker logs
 npx wrangler tail
+
+# Run tests
+npm run test              # Run all tests once
+npm run test:watch        # Run tests in watch mode (auto-rerun on changes)
+npm run test:coverage     # Run tests with coverage report
+npm run test:ui           # Run tests with interactive UI
 ```
+
+## Test-Driven Development Workflow
+
+This project follows a Test-Driven Development (TDD) approach. **Always write tests before implementing features or fixing bugs.**
+
+### TDD Cycle: Red-Green-Refactor
+
+1. **Red**: Write a failing test first
+   - Create a test that describes the desired behavior
+   - Run the test to confirm it fails (this validates the test works)
+
+2. **Green**: Write minimal code to make the test pass
+   - Implement just enough code to satisfy the test
+   - Don't worry about perfect code yet
+
+3. **Refactor**: Improve the code while keeping tests green
+   - Clean up implementation
+   - Remove duplication
+   - Improve readability
+   - Ensure all tests still pass
+
+### When to Write Tests
+
+**ALWAYS write tests when:**
+- Adding a new feature (write test first, then implement)
+- Fixing a bug (write test that reproduces bug, then fix)
+- Refactoring existing code (ensure tests exist and pass before/after)
+- Modifying API endpoints or business logic
+- Creating new React components
+
+**Tests are NOT optional** - they are part of the definition of "done" for any task.
+
+### Test Organization
+
+Tests are colocated with source files in `__tests__` directories:
+
+```
+src/
+├── react-app/
+│   ├── __tests__/
+│   │   ├── App.test.tsx        # React component tests
+│   │   └── utils.test.ts       # Utility function tests
+│   ├── App.tsx
+│   └── main.tsx
+└── worker/
+    ├── __tests__/
+    │   ├── index.test.ts       # Hono API route tests
+    │   └── handlers.test.ts    # Request handler tests
+    └── index.ts
+```
+
+### Naming Conventions
+
+- Test files: `*.test.ts` or `*.test.tsx`
+- Test suites: Use `describe()` to group related tests
+- Test cases: Use `it()` or `test()` with clear, descriptive names
+- Example: `it('should return 404 when resource not found')`
+
+### Testing Frontend (React Components)
+
+Use React Testing Library for component tests:
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { MyComponent } from './MyComponent';
+
+describe('MyComponent', () => {
+  it('should render greeting message', () => {
+    render(<MyComponent name="World" />);
+    expect(screen.getByText(/hello world/i)).toBeInTheDocument();
+  });
+});
+```
+
+**Best practices:**
+- Test user-facing behavior, not implementation details
+- Use semantic queries (getByRole, getByLabelText, getByText)
+- Avoid testing internal state
+- Test accessibility (proper ARIA labels, keyboard navigation)
+
+### Testing Backend (Hono API Routes)
+
+Use Cloudflare Workers testing utilities:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import app from './index';
+
+describe('API Routes', () => {
+  it('GET /api/health should return 200', async () => {
+    const req = new Request('http://localhost/api/health');
+    const res = await app.fetch(req);
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual({ status: 'ok' });
+  });
+});
+```
+
+**Best practices:**
+- Test all HTTP methods (GET, POST, PUT, DELETE)
+- Test error cases (400, 404, 500 responses)
+- Test request validation
+- Test authentication/authorization flows
+- Mock external dependencies (databases, APIs)
+
+### Running Tests During Development
+
+1. **Start test watcher**: `npm run test:watch`
+   - Automatically reruns tests when files change
+   - Provides instant feedback during development
+
+2. **Write test first** (following TDD)
+   - Test will fail initially (Red)
+
+3. **Implement feature**
+   - Watch tests turn green as you code
+
+4. **Refactor if needed**
+   - Tests ensure you don't break functionality
+
+### Before Committing
+
+Always run the full test suite before committing:
+
+```bash
+npm run test              # Ensure all tests pass
+npm run lint              # Fix any linting issues
+npm run build             # Verify build succeeds
+```
+
+### Coverage Goals
+
+- Aim for **>80% code coverage** for critical paths
+- **100% coverage** for business logic and API handlers
+- View coverage report: `npm run test:coverage`
+
+### Continuous Integration
+
+Tests run automatically on:
+- Pre-commit (via git hooks, if configured)
+- Pull requests
+- Before deployment
+
+**Never deploy code without passing tests.**
 
 ## Architecture
 
