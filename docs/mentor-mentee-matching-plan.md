@@ -99,23 +99,23 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
 
 ### User Management
 
-#### `POST /api/users`
+#### `POST /api/v1/users`
 - Create new user account
 - Request: `{ email, name }`
 - Response: `{ id, email, name, created_at }`
 
-#### `GET /api/users/:id`
+#### `GET /api/v1/users/:id`
 - Get user details
 - Response: `{ id, email, name, created_at }`
 
-#### `PUT /api/users/:id`
+#### `PUT /api/v1/users/:id`
 - Update user information
 - Request: `{ name?, email? }`
 - Response: `{ id, email, name, updated_at }`
 
 ### Mentor Profile Management
 
-#### `POST /api/mentors/profiles`
+#### `POST /api/v1/mentors/profiles`
 - Create mentor profile
 - Request:
   ```json
@@ -133,22 +133,22 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
   ```
 - Response: `{ id, user_id, nick_name, bio, ..., created_at }`
 
-#### `GET /api/mentors/profiles/:id`
+#### `GET /api/v1/mentors/profiles/:id`
 - Get mentor profile by ID
 - Response: `{ id, user_id, nick_name, bio, mentoring_levels, payment_types, ... }`
 
-#### `PUT /api/mentors/profiles/:id`
+#### `PUT /api/v1/mentors/profiles/:id`
 - Update mentor profile (only by profile owner)
 - Request: Partial profile data
 - Response: Updated profile with `updated_at`
 
-#### `DELETE /api/mentors/profiles/:id`
+#### `DELETE /api/v1/mentors/profiles/:id`
 - Delete mentor profile (only by profile owner)
 - Response: `{ success: true }`
 
 ### Search & Discovery
 
-#### `GET /api/mentors/search`
+#### `GET /api/v1/mentors/search`
 - Browse/search mentor profiles
 - Query params:
   - `?mentoring_levels=3` - Bit flag filter (finds mentors with Entry OR Senior)
@@ -187,7 +187,7 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
 
 ### Match Management (Mentee-Initiated)
 
-#### `POST /api/matches`
+#### `POST /api/v1/matches`
 - Mentee requests mentorship (creates pending match)
 - Request: `{ mentor_id: "uuid" }`
 - Response: `{ id, mentor_id, mentee_id, status: "pending", created_at }`
@@ -196,7 +196,7 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
   - Cannot create duplicate matches (enforced by UNIQUE constraint)
   - Mentor profile must exist
 
-#### `GET /api/matches`
+#### `GET /api/v1/matches`
 - List user's matches (as mentor or mentee)
 - Query params:
   - `?status=pending` - Filter by status
@@ -218,7 +218,7 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
   }
   ```
 
-#### `POST /api/matches/:id/respond`
+#### `POST /api/v1/matches/:id/respond`
 - Mentor accepts or rejects match request
 - Request: `{ action: "accept" | "reject" }`
 - Response: `{ id, status: "accepted", updated_at }`
@@ -227,14 +227,14 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
   - `pending` → `accepted` or `rejected`
   - Once `accepted`, becomes `active`
 
-#### `PATCH /api/matches/:id/complete`
+#### `PATCH /api/v1/matches/:id/complete`
 - Mark match as completed
 - Request: `{}`
 - Response: `{ id, status: "completed", updated_at }`
 - Authorization: Either mentor or mentee can complete
 - Status transition: `active` → `completed`
 
-#### `DELETE /api/matches/:id`
+#### `DELETE /api/v1/matches/:id`
 - Cancel/end match
 - Response: `{ success: true }`
 - Authorization: Either mentor or mentee can cancel
@@ -614,7 +614,7 @@ export interface GetMatchesRequest {
 #### Test Coverage
 
 **User Tests:**
-- Create, read, update user
+- Create, read, update user (all endpoints under `/api/v1/users`)
 - Email uniqueness validation
 - Input validation (required fields)
 - 404 for non-existent users
@@ -737,14 +737,14 @@ export interface GetMatchesRequest {
 4. **Write tests** for bit flag helper functions
 5. Implement bit flag helper functions (`src/types/mentor.ts`)
 6. **Write tests** for user CRUD APIs
-7. Implement user endpoints (`POST`, `GET`, `PUT /api/users`)
+7. Implement user endpoints (`POST`, `GET`, `PUT /api/v1/users`)
 8. **Write tests** for mentor profile APIs
-9. Implement mentor profile endpoints (`POST`, `GET`, `PUT`, `DELETE /api/mentors/profiles`)
+9. Implement mentor profile endpoints (`POST`, `GET`, `PUT`, `DELETE /api/v1/mentors/profiles`)
 10. Run tests, ensure all pass
 
 ### Phase 2: Search & Browse (Week 2)
 1. **Write tests** for mentor search API with bit flag filters
-2. Implement mentor search endpoint (`GET /api/mentors/search`)
+2. Implement mentor search endpoint (`GET /api/v1/mentors/search`)
 3. Test bit flag queries in D1 (bitwise AND operations)
 4. **Write tests** for bit flag picker components
 5. Build `MentoringLevelPicker` and `PaymentTypePicker` components
@@ -764,7 +764,7 @@ export interface GetMatchesRequest {
 3. **Write tests** for `MentorProfileEdit` component
 4. Build `MentorProfileEdit` with unsaved changes warning
 5. **Write tests** for match CRUD APIs
-6. Implement match endpoints (`POST`, `GET /api/matches`, `POST /api/matches/:id/respond`, `PATCH /api/matches/:id/complete`, `DELETE /api/matches/:id`)
+6. Implement match endpoints (`POST`, `GET /api/v1/matches`, `POST /api/v1/matches/:id/respond`, `PATCH /api/v1/matches/:id/complete`, `DELETE /api/v1/matches/:id`)
 7. **Write tests** for `StatusBadge` component
 8. Build `StatusBadge` component
 9. **Write tests** for `MatchesList` component

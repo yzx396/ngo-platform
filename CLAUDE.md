@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an NGO community website built as a full-stack application using React + Vite + Hono + Cloudflare Workers. The project uses a hybrid architecture where the React frontend and Hono backend are deployed together to Cloudflare's edge network.
+This is **Lead Forward Platform** - an NGO community website built as a full-stack application using React + Vite + Hono + Cloudflare Workers. The project uses a hybrid architecture where the React frontend and Hono backend are deployed together to Cloudflare's edge network.
+
+The platform is designed to support mentor-mentee matching and other community features for NGO members.
 
 ## Development Commands
 
@@ -41,6 +43,12 @@ npm run test              # Run all tests once
 npm run test:watch        # Run tests in watch mode (auto-rerun on changes)
 npm run test:coverage     # Run tests with coverage report
 npm run test:ui           # Run tests with interactive UI
+
+# Run specific tests (for faster iteration)
+npm run test:watch -- src/react-app/__tests__/App.test.tsx    # Run single test file
+npm run test:watch -- --project=react                         # Run only React tests
+npm run test:watch -- --project=worker                        # Run only Worker tests
+npm run test -- --run src/worker/__tests__/index.test.ts      # Run single test once
 ```
 
 ## Test-Driven Development Workflow
@@ -92,6 +100,22 @@ src/
     │   └── handlers.test.ts    # Request handler tests
     └── index.ts
 ```
+
+**Test Environments:**
+
+The project uses Vitest with two separate test environments configured in `vitest.config.ts`:
+
+1. **React tests** (`--project=react`)
+   - Environment: `jsdom` (simulates browser DOM)
+   - Pattern: `src/react-app/**/*.test.{ts,tsx}`
+   - Use for: Component tests, browser API tests
+
+2. **Worker tests** (`--project=worker`)
+   - Environment: `node` (Node.js with Web APIs)
+   - Pattern: `src/worker/**/*.test.ts`
+   - Use for: API route tests, server-side logic
+
+This separation ensures tests run in the correct environment (DOM for React, Node for Workers).
 
 ### Naming Conventions
 
@@ -229,6 +253,14 @@ The codebase is split into three distinct TypeScript projects using TypeScript p
 - Both are served from the same Cloudflare Worker
 - Static assets configured with SPA fallback (`not_found_handling: "single-page-application"`)
 
+**API Versioning Convention:**
+
+All API endpoints MUST be versioned using `/api/v1/` prefix:
+- ✅ Good: `/api/v1/users`, `/api/v1/mentors/profiles`, `/api/v1/matches`
+- ❌ Bad: `/api/users`, `/api/mentors`
+
+This allows future API changes without breaking existing clients. When making breaking changes, create `/api/v2/` routes.
+
 ### TypeScript Configuration
 
 The root `tsconfig.json` uses project references to coordinate three separate compilation contexts:
@@ -256,3 +288,83 @@ The `wrangler.json` file contains:
 - Static assets directory and SPA routing configuration
 
 To modify worker bindings (KV, D1, R2, etc.), add them to `wrangler.json` and regenerate types with `npm run cf-typegen`.
+
+## Database (Cloudflare D1)
+
+When adding database functionality:
+
+1. **Add D1 binding** to `wrangler.json`:
+   ```json
+   {
+     "d1_databases": [
+       {
+         "binding": "DB",
+         "database_name": "platform-db",
+         "database_id": "your-database-id"
+       }
+     ]
+   }
+   ```
+
+2. **Regenerate types**: `npm run cf-typegen` to update `worker-configuration.d.ts`
+
+3. **Create migrations** in `migrations/` directory following SQLite syntax
+
+4. **Access in Worker code**:
+   ```typescript
+   app.get('/api/v1/users', async (c) => {
+     const db = c.env.DB;
+     const result = await db.prepare('SELECT * FROM users').all();
+     return c.json(result.results);
+   });
+   ```
+
+5. **Test with mocks** - Mock the D1 database in tests:
+   ```typescript
+   const mockDb = {
+     prepare: vi.fn(() => ({
+       all: vi.fn(() => ({ results: [] }))
+     }))
+   };
+   ```
+
+**Important:** D1 uses SQLite syntax. Refer to [Cloudflare D1 documentation](https://developers.cloudflare.com/d1/) for query syntax and limitations.
+
+## Project-Specific Patterns
+
+### Bit Flags for Database Efficiency
+
+The mentor-mentee matching feature uses **bit flags** for storing multiple selections (mentoring levels, payment types) as integers:
+
+```typescript
+// Instead of storing arrays: ["entry", "senior"]
+// Store as integer: 3 (binary: 0011, which is 1 + 2)
+
+enum MentoringLevel {
+  Entry = 1,       // 2^0
+  Senior = 2,      // 2^1
+  Staff = 4,       // 2^2
+  Management = 8   // 2^3
+}
+
+// Check if has level: (levels & MentoringLevel.Senior) !== 0
+// Add level: levels | MentoringLevel.Staff
+// Remove level: levels & ~MentoringLevel.Entry
+```
+
+**Benefits:**
+- Faster database queries (integer bitwise operations vs JSON parsing)
+- Efficient indexing in SQLite
+- Smaller storage footprint
+
+**Implementation:** See `src/types/mentor.ts` for helper functions (`hasLevel`, `addLevel`, `getLevelNames`, etc.)
+
+### User-Driven Matching
+
+The platform uses a **mentee-initiated** matching system (not algorithm-based):
+- Mentees browse and search mentor profiles
+- Mentees send match requests (creates `pending` status)
+- Mentors accept or reject requests
+- Match progresses: `pending` → `accepted` → `active` → `completed`
+
+This keeps the UX simple and gives users full control over matching.
