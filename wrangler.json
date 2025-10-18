@@ -25,6 +25,17 @@
 	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
 	 */
 	/**
+	 * D1 Database
+	 * https://developers.cloudflare.com/d1/
+	 */
+	"d1_databases": [
+		{
+			"binding": "platform_db",
+			"database_name": "platform-db",
+			"database_id": "8363158a-596f-468b-8faa-cbefac50b9f2"
+		}
+	],
+	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */

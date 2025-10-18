@@ -414,7 +414,7 @@ All custom components will be built on top of these shadcn primitives, ensuring 
   - My Mentor Profile (visible only to mentors)
 - Active route highlighting
 
-## 4. Type Definitions
+## 5. Type Definitions
 
 ### `src/types/user.ts`
 ```typescript
@@ -635,7 +635,7 @@ export interface GetMatchesRequest {
 }
 ```
 
-## 5. Testing Strategy (TDD Approach)
+## 6. Testing Strategy (TDD Approach)
 
 ### Backend Tests (`src/worker/__tests__/`)
 
@@ -765,7 +765,7 @@ export interface GetMatchesRequest {
 - **>80% coverage** for UI components
 - All critical paths tested (create profile, search, match request, accept/reject)
 
-## 6. Implementation Order (Following TDD Red-Green-Refactor)
+## 7. Implementation Order (Following TDD Red-Green-Refactor)
 
 ### Phase 0: Setup shadcn Components (Day 1)
 1. Install all required shadcn components:
@@ -841,7 +841,7 @@ export interface GetMatchesRequest {
 
 **Total Time Estimate: 4 weeks** (reduced from 5 weeks)
 
-## 7. Additional Considerations
+## 8. Additional Considerations
 
 ### Security & Validation
 - Input validation on all endpoints (required fields, data types)
@@ -909,7 +909,7 @@ export interface GetMatchesRequest {
 - Error logging (uncaught exceptions, API errors)
 - User feedback collection (optional survey after match completion)
 
-## 8. Estimated Scope
+## 9. Estimated Scope
 
 ### Deliverables
 - **Database:** 3 tables with migrations (`users`, `mentor_profiles`, `matches`)
@@ -933,9 +933,9 @@ export interface GetMatchesRequest {
 - **Zod** for schema validation
 - **Sonner** for toast notifications
 - **Lucide React** for icons (comes with shadcn)
-- **Tailwind CSS (v4)** for styling (required by shadcn, already configured)
+- **Tailwind CSS** (v4) for styling (required by shadcn, already configured)
 
-## 9. Future Enhancements
+## 10. Future Enhancements
 
 ### Phase 2 Features (Post-MVP)
 - **Messaging:** In-app messaging between matched mentors/mentees
