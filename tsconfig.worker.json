@@ -9,5 +9,8 @@
   },
   "include": [
     "src/worker"
+  ],
+  "exclude": [
+    "src/worker/**/__tests__"
   ]
 }

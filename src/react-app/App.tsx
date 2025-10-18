@@ -6,10 +6,30 @@ import viteLogo from "/vite.svg";
 import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
 import honoLogo from "./assets/hono.svg";
 import "./App.css";
+import { Toaster } from "sonner";
+import ComponentsTest from "./ComponentsTest";
 
 function App() {
   const [count, setCount] = useState(0);
   const [name, setName] = useState("unknown");
+  const [showComponentsTest, setShowComponentsTest] = useState(false);
+
+  if (showComponentsTest) {
+    return (
+      <>
+        <div className="fixed top-4 left-4">
+          <button
+            onClick={() => setShowComponentsTest(false)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            ← Back to Home
+          </button>
+        </div>
+        <ComponentsTest />
+        <Toaster />
+      </>
+    );
+  }
 
   return (
     <>
@@ -62,6 +82,16 @@ function App() {
         </p>
       </div>
       <p className="read-the-docs">Click on the logos to learn more</p>
+      <div className="card">
+        <button
+          onClick={() => setShowComponentsTest(true)}
+          className="px-6 py-3 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          🎨 View shadcn/ui Components Test
+        </button>
+        <p>View all installed shadcn/ui components</p>
+      </div>
+      <Toaster />
     </>
   );
 }
