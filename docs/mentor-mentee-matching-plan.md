@@ -34,7 +34,7 @@ CREATE TABLE mentor_profiles (
   -- Bit flags for mentoring levels:
   -- 1 = entry (2^0), 2 = senior (2^1), 4 = staff (2^2), 8 = management (2^3)
   mentoring_levels INTEGER NOT NULL DEFAULT 0,
-  availability TEXT, -- JSON: { timezone: "UTC", slots: { monday: [{start: "09:00", end: "17:00"}] } }
+  availability TEXT, -- Free text description (e.g., "Weekdays 9am-5pm EST", "Flexible, contact me")
   hourly_rate INTEGER,
   -- Bit flags for payment types:
   -- 1 = venmo (2^0), 2 = paypal (2^1), 4 = zelle (2^2), 8 = alipay (2^3), 16 = wechat (2^4), 32 = crypto (2^5)
@@ -95,7 +95,38 @@ CREATE INDEX idx_matches_mentor ON matches(mentor_id, status);
 CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
 ```
 
-## 2. Backend API (TDD - Write Tests First)
+## 2. shadcn/ui Component Library Setup
+
+This project uses shadcn/ui for building accessible, customizable UI components. The registry `@shadcn` is already configured in `components.json`.
+
+### Required Components
+
+Install all necessary shadcn components at the start of frontend development:
+
+```bash
+# Core UI components
+npx shadcn@latest add form button input textarea label
+npx shadcn@latest add card badge avatar checkbox slider select
+npx shadcn@latest add dialog tabs separator pagination skeleton
+npx shadcn@latest add empty
+
+# Additional dependencies for forms
+npm install react-hook-form @hookform/resolvers zod sonner
+```
+
+### Component Architecture
+
+shadcn components will be used throughout the application:
+- **Form handling**: `Form` + React Hook Form + Zod for validation
+- **Layout**: `Card`, `Separator` for structured content
+- **Input**: `Input`, `Textarea`, `Checkbox`, `Slider`, `Select` for form fields
+- **Feedback**: `Badge`, `Skeleton`, `Empty` for status and loading states
+- **Navigation**: `Tabs`, `Pagination`, `Dialog` for content organization
+- **Display**: `Avatar`, `Button`, `Label` for user interface elements
+
+All custom components will be built on top of these shadcn primitives, ensuring consistent styling, accessibility (ARIA), and keyboard navigation out of the box.
+
+## 3. Backend API (TDD - Write Tests First)
 
 ### User Management
 
@@ -124,7 +155,7 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
     "nick_name": "string",
     "bio": "string",
     "mentoring_levels": 3,  // Bit flags: 1=entry, 2=senior, 4=staff, 8=management
-    "availability": { "timezone": "UTC", "slots": {...} },
+    "availability": "Weekdays 9am-5pm EST, flexible on weekends",
     "hourly_rate": 50,
     "payment_types": 5,  // Bit flags: 1=venmo, 2=paypal, 4=zelle, 8=alipay, 16=wechat, 32=crypto
     "allow_reviews": true,
@@ -169,7 +200,7 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
       "mentoring_levels": 3,
       "payment_types": 5,
       "hourly_rate": 50,
-      "availability": {...},
+      "availability": "Weekdays 9am-5pm EST, flexible on weekends",
       "allow_reviews": true,
       "allow_recording": true
     }],
@@ -240,116 +271,130 @@ CREATE INDEX idx_matches_mentee ON matches(mentee_id, status);
 - Authorization: Either mentor or mentee can cancel
 - Available in any status
 
-## 3. Frontend Components (TDD)
+## 4. Frontend Components (TDD)
 
 ### Core Pages
 
 #### `MentorProfileSetup.tsx`
-- Onboarding flow for mentors
-- Multi-step form:
-  1. **Basic Info**: nickname, bio
-  2. **Mentoring Levels**: checkbox group (converts to bit flags)
-  3. **Payment & Rates**: hourly rate, payment types (checkboxes → bit flags)
-  4. **Availability**: weekly time slot picker
-  5. **Preferences**: allow reviews, allow recording
-- Form validation (required fields, nickname uniqueness)
-- Progress indicator
-- Save as draft functionality
+- Onboarding flow for mentors built with shadcn `Form` + React Hook Form + Zod
+- Multi-step form with validation:
+  1. **Basic Info**: nickname (`Input`), bio (`Textarea`)
+  2. **Mentoring Levels**: checkbox group using `Checkbox` (converts to bit flags)
+  3. **Payment & Rates**: hourly rate (`Input`), payment types (`Checkbox` group → bit flags)
+  4. **Availability**: free text input using `Textarea`
+  5. **Preferences**: allow reviews, allow recording (`Checkbox`)
+- Form validation with Zod schema (required fields, nickname uniqueness)
+- Progress indicator using custom stepper or `Separator`
+- `Button` components for navigation (Next, Back, Submit)
+- Save as draft functionality with toast notifications using `sonner`
 
 #### `MentorProfileEdit.tsx`
-- Edit existing mentor profile
-- Same form components as MentorProfileSetup
-- Unsaved changes warning (prompt before navigation)
-- Delete profile option (with confirmation)
+- Edit existing mentor profile using shadcn `Form`
+- Same form components as MentorProfileSetup (reusable form component)
+- Unsaved changes warning using browser `beforeunload` or custom dialog
+- Delete profile option with `AlertDialog` confirmation from shadcn
+- Toast notifications for success/error states
 
 #### `MentorBrowse.tsx`
 - Main discovery page for mentees
-- Grid/list view toggle
-- Filter sidebar:
-  - Mentoring levels (checkboxes → combine into bit flag)
-  - Payment types (checkboxes → combine into bit flag)
-  - Hourly rate range (slider)
-  - Nickname search (text input)
-- Mentor cards with preview info
-- "Request Mentorship" button on each card
-- Pagination (20 per page)
-- Empty state when no results
+- Grid/list view toggle using `Button` group
+- Filter sidebar with shadcn components:
+  - Mentoring levels: `Checkbox` group → combine into bit flag
+  - Payment types: `Checkbox` group → combine into bit flag
+  - Hourly rate range: `Slider` component (min/max)
+  - Nickname search: `Input` with search icon
+- Mentor cards (`Card` component) with preview info
+- `Button` for "Request Mentorship" on each card
+- `Pagination` component (20 per page)
+- `Empty` component for no results state
+- `Skeleton` loading states while fetching
 
 #### `MentorDetails.tsx`
-- Modal or full-page view of mentor profile
-- Display all profile information:
+- Modal view using shadcn `Dialog` component
+- Display all profile information in `Card` layout:
   - Nickname, bio
-  - Mentoring levels (badges)
-  - Hourly rate
-  - Payment types (icons)
-  - Availability calendar view
-  - Reviews (future)
-- "Request Mentorship" button (disabled if already matched)
-- Close/back navigation
+  - Mentoring levels (`Badge` components)
+  - Hourly rate display
+  - Payment types (icon badges)
+  - Availability (formatted text display)
+  - Reviews section (future enhancement)
+- `Button` for "Request Mentorship" (disabled state if already matched)
+- `DialogClose` for close/back navigation
 
 #### `MatchesList.tsx`
-- View user's matches (different views for mentor vs mentee)
+- View user's matches with role-based views
+- `Tabs` component for switching views and filtering
 - **Mentee View**:
-  - Shows requested mentors with status badges
+  - `Card` grid showing requested mentors
+  - Status `Badge` components (pending, active, completed)
   - Tabs: Pending, Active, Completed
-  - Cancel button for pending/active
+  - `Button` for cancel action with `AlertDialog` confirmation
 - **Mentor View**:
-  - Shows mentorship requests from mentees
-  - Accept/Reject buttons for pending requests
-  - Complete button for active matches
-- Sort by date
-- Filter by status
-- Empty states for each tab
+  - `Card` list showing mentorship requests from mentees
+  - Accept/Reject `Button` group for pending requests
+  - Complete `Button` for active matches
+- Sort by date using `Select` dropdown
+- `Empty` component for each empty tab state
+- `Skeleton` loading states
 
 ### Shared Components
 
 #### `MentorCard.tsx`
-- Compact mentor profile card
-- Display: avatar (placeholder), nickname, bio snippet (truncated)
-- Mentoring level badges (first 2-3)
-- Hourly rate badge
-- Payment type icons (first 3)
-- "View Details" button
-- "Request Mentorship" button (context-dependent)
+- Built with shadcn `Card` component (`CardHeader`, `CardContent`, `CardFooter`)
+- Display components:
+  - `Avatar` with fallback initials
+  - Nickname (heading), bio snippet (truncated text)
+  - Mentoring level `Badge` components (first 2-3, styled variants)
+  - Hourly rate `Badge` (outline variant)
+  - Payment type icon badges (first 3)
+- Action buttons:
+  - "View Details" `Button` (variant: outline)
+  - "Request Mentorship" `Button` (variant: default, context-dependent visibility)
+- Hover effects and responsive layout
 
 #### `MentoringLevelPicker.tsx`
-- Checkbox group for mentoring levels
+- Built with shadcn `Checkbox` components within `FormField`
 - Options: Entry, Senior, Staff, Management
-- Converts selections to bit flags (1, 2, 4, 8)
-- Visual indicators (icons or colors per level)
-- Required validation (at least one selected)
+- Each option is a `FormItem` with `Checkbox` + `Label`
+- Converts selections to bit flags (1, 2, 4, 8) using bit manipulation helpers
+- Visual indicators using Lucide icons or color-coded badges
+- Required validation via Zod schema (at least one selected)
+- Integrates with React Hook Form
 
 #### `PaymentTypePicker.tsx`
-- Checkbox group for payment types
+- Built with shadcn `Checkbox` group within `FormField`
 - Options: Venmo, Paypal, Zelle, Alipay, WeChat, Crypto
+- Each option uses `Checkbox` + `Label` with payment icon
 - Converts selections to bit flags (1, 2, 4, 8, 16, 32)
-- Payment type icons
-- Optional field
+- Payment type icons from Lucide or custom SVG
+- Optional field (no validation required)
+- Integrates with React Hook Form
 
-#### `AvailabilityPicker.tsx`
-- Weekly calendar grid (Monday-Sunday)
-- Click to add time slot for each day
-- Time range selector (dropdown or time picker)
-- Timezone selector (dropdown with common timezones)
-- Add multiple slots per day
-- Remove slot button
-- Visual representation (colored blocks)
-- Outputs JSON: `{ timezone: "UTC", slots: { monday: [{start: "09:00", end: "17:00"}] } }`
+#### `AvailabilityInput.tsx`
+- Built with shadcn `Textarea` component within `FormField`
+- `Label` with descriptive text
+- `FormDescription` with examples: "e.g., Weekdays 9am-5pm EST, Flexible on weekends"
+- Optional character limit (200 characters) with counter display
+- `FormMessage` for validation errors
+- Used in profile setup/edit forms
+- Integrates with React Hook Form
 
 #### `AvailabilityDisplay.tsx`
-- Read-only display of availability
-- Weekly grid with colored time blocks
-- Timezone badge
-- Tooltip with exact times
-- Used in MentorDetails view
+- Simple text display component (no shadcn component needed)
+- Renders availability string with preserved line breaks (`whitespace-pre-wrap`)
+- Shows muted text "Not specified" if empty
+- Used in MentorDetails and MentorCard views
+- Styled with consistent typography
 
 #### `StatusBadge.tsx`
-- Color-coded badge for match status
-- Pending: yellow
-- Accepted/Active: green
-- Rejected: red
-- Completed: gray
-- Small size for cards, larger for detail views
+- Built with shadcn `Badge` component using variants
+- Color-coded status mapping:
+  - Pending: `Badge` variant="warning" (yellow)
+  - Accepted/Active: `Badge` variant="success" (green)
+  - Rejected: `Badge` variant="destructive" (red)
+  - Completed: `Badge` variant="secondary" (gray)
+- Size variants: small (default) for cards, larger for detail views
+- Includes status text and optional icon
 
 ### Navigation
 
@@ -401,21 +446,13 @@ export enum PaymentType {
   Crypto = 32      // 100000 (2^5)
 }
 
-export interface AvailabilitySlots {
-  timezone: string;
-  slots: {
-    [day: string]: { start: string; end: string }[];
-    // Example: { monday: [{start: "09:00", end: "17:00"}, {start: "19:00", end: "21:00"}] }
-  };
-}
-
 export interface MentorProfile {
   id: string;
   user_id: string;
   nick_name: string;
   bio: string;
   mentoring_levels: number; // Bit flags
-  availability: AvailabilitySlots | null;
+  availability: string | null; // Free text description
   hourly_rate: number | null;
   payment_types: number; // Bit flags
   allow_reviews: boolean;
@@ -530,8 +567,6 @@ export interface MatchWithDetails extends Match {
 
 ### `src/types/api.ts`
 ```typescript
-import { AvailabilitySlots } from './mentor';
-
 // User API
 export interface CreateUserRequest {
   email: string;
@@ -549,7 +584,7 @@ export interface CreateMentorProfileRequest {
   nick_name: string;
   bio: string;
   mentoring_levels: number; // Bit flags
-  availability?: AvailabilitySlots | null;
+  availability?: string | null; // Free text description
   hourly_rate?: number | null;
   payment_types: number; // Bit flags
   allow_reviews?: boolean;
@@ -560,7 +595,7 @@ export interface UpdateMentorProfileRequest {
   nick_name?: string;
   bio?: string;
   mentoring_levels?: number;
-  availability?: AvailabilitySlots | null;
+  availability?: string | null; // Free text description
   hourly_rate?: number | null;
   payment_types?: number;
   allow_reviews?: boolean;
@@ -675,52 +710,54 @@ export interface GetMatchesRequest {
 - `MatchesList.test.tsx` - Matches list with mentor/mentee views
 - `MentoringLevelPicker.test.tsx` - Checkbox group with bit flags
 - `PaymentTypePicker.test.tsx` - Checkbox group with bit flags
-- `AvailabilityPicker.test.tsx` - Time slot picker
-- `AvailabilityDisplay.test.tsx` - Read-only availability view
+- `AvailabilityInput.test.tsx` - Free text availability input
+- `AvailabilityDisplay.test.tsx` - Read-only availability display
 - `StatusBadge.test.tsx` - Match status badge
 
 #### Test Scenarios
 
-**Form Components:**
-- Form validation (required fields)
-- Multi-step navigation (next, back, submit)
-- Bit flag conversion (checkboxes → integer)
-- Availability JSON serialization
-- Submit success/error handling
-- Unsaved changes warning
+**Form Components (shadcn Form + React Hook Form):**
+- Form validation using Zod schemas (required fields, type checks)
+- Multi-step navigation (next, back, submit buttons)
+- Bit flag conversion (shadcn `Checkbox` selections → integer)
+- Free text input (shadcn `Textarea` with character limit)
+- Submit success/error handling with toast notifications
+- Unsaved changes warning with `AlertDialog`
+- Test form integration with `@testing-library/react` and `@testing-library/user-event`
 
-**Browse & Search:**
-- Filter changes trigger API call
-- Checkbox filters combine into bit flags
-- Hourly rate slider updates
-- Pagination controls
-- Empty state display
-- Loading states
+**Browse & Search (shadcn UI components):**
+- Filter changes trigger API call (debounced)
+- `Checkbox` filters combine into bit flags correctly
+- `Slider` component updates hourly rate range
+- `Pagination` controls (next/prev, page numbers)
+- `Empty` component display when no results
+- `Skeleton` loading states during fetch
 
-**Match Management:**
-- Mentee view: shows requested mentors
-- Mentor view: shows requests with Accept/Reject buttons
-- Status filtering (tabs)
-- Accept/Reject/Complete/Cancel actions
-- Optimistic updates
-- Error handling
+**Match Management (shadcn layouts):**
+- Mentee view: `Card` grid showing requested mentors
+- Mentor view: requests with Accept/Reject `Button` components
+- Status filtering using `Tabs` component
+- Accept/Reject/Complete/Cancel button actions
+- Optimistic updates (immediate UI feedback)
+- Error handling with toast notifications
 
 **Bit Flag Components:**
-- Check/uncheck updates bit flag value
-- Multiple selections combine correctly (bitwise OR)
-- Visual state reflects bit flag value
+- `Checkbox` check/uncheck updates bit flag value correctly
+- Multiple selections combine correctly (bitwise OR operation)
+- Visual state reflects bit flag value (checked state synced)
+- Integration with React Hook Form `Controller`
 
-**Accessibility:**
-- ARIA labels on interactive elements
-- Keyboard navigation (Tab, Enter, Space)
-- Screen reader announcements
-- Focus management
-- Form error announcements
+**Accessibility (built into shadcn components):**
+- ARIA labels on all interactive elements (buttons, checkboxes, inputs)
+- Keyboard navigation (Tab, Enter, Space, Escape)
+- Screen reader announcements (form errors, status changes)
+- Focus management (dialog trapping, focus restoration)
+- Form error announcements using `aria-live` regions
 
 **API Mocking:**
 - Mock API calls with MSW or Vitest mocks
-- Test loading states
-- Test error states (400, 404, 500)
+- Test `Skeleton` loading states
+- Test error states (400, 404, 500) with toast display
 
 ### Test Coverage Goals
 - **100% coverage** for bit flag helper functions
@@ -729,6 +766,20 @@ export interface GetMatchesRequest {
 - All critical paths tested (create profile, search, match request, accept/reject)
 
 ## 6. Implementation Order (Following TDD Red-Green-Refactor)
+
+### Phase 0: Setup shadcn Components (Day 1)
+1. Install all required shadcn components:
+   ```bash
+   npx shadcn@latest add form button input textarea label
+   npx shadcn@latest add card badge avatar checkbox slider select
+   npx shadcn@latest add dialog tabs separator pagination skeleton empty
+   ```
+2. Install form dependencies:
+   ```bash
+   npm install react-hook-form @hookform/resolvers zod sonner
+   ```
+3. Verify shadcn components render correctly (create test page)
+4. Set up toast provider (`Toaster` from sonner) in `App.tsx`
 
 ### Phase 1: Database & Core APIs (Week 1)
 1. **Write tests** for database schema validation
@@ -746,31 +797,31 @@ export interface GetMatchesRequest {
 1. **Write tests** for mentor search API with bit flag filters
 2. Implement mentor search endpoint (`GET /api/v1/mentors/search`)
 3. Test bit flag queries in D1 (bitwise AND operations)
-4. **Write tests** for bit flag picker components
-5. Build `MentoringLevelPicker` and `PaymentTypePicker` components
-6. **Write tests** for `AvailabilityPicker` component
-7. Build `AvailabilityPicker` component
+4. **Write tests** for bit flag picker components (`MentoringLevelPicker`, `PaymentTypePicker`)
+5. Build picker components using shadcn `Checkbox` + `FormField`
+6. **Write tests** for `AvailabilityInput` component
+7. Build `AvailabilityInput` using shadcn `Textarea`
 8. **Write tests** for `MentorCard` component
-9. Build `MentorCard` component
+9. Build `MentorCard` using shadcn `Card`, `Avatar`, `Badge`
 10. **Write tests** for `MentorBrowse` page
-11. Build `MentorBrowse` page with filters and pagination
+11. Build `MentorBrowse` with shadcn filters, `Pagination`, `Skeleton`, `Empty`
 12. **Write tests** for `MentorDetails` view
-13. Build `MentorDetails` view
+13. Build `MentorDetails` using shadcn `Dialog`
 14. Run tests, ensure all pass
 
 ### Phase 3: Mentor Profiles & Match Management (Week 3)
 1. **Write tests** for `MentorProfileSetup` component
-2. Build `MentorProfileSetup` multi-step form
+2. Build `MentorProfileSetup` multi-step form with shadcn `Form` + React Hook Form
 3. **Write tests** for `MentorProfileEdit` component
-4. Build `MentorProfileEdit` with unsaved changes warning
+4. Build `MentorProfileEdit` with unsaved changes warning + `AlertDialog`
 5. **Write tests** for match CRUD APIs
 6. Implement match endpoints (`POST`, `GET /api/v1/matches`, `POST /api/v1/matches/:id/respond`, `PATCH /api/v1/matches/:id/complete`, `DELETE /api/v1/matches/:id`)
 7. **Write tests** for `StatusBadge` component
-8. Build `StatusBadge` component
+8. Build `StatusBadge` using shadcn `Badge` variants
 9. **Write tests** for `MatchesList` component
-10. Build `MatchesList` with mentor/mentee views
+10. Build `MatchesList` with shadcn `Tabs`, `Card`, `Button`, `Empty`
 11. **Write tests** for `AvailabilityDisplay` component
-12. Build `AvailabilityDisplay` component
+12. Build `AvailabilityDisplay` (simple text display)
 13. Run tests, ensure all pass
 
 ### Phase 4: Integration, Polish & Deployment (Week 4)
@@ -865,7 +916,7 @@ export interface GetMatchesRequest {
 - **Backend:** ~10 API endpoints with tests (users, mentor profiles, search, matches)
 - **Frontend:** ~11 pages/components with tests
   - Pages: MentorProfileSetup, MentorProfileEdit, MentorBrowse, MentorDetails, MatchesList
-  - Components: MentorCard, MentoringLevelPicker, PaymentTypePicker, AvailabilityPicker, AvailabilityDisplay, StatusBadge
+  - Components: MentorCard, MentoringLevelPicker, PaymentTypePicker, AvailabilityInput, AvailabilityDisplay, StatusBadge
 - **Tests:** ~16 test files (5 backend + 11 frontend)
 - **Types:** 3 type definition files (`user.ts`, `mentor.ts`, `match.ts`, `api.ts`)
 
@@ -875,10 +926,14 @@ export interface GetMatchesRequest {
 - Assumes 1 developer working full-time
 
 ### Dependencies
-- Cloudflare D1 database (SQLite)
-- React Router DOM (v6+) for navigation
-- Date/time library for availability (optional: date-fns or Day.js)
-- No CSS framework required (can use vanilla CSS or Tailwind if preferred)
+- **Cloudflare D1** database (SQLite)
+- **React Router DOM** (v7) for navigation
+- **shadcn/ui** component library (already configured with `@shadcn` registry)
+- **React Hook Form** for form state management
+- **Zod** for schema validation
+- **Sonner** for toast notifications
+- **Lucide React** for icons (comes with shadcn)
+- **Tailwind CSS (v4)** for styling (required by shadcn, already configured)
 
 ## 9. Future Enhancements
 
@@ -920,25 +975,42 @@ All features will be built with tests written BEFORE implementation, ensuring hi
 
 ### Key Design Decisions
 
-1. **Bit Flags Instead of JSON Arrays:**
+1. **shadcn/ui Component Library:**
+   - **Accessibility-first**: All components built with ARIA labels, keyboard navigation, and screen reader support
+   - **Customizable**: Components are copied into your project (not installed as dependencies), allowing full customization
+   - **Type-safe**: Written in TypeScript with excellent type inference
+   - **Modern stack**: Built on Radix UI primitives with Tailwind CSS styling
+   - **Developer experience**: Integrates seamlessly with React Hook Form + Zod for robust form handling
+   - **Consistency**: Provides design system primitives (Button, Card, Badge, etc.) ensuring visual consistency
+   - **Performance**: Tree-shakeable, zero runtime cost for unused components
+   - **Trade-off**: Requires Tailwind CSS, but this is already configured in the project
+
+2. **Bit Flags Instead of JSON Arrays:**
    - Faster queries (integer bitwise operations vs JSON parsing)
    - Smaller storage footprint
    - Efficient indexing in SQLite
    - Trade-off: Less human-readable in database, but TypeScript helpers mitigate this
 
-2. **Mentee-Initiated Matching:**
+3. **Mentee-Initiated Matching:**
    - Simpler UX (no algorithm to explain)
    - User maintains full control over matching
    - Reduces complexity (no scoring, no suggestions)
    - Faster implementation (4 weeks vs 5 weeks)
 
-3. **Unified User Table:**
+4. **Unified User Table:**
    - Single `users` table for both mentors and mentees
    - Role determined by presence of `mentor_profile`
    - Allows users to be both mentor and mentee in future
 
-4. **SQLite/D1 Compatibility:**
+5. **SQLite/D1 Compatibility:**
    - Uses INTEGER for bit flags (native SQLite type)
-   - Uses TEXT for JSON (availability slots)
+   - Uses TEXT for free text fields (availability description)
    - Bitwise operations supported in SQLite 3.x
    - Leverages Cloudflare D1's edge distribution
+
+6. **Free Text Availability:**
+   - Simple user experience (type naturally instead of complex calendar UI)
+   - No parsing/validation complexity
+   - Flexible format (users express availability their own way)
+   - Reduces frontend complexity (no timezone handling, no calendar component)
+   - Faster implementation
