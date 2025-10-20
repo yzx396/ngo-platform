@@ -6,11 +6,20 @@ import path from "path";
 export default defineConfig({
   plugins: [
     react(),
-    cloudflare(),
+    cloudflare({
+      config: {
+        env: {
+          local: {},
+        },
+      },
+    }),
   ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src/react-app"),
     },
+  },
+  server: {
+    port: 5173,
   },
 });
