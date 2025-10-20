@@ -24,11 +24,11 @@ export function OAuthCallbackPage() {
         }
 
         if (!code) {
-          throw new Error('No authorization code provided');
+          throw new Error('Missing authorization code');
         }
 
-        // Exchange code for token
-        const response = await fetch('/api/v1/auth/google/callback', {
+        // Exchange code for token - pass code in query parameter
+        const response = await fetch(`/api/v1/auth/google/callback?code=${encodeURIComponent(code)}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
