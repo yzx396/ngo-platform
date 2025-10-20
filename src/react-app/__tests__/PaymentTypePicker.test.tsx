@@ -12,6 +12,7 @@ function PaymentTypePickerWithForm({ onValuesChange }: { onValuesChange?: (value
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValue = form.watch('payment_types');
   if (onValuesChange) {
     onValuesChange(watchedValue);

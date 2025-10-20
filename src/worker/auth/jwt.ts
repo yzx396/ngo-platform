@@ -44,7 +44,7 @@ export async function verifyToken(
       iat: iat ? Math.floor(iat) : undefined,
       exp: exp ? Math.floor(exp) : undefined,
     };
-  } catch (error) {
+  } catch {
     throw new Error('Invalid or expired token');
   }
 }

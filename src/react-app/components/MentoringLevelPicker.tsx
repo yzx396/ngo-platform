@@ -3,7 +3,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { MentoringLevel } from '../../types/mentor';
 
-interface MentoringLevelPickerProps<T extends FieldValues = any> {
+interface MentoringLevelPickerProps<T extends FieldValues = Record<string, unknown>> {
   control: Control<T>;
   name?: Path<T>;
 }
@@ -13,7 +13,7 @@ interface MentoringLevelPickerProps<T extends FieldValues = any> {
  * Checkbox group for selecting mentoring levels with bit flag conversion
  * Works with React Hook Form for form state management
  */
-export function MentoringLevelPicker<T extends FieldValues = any>({
+export function MentoringLevelPicker<T extends FieldValues = Record<string, unknown>>({
   control,
   name = 'mentoring_levels' as Path<T>
 }: MentoringLevelPickerProps<T>) {

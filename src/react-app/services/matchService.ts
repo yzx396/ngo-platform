@@ -12,8 +12,6 @@ import type {
  * Handles all mentorship match-related API operations
  */
 
-interface MatchFilters extends GetMatchesRequest {}
-
 /**
  * Create a new match request (mentee initiates)
  * @param mentor_id - ID of the mentor to request
@@ -29,7 +27,7 @@ export async function createMatch(mentor_id: string): Promise<Match> {
  * @param filters - Filter options (status, role)
  * @returns List of matches
  */
-export async function getMatches(filters?: MatchFilters): Promise<Match[]> {
+export async function getMatches(filters?: GetMatchesRequest): Promise<Match[]> {
   const params = new URLSearchParams();
 
   if (filters?.status) {

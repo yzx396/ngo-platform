@@ -18,12 +18,12 @@ import { MentoringLevel, PaymentType } from '../../types/mentor';
 // ============================================================================
 
 const createMockDb = () => {
-  const mockUsers = new Map<string, any>();
-  const mockProfiles = new Map<string, any>();
+  const mockUsers = new Map<string, Record<string, unknown>>();
+  const mockProfiles = new Map<string, Record<string, unknown>>();
 
   return {
     prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: any[]) => ({
+      bind: vi.fn((...params: unknown[]) => ({
         all: vi.fn(async () => {
           if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE id = ?')) {
             const profileId = params[0];
@@ -168,12 +168,12 @@ async function createTestUser(mockEnv: Env, email: string, name: string) {
 describe('Mentor Profile CRUD API', () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockEnv: Env;
-  let testUser: any;
+  let testUser: Record<string, unknown>;
 
   beforeEach(async () => {
     mockDb = createMockDb();
     mockEnv = {
-      platform_db: mockDb as any,
+      platform_db: mockDb as unknown,
     } as Env;
 
     // Create a test user for mentor profiles
@@ -426,7 +426,7 @@ describe('Mentor Profile CRUD API', () => {
   // ==========================================================================
 
   describe('PUT /api/v1/mentors/profiles/:id', () => {
-    let createdProfile: any;
+    let createdProfile: Record<string, unknown>;
 
     beforeEach(async () => {
       const createReq = new Request('http://localhost/api/v1/mentors/profiles', {

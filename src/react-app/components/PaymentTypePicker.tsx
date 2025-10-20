@@ -3,7 +3,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { PaymentType } from '../../types/mentor';
 
-interface PaymentTypePickerProps<T extends FieldValues = any> {
+interface PaymentTypePickerProps<T extends FieldValues = Record<string, unknown>> {
   control: Control<T>;
   name?: Path<T>;
 }
@@ -13,7 +13,7 @@ interface PaymentTypePickerProps<T extends FieldValues = any> {
  * Checkbox group for selecting payment types with bit flag conversion
  * Works with React Hook Form for form state management
  */
-export function PaymentTypePicker<T extends FieldValues = any>({
+export function PaymentTypePicker<T extends FieldValues = Record<string, unknown>>({
   control,
   name = 'payment_types' as Path<T>
 }: PaymentTypePickerProps<T>) {

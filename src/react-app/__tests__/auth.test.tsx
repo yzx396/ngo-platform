@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import { useEffect, type ReactNode, type Ref } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ProtectedRoute } from '../components/ProtectedRoute';
@@ -37,8 +38,37 @@ function ProtectedContent() {
   return <div>Protected Content</div>;
 }
 
-function LoginLink() {
-  return <a href="/login">Go to Login</a>;
+interface TestComponentProps {
+  authUtilsRef: Ref<ReturnType<typeof useAuth> | null>;
+}
+
+function TestComponentWithRef({ authUtilsRef }: TestComponentProps) {
+  const authUtils = useAuth();
+
+  // Use useEffect to store the hook result in ref (after render)
+  useEffect(() => {
+    if (authUtilsRef && 'current' in authUtilsRef) {
+      authUtilsRef.current = authUtils;
+    }
+  }, [authUtils, authUtilsRef]);
+
+  return <TestComponent />;
+}
+
+function TestProtectedComponentWithRef({ authUtilsRef }: TestComponentProps): ReactNode {
+  const authUtils = useAuth();
+
+  useEffect(() => {
+    if (authUtilsRef && 'current' in authUtilsRef) {
+      authUtilsRef.current = authUtils;
+    }
+  }, [authUtils, authUtilsRef]);
+
+  return (
+    <ProtectedRoute>
+      <ProtectedContent />
+    </ProtectedRoute>
+  );
 }
 
 // ============================================================================
@@ -136,17 +166,12 @@ describe('AuthContext', () => {
         updated_at: 2000,
       };
 
-      let authUtils: any;
-
-      function TestLoginComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestLoginComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
@@ -155,7 +180,7 @@ describe('AuthContext', () => {
 
       // Call login wrapped in act
       await act(async () => {
-        authUtils.login('test-jwt-token', mockUser);
+        authUtilsRef.current?.login('test-jwt-token', mockUser);
       });
 
       await waitFor(() => {
@@ -175,23 +200,18 @@ describe('AuthContext', () => {
         updated_at: 2000,
       };
 
-      let authUtils: any;
-
-      function TestLoginComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestLoginComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
 
       await act(async () => {
-        authUtils.login('storage-token', mockUser);
+        authUtilsRef.current?.login('storage-token', mockUser);
       });
 
       expect(localStorage.getItem('auth_token')).toBe('storage-token');
@@ -208,23 +228,18 @@ describe('AuthContext', () => {
         updated_at: 2000,
       };
 
-      let authUtils: any;
-
-      function TestLogoutComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestLogoutComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
 
       await act(async () => {
-        authUtils.login('logout-token', mockUser);
+        authUtilsRef.current?.login('logout-token', mockUser);
       });
 
       await waitFor(() => {
@@ -232,7 +247,7 @@ describe('AuthContext', () => {
       });
 
       await act(async () => {
-        authUtils.logout();
+        authUtilsRef.current?.logout();
       });
 
       await waitFor(() => {
@@ -249,28 +264,23 @@ describe('AuthContext', () => {
         updated_at: 2000,
       };
 
-      let authUtils: any;
-
-      function TestLogoutComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestLogoutComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
 
       await act(async () => {
-        authUtils.login('storage-token', mockUser);
+        authUtilsRef.current?.login('storage-token', mockUser);
       });
       expect(localStorage.getItem('auth_token')).toBe('storage-token');
 
       await act(async () => {
-        authUtils.logout();
+        authUtilsRef.current?.logout();
       });
 
       expect(localStorage.getItem('auth_token')).toBeNull();
@@ -291,51 +301,41 @@ describe('AuthContext', () => {
         Promise.resolve(new Response(JSON.stringify(mockUser)))
       );
 
-      let authUtils: any;
-
-      function TestGetUserComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestGetUserComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
 
       await act(async () => {
-        authUtils.login('getuser-token', { id: 'user-temp', email: 'temp@example.com', name: 'Temp', created_at: 0, updated_at: 0 });
+        authUtilsRef.current?.login('getuser-token', { id: 'user-temp', email: 'temp@example.com', name: 'Temp', created_at: 0, updated_at: 0 });
       });
 
       const user = await act(async () => {
-        return await authUtils.getUser();
+        return await authUtilsRef.current?.getUser();
       });
 
       expect(user).toEqual(mockUser);
-      expect(user.id).toBe('user-get');
-      expect(user.email).toBe('getuser@example.com');
+      expect(user?.id).toBe('user-get');
+      expect(user?.email).toBe('getuser@example.com');
     });
 
     it('should return null if no token', async () => {
-      let authUtils: any;
-
-      function TestGetUserComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestGetUserComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
 
-      const user = await authUtils.getUser();
+      const user = await authUtilsRef.current?.getUser();
 
       expect(user).toBeNull();
     });
@@ -345,17 +345,12 @@ describe('AuthContext', () => {
         Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
       );
 
-      let authUtils: any;
-
-      function TestGetUserComponent() {
-        authUtils = useAuth();
-        return <TestComponent />;
-      }
+      const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
       render(
         <BrowserRouter>
           <AuthProvider>
-            <TestGetUserComponent />
+            <TestComponentWithRef authUtilsRef={authUtilsRef} />
           </AuthProvider>
         </BrowserRouter>
       );
@@ -369,11 +364,11 @@ describe('AuthContext', () => {
       };
 
       await act(async () => {
-        authUtils.login('test-token', mockUser);
+        authUtilsRef.current?.login('test-token', mockUser);
       });
 
       const user = await act(async () => {
-        return await authUtils.getUser();
+        return await authUtilsRef.current?.getUser();
       });
 
       expect(user).toBeNull();
@@ -441,21 +436,12 @@ describe('ProtectedRoute', () => {
       Promise.resolve(new Response(JSON.stringify(mockUser)))
     );
 
-    let authUtils: any;
-
-    function TestProtectedComponent() {
-      authUtils = useAuth();
-      return (
-        <ProtectedRoute>
-          <ProtectedContent />
-        </ProtectedRoute>
-      );
-    }
+    const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
     render(
       <BrowserRouter>
         <AuthProvider>
-          <TestProtectedComponent />
+          <TestProtectedComponentWithRef authUtilsRef={authUtilsRef} />
         </AuthProvider>
       </BrowserRouter>
     );
@@ -495,40 +481,30 @@ describe('Token Persistence', () => {
       updated_at: 2000,
     };
 
-    let authUtils: any;
-
-    function TestPersistComponent() {
-      authUtils = useAuth();
-      return <TestComponent />;
-    }
+    const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
     render(
       <BrowserRouter>
         <AuthProvider>
-          <TestPersistComponent />
+          <TestComponentWithRef authUtilsRef={authUtilsRef} />
         </AuthProvider>
       </BrowserRouter>
     );
 
     await act(async () => {
-      authUtils.login('persist-token', mockUser);
+      authUtilsRef.current?.login('persist-token', mockUser);
     });
 
     expect(localStorage.getItem('auth_token')).toBe('persist-token');
   });
 
   it('should clear invalid token on 401', async () => {
-    let authUtils: any;
-
-    function TestInvalidComponent() {
-      authUtils = useAuth();
-      return <TestComponent />;
-    }
+    const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
     render(
       <BrowserRouter>
         <AuthProvider>
-          <TestInvalidComponent />
+          <TestComponentWithRef authUtilsRef={authUtilsRef} />
         </AuthProvider>
       </BrowserRouter>
     );
@@ -539,7 +515,7 @@ describe('Token Persistence', () => {
     );
 
     await act(async () => {
-      authUtils.login('invalid-token', {
+      authUtilsRef.current?.login('invalid-token', {
         id: 'user-invalid',
         email: 'invalid@example.com',
         name: 'Invalid',
@@ -550,7 +526,7 @@ describe('Token Persistence', () => {
 
     // Call getUser which should trigger 401 and logout
     await act(async () => {
-      await authUtils.getUser();
+      await authUtilsRef.current?.getUser();
     });
 
     // Token should be cleared after 401 response
@@ -581,25 +557,17 @@ describe('API Client Token Attachment', () => {
       updated_at: 2000,
     };
 
-    let authUtils: any;
-
-    function TestAPIComponent() {
-      authUtils = useAuth();
-      return <TestComponent />;
-    }
+    const authUtilsRef: { current: ReturnType<typeof useAuth> | null } = { current: null };
 
     render(
       <BrowserRouter>
         <AuthProvider>
-          <TestAPIComponent />
+          <TestComponentWithRef authUtilsRef={authUtilsRef} />
         </AuthProvider>
       </BrowserRouter>
     );
 
-    authUtils.login('api-token-12345', mockUser);
-
-    // Import and test the apiClient token attachment
-    const { getAuthToken } = await import('../services/apiClient');
+    authUtilsRef.current?.login('api-token-12345', mockUser);
 
     // After login, token should be retrievable
     const token = localStorage.getItem('auth_token');

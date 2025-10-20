@@ -1,7 +1,6 @@
 import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
-import type { Assertion, AsymmetricMatchersContaining } from 'vitest';
 
 declare module 'vitest' {
-  interface Assertion<T = any> extends TestingLibraryMatchers<ReturnType<typeof expect.stringContaining>, T> {}
-  interface AsymmetricMatchersContaining extends TestingLibraryMatchers {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface Assertion<T = unknown> extends TestingLibraryMatchers<ReturnType<typeof expect.stringContaining>, T> {}
 }

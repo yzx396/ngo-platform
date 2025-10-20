@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '../components/ui/card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -22,11 +22,7 @@ export function MatchesList() {
   const [role, setRole] = useState<'mentor' | 'mentee'>('mentee');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
 
-  useEffect(() => {
-    fetchMatches();
-  }, [role]);
-
-  const fetchMatches = async () => {
+  const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getMatches({ role });
@@ -36,7 +32,11 @@ export function MatchesList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [role]);
+
+  useEffect(() => {
+    fetchMatches();
+  }, [fetchMatches]);
 
   const handleRespond = async (matchId: string, action: 'accept' | 'reject') => {
     try {

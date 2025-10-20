@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -14,6 +14,7 @@ function MentoringLevelPickerWithForm({ onValuesChange }: { onValuesChange?: (va
   });
 
   // Watch for changes and call callback
+  // eslint-disable-next-line react-hooks/incompatible-library
   const watchedValue = form.watch('mentoring_levels');
   if (onValuesChange) {
     onValuesChange(watchedValue);

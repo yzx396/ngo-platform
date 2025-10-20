@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -36,7 +36,7 @@ export function MentorBrowse() {
     },
   });
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
       const values = form.getValues();
@@ -56,12 +56,12 @@ export function MentorBrowse() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, form]);
 
   // Auto-fetch on mount
   useEffect(() => {
     handleSearch();
-  }, []);
+  }, [handleSearch]);
 
   const handleFilterChange = () => {
     setCurrentPage(1);

@@ -22,12 +22,12 @@ import { MentoringLevel, PaymentType } from '../../types/mentor';
 // ============================================================================
 
 const createMockDb = () => {
-  const mockUsers = new Map<string, any>();
-  const mockProfiles = new Map<string, any>();
+  const mockUsers = new Map<string, Record<string, unknown>>();
+  const mockProfiles = new Map<string, Record<string, unknown>>();
 
   return {
     prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: any[]) => ({
+      bind: vi.fn((...params: unknown[]) => ({
         all: vi.fn(async () => {
           // Handle INSERT for users
           if (query.includes('INSERT INTO users')) {
@@ -81,9 +81,6 @@ const createMockDb = () => {
                 results = results.filter(p => p.nick_name.toLowerCase().includes(searchTerm));
               }
             }
-
-            // Get total count before pagination
-            const total = results.length;
 
             // Apply pagination (LIMIT and OFFSET)
             if (query.includes('LIMIT') && query.includes('OFFSET')) {
@@ -214,7 +211,7 @@ async function createTestUser(mockEnv: Env, email: string, name: string) {
   return await res.json();
 }
 
-async function createTestMentorProfile(mockEnv: Env, profileData: any) {
+async function createTestMentorProfile(mockEnv: Env, profileData: Record<string, unknown>) {
   const req = new Request('http://localhost/api/v1/mentors/profiles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -235,7 +232,7 @@ describe('Mentor Search API', () => {
   beforeEach(async () => {
     mockDb = createMockDb();
     mockEnv = {
-      platform_db: mockDb as any,
+      platform_db: mockDb as unknown,
     } as Env;
   });
 
@@ -343,7 +340,7 @@ describe('Mentor Search API', () => {
       const data = await res.json();
       expect(data.mentors).toHaveLength(2); // EntryMentor and EntrySeniorMentor
       expect(data.total).toBe(2);
-      expect(data.mentors.every((m: any) => (m.mentoring_levels & MentoringLevel.Entry) > 0)).toBe(true);
+      expect(data.mentors.every((m: Record<string, unknown>) => ((m.mentoring_levels as number) & MentoringLevel.Entry) > 0)).toBe(true);
     });
 
     it('should filter mentors with Senior level', async () => {
@@ -509,7 +506,7 @@ describe('Mentor Search API', () => {
       const data = await res.json();
       expect(data.mentors).toHaveLength(2); // CheapMentor and MidMentor
       expect(data.total).toBe(2);
-      expect(data.mentors.every((m: any) => m.hourly_rate <= 100)).toBe(true);
+      expect(data.mentors.every((m: Record<string, unknown>) => (m.hourly_rate as number) <= 100)).toBe(true);
     });
 
     it('should filter mentors with hourly_rate_min', async () => {
@@ -522,7 +519,7 @@ describe('Mentor Search API', () => {
       const data = await res.json();
       expect(data.mentors).toHaveLength(2); // MidMentor and ExpensiveMentor
       expect(data.total).toBe(2);
-      expect(data.mentors.every((m: any) => m.hourly_rate >= 50)).toBe(true);
+      expect(data.mentors.every((m: Record<string, unknown>) => (m.hourly_rate as number) >= 50)).toBe(true);
     });
 
     it('should filter mentors with both hourly_rate_min and hourly_rate_max', async () => {
@@ -583,7 +580,7 @@ describe('Mentor Search API', () => {
       const data = await res.json();
       expect(data.mentors).toHaveLength(2); // CodeMaster and CodeNinja
       expect(data.total).toBe(2);
-      expect(data.mentors.every((m: any) => m.nick_name.includes('Code'))).toBe(true);
+      expect(data.mentors.every((m: Record<string, unknown>) => (m.nick_name as string).includes('Code'))).toBe(true);
     });
 
     it('should be case-insensitive for nickname search', async () => {

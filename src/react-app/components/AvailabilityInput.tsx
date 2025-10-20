@@ -2,7 +2,7 @@ import { Controller, type Control, type FieldValues, type Path } from 'react-hoo
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 
-interface AvailabilityInputProps<T extends FieldValues = any> {
+interface AvailabilityInputProps<T extends FieldValues = Record<string, unknown>> {
   control: Control<T>;
   name?: Path<T>;
   maxLength?: number;
@@ -13,7 +13,7 @@ interface AvailabilityInputProps<T extends FieldValues = any> {
  * Free text input for mentor availability using React Hook Form
  * Supports multi-line text and character limit
  */
-export function AvailabilityInput<T extends FieldValues = any>({
+export function AvailabilityInput<T extends FieldValues = Record<string, unknown>>({
   control,
   name = 'availability' as Path<T>,
   maxLength = 200

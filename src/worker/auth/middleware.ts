@@ -28,7 +28,7 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
   try {
     const payload = await verifyToken(token, jwtSecret);
     c.set('user', payload);
-  } catch (error) {
+  } catch {
     // Token verification failed, continue without user
   }
 

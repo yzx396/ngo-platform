@@ -12,7 +12,7 @@ import type {
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
-import { authMiddleware } from "./auth/middleware";
+import { authMiddleware, requireAuth } from "./auth/middleware";
 import {
   getGoogleLoginUrl,
   exchangeGoogleCode,
@@ -125,7 +125,7 @@ app.post("/api/v1/users", async (c) => {
     };
 
     return c.json(user, 201);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -207,7 +207,7 @@ app.put("/api/v1/users/:id", async (c) => {
       .first<User>();
 
     return c.json(updated);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -307,7 +307,7 @@ app.post("/api/v1/mentors/profiles", async (c) => {
     };
 
     return c.json<MentorProfile>(profile, 201);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -366,7 +366,7 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
 
     // Build update query dynamically
     const updates: string[] = [];
-    const params: any[] = [];
+    const params: (string | number | boolean | null)[] = [];
 
     if (body.nick_name !== undefined) {
       updates.push("nick_name = ?");
@@ -422,7 +422,7 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
     }
 
     return c.json<MentorProfile>(updated);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -509,7 +509,7 @@ app.get("/api/v1/mentors/search", async (c) => {
 
     // Build WHERE clause dynamically
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (mentoring_levels) {
       const levels = parseInt(mentoring_levels, 10);
@@ -575,9 +575,9 @@ app.get("/api/v1/mentors/search", async (c) => {
     };
 
     return c.json<SearchMentorsResponse>(response);
-  } catch (error) {
-    console.error("Search error:", error);
-    return c.json({ error: "Invalid request", details: error instanceof Error ? error.message : String(error) }, 400);
+  } catch (err) {
+    console.error("Search error:", err);
+    return c.json({ error: "Invalid request", details: err instanceof Error ? err.message : String(err) }, 400);
   }
 });
 
@@ -588,7 +588,7 @@ app.get("/api/v1/mentors/search", async (c) => {
 /**
  * POST /api/v1/matches - Create match request (mentee-initiated)
  */
-app.post("/api/v1/matches", async (c) => {
+app.post("/api/v1/matches", requireAuth, async (c) => {
   try {
     const body = await c.req.json<CreateMatchRequest>();
 
@@ -617,12 +617,9 @@ app.post("/api/v1/matches", async (c) => {
       return c.json({ error: "Mentor mentor profile not found" }, 400);
     }
 
-    // Get current user (mentee) - in real app this would come from auth
-    // For now, assume it's injected in the context or body
-    const menteeId = c.req.header("X-User-ID") || body.mentee_id;
-    if (!menteeId) {
-      return c.json({ error: "mentee_id or X-User-ID header required" }, 400);
-    }
+    // Get current user (mentee) from JWT authentication
+    const user = c.get('user') as AuthPayload;
+    const menteeId = user.userId;
 
     // Check if mentee tries to match with themselves
     if (body.mentor_id === menteeId) {
@@ -660,7 +657,7 @@ app.post("/api/v1/matches", async (c) => {
     };
 
     return c.json<Match>(match, 201);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -668,13 +665,11 @@ app.post("/api/v1/matches", async (c) => {
 /**
  * GET /api/v1/matches - List matches for user (mentor or mentee)
  */
-app.get("/api/v1/matches", async (c) => {
+app.get("/api/v1/matches", requireAuth, async (c) => {
   try {
-    // Get current user - in real app this would come from auth
-    const userId = c.req.header("X-User-ID");
-    if (!userId) {
-      return c.json({ error: "X-User-ID header required" }, 400);
-    }
+    // Get current user from JWT authentication
+    const user = c.get('user') as AuthPayload;
+    const userId = user.userId;
 
     const statusParam = c.req.query("status");
     const roleParam = c.req.query("role");
@@ -686,7 +681,7 @@ app.get("/api/v1/matches", async (c) => {
 
     // Build WHERE clause
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: string[] = [];
 
     // Filter by user (as mentor or mentee)
     conditions.push("(mentor_id = ? OR mentee_id = ?)");
@@ -720,7 +715,7 @@ app.get("/api/v1/matches", async (c) => {
     };
 
     return c.json<GetMatchesResponse>(response);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request" }, 400);
   }
 });
@@ -728,7 +723,7 @@ app.get("/api/v1/matches", async (c) => {
 /**
  * POST /api/v1/matches/:id/respond - Mentor accepts or rejects match
  */
-app.post("/api/v1/matches/:id/respond", async (c) => {
+app.post("/api/v1/matches/:id/respond", requireAuth, async (c) => {
   try {
     const matchId = c.req.param("id");
     const body = await c.req.json<RespondToMatchRequest>();
@@ -754,7 +749,7 @@ app.post("/api/v1/matches/:id/respond", async (c) => {
     }
 
     // Determine new status
-    let newStatus = body.action === "accept" ? "active" : "rejected";
+    const newStatus = body.action === "accept" ? "active" : "rejected";
 
     // Update match
     const timestamp = getTimestamp();
@@ -774,7 +769,7 @@ app.post("/api/v1/matches/:id/respond", async (c) => {
     }
 
     return c.json<Match>(updated);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
 });
@@ -782,7 +777,7 @@ app.post("/api/v1/matches/:id/respond", async (c) => {
 /**
  * PATCH /api/v1/matches/:id/complete - Mark match as completed
  */
-app.patch("/api/v1/matches/:id/complete", async (c) => {
+app.patch("/api/v1/matches/:id/complete", requireAuth, async (c) => {
   try {
     const matchId = c.req.param("id");
 
@@ -819,7 +814,7 @@ app.patch("/api/v1/matches/:id/complete", async (c) => {
     }
 
     return c.json<Match>(updated);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Invalid request" }, 400);
   }
 });
@@ -827,7 +822,7 @@ app.patch("/api/v1/matches/:id/complete", async (c) => {
 /**
  * DELETE /api/v1/matches/:id - Cancel/delete match
  */
-app.delete("/api/v1/matches/:id", async (c) => {
+app.delete("/api/v1/matches/:id", requireAuth, async (c) => {
   const matchId = c.req.param("id");
 
   // Check if match exists
@@ -871,7 +866,7 @@ app.get("/api/v1/auth/google/login", (c) => {
 
     const loginUrl = getGoogleLoginUrl(clientId, redirectUri);
     return c.json({ url: loginUrl });
-  } catch (error) {
+  } catch {
     return c.json({ error: "Failed to generate login URL" }, 500);
   }
 });
@@ -936,14 +931,14 @@ app.get("/api/v1/auth/google/callback", async (c) => {
         name: user.name,
       },
     });
-  } catch (error) {
+  } catch (err) {
     // Detailed error logging for OAuth debugging
-    console.error("OAuth callback error:", error);
+    console.error("OAuth callback error:", err);
 
     // Log additional context if available
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+    if (err instanceof Error) {
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
     }
 
     // Log request details (without sensitive data)
@@ -977,7 +972,7 @@ app.get("/api/v1/auth/me", async (c) => {
     }
 
     return c.json(user);
-  } catch (error) {
+  } catch {
     return c.json({ error: "Failed to fetch user" }, 500);
   }
 });

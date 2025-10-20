@@ -16,11 +16,11 @@ import app from '../index';
 // ============================================================================
 
 const createMockDb = () => {
-  const mockResults = new Map<string, any>();
+  const mockResults = new Map<string, Record<string, unknown>>();
 
   return {
     prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: any[]) => ({
+      bind: vi.fn((...params: unknown[]) => ({
         all: vi.fn(async () => {
           // Simulate SELECT queries
           if (query.includes('SELECT') && query.includes('WHERE id = ?')) {
@@ -114,7 +114,7 @@ describe('User CRUD API', () => {
   beforeEach(() => {
     mockDb = createMockDb();
     mockEnv = {
-      platform_db: mockDb as any,
+      platform_db: mockDb as unknown,
     } as Env;
   });
 

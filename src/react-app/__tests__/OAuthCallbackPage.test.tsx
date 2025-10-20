@@ -6,7 +6,7 @@ import { OAuthCallbackPage } from '../pages/OAuthCallbackPage';
 
 // Mock react-router-dom useNavigate
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
     ...actual,
     useNavigate: vi.fn(),
@@ -20,8 +20,8 @@ describe('OAuthCallbackPage', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
-    (useNavigate as any).mockReturnValue(mockNavigate);
-    global.fetch = mockFetch;
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -45,8 +45,8 @@ describe('OAuthCallbackPage', () => {
     );
 
     // Set up URL with authorization code
-    delete (window as any).location;
-    window.location = new URL('http://localhost:5173/auth/google/callback?code=auth-code-123') as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL('http://localhost:5173/auth/google/callback?code=auth-code-123') as unknown as Location;
 
     render(
       <BrowserRouter>
@@ -69,8 +69,8 @@ describe('OAuthCallbackPage', () => {
 
   it('should handle missing authorization code', async () => {
     // Set up URL without authorization code
-    delete (window as any).location;
-    window.location = new URL('http://localhost:5173/auth/google/callback') as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL('http://localhost:5173/auth/google/callback') as unknown as Location;
 
     render(
       <BrowserRouter>
@@ -91,8 +91,8 @@ describe('OAuthCallbackPage', () => {
 
   it('should handle OAuth error from Google', async () => {
     // Set up URL with error parameter
-    delete (window as any).location;
-    window.location = new URL('http://localhost:5173/auth/google/callback?error=access_denied') as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL('http://localhost:5173/auth/google/callback?error=access_denied') as unknown as Location;
 
     render(
       <BrowserRouter>
@@ -121,8 +121,8 @@ describe('OAuthCallbackPage', () => {
     );
 
     // Set up URL with authorization code
-    delete (window as any).location;
-    window.location = new URL('http://localhost:5173/auth/google/callback?code=invalid-code') as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL('http://localhost:5173/auth/google/callback?code=invalid-code') as unknown as Location;
 
     render(
       <BrowserRouter>
@@ -155,8 +155,8 @@ describe('OAuthCallbackPage', () => {
     );
 
     // Set up URL with authorization code
-    delete (window as any).location;
-    window.location = new URL('http://localhost:5173/auth/google/callback?code=valid-code') as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL('http://localhost:5173/auth/google/callback?code=valid-code') as unknown as Location;
 
     render(
       <BrowserRouter>
@@ -193,8 +193,8 @@ describe('OAuthCallbackPage', () => {
 
     // Authorization codes from Google may have special characters
     const specialCode = 'code/with+special=chars&more';
-    delete (window as any).location;
-    window.location = new URL(`http://localhost:5173/auth/google/callback?code=${encodeURIComponent(specialCode)}`) as any;
+    delete (window as unknown as { location: Location }).location;
+    window.location = new URL(`http://localhost:5173/auth/google/callback?code=${encodeURIComponent(specialCode)}`) as unknown as Location;
 
     render(
       <BrowserRouter>
