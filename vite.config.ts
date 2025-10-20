@@ -6,13 +6,7 @@ import path from "path";
 export default defineConfig({
   plugins: [
     react(),
-    cloudflare({
-      config: {
-        env: {
-          local: {},
-        },
-      },
-    }),
+    cloudflare(),
   ],
   resolve: {
     alias: {
