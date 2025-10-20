@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,8 +6,14 @@ export function OAuthCallbackPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const hasHandledRef = useRef(false);
 
   useEffect(() => {
+    if (hasHandledRef.current) {
+      return;
+    }
+    hasHandledRef.current = true;
+
     /**
      * Handle OAuth callback
      * Exchange authorization code for JWT token
@@ -33,6 +39,7 @@ export function OAuthCallbackPage() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
         });
 
         if (!response.ok) {

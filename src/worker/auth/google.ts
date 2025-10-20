@@ -147,9 +147,8 @@ export async function getGoogleUserProfile(
   // Log what Google returned for debugging
   console.log('Google userinfo response keys:', Object.keys(profile));
 
-  // If 'sub' is missing but we have id_token, try fallback
+  // Extract sub and email from id_token if missing
   if (!profile.sub && idToken) {
-    console.warn('Missing sub in userinfo response, attempting fallback to id_token');
     const payload = decodeJwt(idToken);
     if (payload && payload.sub && payload.email) {
       return {

@@ -14,8 +14,13 @@ export function LoginPage() {
       setError(null);
 
       // Get login URL from backend
-      const response = await fetch('/api/v1/auth/google/login', {
+      const params = new URLSearchParams({
+        redirect_uri: `${window.location.origin}/auth/google/callback`,
+      });
+
+      const response = await fetch(`/api/v1/auth/google/login?${params.toString()}`, {
         method: 'GET',
+        credentials: 'include',
       });
 
       if (!response.ok) {
