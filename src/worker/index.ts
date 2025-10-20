@@ -12,7 +12,7 @@ import type {
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
-import { authMiddleware, requireAuth } from "./auth/middleware";
+import { authMiddleware } from "./auth/middleware";
 import {
   getGoogleLoginUrl,
   exchangeGoogleCode,
@@ -21,8 +21,29 @@ import {
   createAuthPayload,
 } from "./auth/google";
 import { createToken } from "./auth/jwt";
+import { AuthPayload } from "../types/user";
 
-const app = new Hono<{ Bindings: Env }>();
+/**
+ * Environment variables and bindings for the Worker
+ */
+interface Env {
+  platform_db: D1Database;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  JWT_SECRET: string;
+}
+
+/**
+ * Custom Hono context type with auth payload
+ */
+type HonoContext = {
+  Bindings: Env;
+  Variables: {
+    user: AuthPayload;
+  };
+};
+
+const app = new Hono<HonoContext>();
 
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
@@ -859,7 +880,6 @@ app.get("/api/v1/auth/google/login", (c) => {
 app.get("/api/v1/auth/google/callback", async (c) => {
   try {
     const code = c.req.query("code");
-    const state = c.req.query("state");
     const error = c.req.query("error");
 
     // Handle OAuth errors
@@ -916,7 +936,7 @@ app.get("/api/v1/auth/google/callback", async (c) => {
  */
 app.get("/api/v1/auth/me", async (c) => {
   try {
-    const authPayload = c.get("user");
+    const authPayload = c.get("user") as AuthPayload | undefined;
 
     if (!authPayload) {
       return c.json({ error: "Unauthorized" }, 401);

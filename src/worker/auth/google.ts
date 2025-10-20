@@ -1,4 +1,3 @@
-import { Context } from 'hono';
 import { AuthPayload, User } from '../../types/user';
 
 /**
@@ -63,8 +62,8 @@ export async function exchangeGoogleCode(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Google token exchange failed: ${error.error_description}`);
+    const error = await response.json() as Record<string, unknown>;
+    throw new Error(`Google token exchange failed: ${error.error_description || 'Unknown error'}`);
   }
 
   return response.json();

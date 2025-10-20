@@ -14,7 +14,7 @@ export async function createToken(
 ): Promise<string> {
   const secretKey = new TextEncoder().encode(secret);
 
-  const token = await new SignJWT(payload)
+  const token = await new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${expirationHours}h`)
@@ -36,7 +36,14 @@ export async function verifyToken(
 
   try {
     const verified = await jwtVerify(token, secretKey);
-    return verified.payload as AuthPayload;
+    const { userId, email, name, iat, exp } = verified.payload;
+    return {
+      userId: userId as string,
+      email: email as string,
+      name: name as string,
+      iat: iat ? Math.floor(iat) : undefined,
+      exp: exp ? Math.floor(exp) : undefined,
+    };
   } catch (error) {
     throw new Error('Invalid or expired token');
   }

@@ -13,7 +13,8 @@ import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { AvailabilityInput } from '../components/AvailabilityInput';
 import { createMentorProfile } from '../services/mentorService';
-import { handleApiError, showSuccessToast, getMockUserId } from '../services/apiClient';
+import { handleApiError, showSuccessToast } from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 // Zod validation schema
 const mentorProfileSchema = z.object({
@@ -38,6 +39,7 @@ export function MentorProfileSetup() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const form = useForm<MentorProfileFormData>({
     resolver: zodResolver(mentorProfileSchema),
@@ -75,11 +77,13 @@ export function MentorProfileSetup() {
   const handleSubmit = async (data: MentorProfileFormData) => {
     setIsSubmitting(true);
     try {
-      const user_id = getMockUserId();
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
       await createMentorProfile({
         ...data,
-        user_id,
+        user_id: user.id,
         hourly_rate: data.hourly_rate || undefined,
         availability: data.availability || undefined,
       });

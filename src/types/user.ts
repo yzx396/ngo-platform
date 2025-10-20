@@ -11,4 +11,6 @@ export interface AuthPayload {
   userId: string;
   email: string;
   name: string;
+  iat?: number; // Issued at (Unix timestamp in seconds)
+  exp?: number; // Expiration time (Unix timestamp in seconds)
 }

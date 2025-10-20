@@ -3,19 +3,11 @@ import { extractTokenFromHeader, verifyToken } from './jwt';
 import { AuthPayload } from '../../types/user';
 
 /**
- * Extends Hono Context to include authenticated user
- */
-export interface AuthContext extends Context {
-  get(key: 'user'): AuthPayload | undefined;
-  set(key: 'user', value: AuthPayload): void;
-}
-
-/**
  * Authentication middleware that verifies JWT token
  * Extracts token from Authorization header and validates it
  */
 export async function authMiddleware(c: Context, next: () => Promise<void>) {
-  const jwtSecret = c.env.JWT_SECRET;
+  const jwtSecret = (c.env as Record<string, unknown>).JWT_SECRET as string | undefined;
 
   // Allow middleware to work without JWT_SECRET (for optional auth routes)
   const authHeader = c.req.header('Authorization');
@@ -23,14 +15,12 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
 
   // If no token, user is not authenticated
   if (!token) {
-    c.set('user', undefined);
     await next();
     return;
   }
 
   // If token exists but no secret configured, can't verify
   if (!jwtSecret) {
-    c.set('user', undefined);
     await next();
     return;
   }
@@ -39,7 +29,7 @@ export async function authMiddleware(c: Context, next: () => Promise<void>) {
     const payload = await verifyToken(token, jwtSecret);
     c.set('user', payload);
   } catch (error) {
-    c.set('user', undefined);
+    // Token verification failed, continue without user
   }
 
   await next();
