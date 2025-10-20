@@ -58,5 +58,21 @@
 	"assets": {
 		"directory": "./dist/client",
 		"not_found_handling": "single-page-application"
+	},
+	/**
+	 * Local Development Environment
+	 * Uses local D1 database for development (stored in .wrangler/state/d1/)
+	 * Run: npm run dev (or wrangler dev --env local)
+	 */
+	"env": {
+		"local": {
+			"d1_databases": [
+				{
+					"binding": "platform_db",
+					"database_name": "platform-db-local",
+					"database_id": "LOCAL"
+				}
+			]
+		}
 	}
 }
