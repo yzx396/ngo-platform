@@ -49,6 +49,14 @@ npm run test:watch -- src/react-app/__tests__/App.test.tsx    # Run single test 
 npm run test:watch -- --project=react                         # Run only React tests
 npm run test:watch -- --project=worker                        # Run only Worker tests
 npm run test -- --run src/worker/__tests__/index.test.ts      # Run single test once
+
+# Database migrations (local)
+npm run db:migrate        # Run all pending migrations on local D1 database
+npm run db:schema         # Display the current database schema
+
+# Database migrations (production)
+npm run db:migrate:prod   # Run all pending migrations on production Cloudflare D1
+npm run db:schema:prod    # Display the production database schema
 ```
 
 ## Test-Driven Development Workflow
@@ -237,6 +245,12 @@ The codebase is split into three distinct TypeScript projects using TypeScript p
    - Config: `tsconfig.node.json`
    - Target: ES2022
 
+4. **Shared Types** (`src/types/`)
+   - Contains type definitions shared between React and Worker
+   - Files: `user.ts`, `mentor.ts`, `match.ts`, `api.ts`
+   - These types are imported in both frontend and backend code
+   - Example: `MentoringLevel` enum and `MentorProfile` interface used across the codebase
+
 ### Build and Deployment Flow
 
 1. **Development**: `npm run dev` starts Vite dev server with Cloudflare plugin, providing HMR for both frontend and worker
@@ -260,6 +274,34 @@ All API endpoints MUST be versioned using `/api/v1/` prefix:
 - ❌ Bad: `/api/users`, `/api/mentors`
 
 This allows future API changes without breaking existing clients. When making breaking changes, create `/api/v2/` routes.
+
+**API Client Pattern:**
+
+The project uses a centralized, type-safe API client pattern:
+- `src/react-app/services/apiClient.ts`: Base API client with request/response handling
+- Service layer: `mentorService.ts`, `matchService.ts`, etc. wrap API calls with business logic
+- Benefits:
+  - Centralized error handling and request interceptors
+  - Type safety through shared types from `src/types/`
+  - Easy to mock in tests
+  - Single source of truth for API endpoints
+
+Example service structure:
+```typescript
+// Service wraps API calls with type-safe methods
+import { apiClient } from './apiClient';
+import { MentorProfile } from '../types/mentor';
+
+export const mentorService = {
+  async getProfile(userId: string): Promise<MentorProfile> {
+    return apiClient.get(`/api/v1/mentors/profiles/${userId}`);
+  },
+  // ... more methods
+};
+
+// Component uses the service
+const profile = await mentorService.getProfile(userId);
+```
 
 ### TypeScript Configuration
 
@@ -291,6 +333,8 @@ To modify worker bindings (KV, D1, R2, etc.), add them to `wrangler.json` and re
 
 ## Database (Cloudflare D1)
 
+### Configuration
+
 When adding database functionality:
 
 1. **Add D1 binding** to `wrangler.json`:
@@ -298,7 +342,7 @@ When adding database functionality:
    {
      "d1_databases": [
        {
-         "binding": "DB",
+         "binding": "platform_db",
          "database_name": "platform-db",
          "database_id": "your-database-id"
        }
@@ -306,29 +350,69 @@ When adding database functionality:
    }
    ```
 
-2. **Regenerate types**: `npm run cf-typegen` to update `worker-configuration.d.ts`
+2. **Local Development**: The `wrangler.json` includes an `env.local` configuration that uses a local D1 database stored in `.wrangler/state/d1/`. This is automatically used when running `npm run dev`.
 
-3. **Create migrations** in `migrations/` directory following SQLite syntax
+3. **Regenerate types**: `npm run cf-typegen` to update `worker-configuration.d.ts` after modifying bindings
 
-4. **Access in Worker code**:
-   ```typescript
-   app.get('/api/v1/users', async (c) => {
-     const db = c.env.DB;
-     const result = await db.prepare('SELECT * FROM users').all();
-     return c.json(result.results);
-   });
-   ```
+### Creating and Running Migrations
 
-5. **Test with mocks** - Mock the D1 database in tests:
-   ```typescript
-   const mockDb = {
-     prepare: vi.fn(() => ({
-       all: vi.fn(() => ({ results: [] }))
-     }))
-   };
-   ```
+**Create migrations** in `migrations/` directory following SQLite syntax:
+- Name format: `0001_description.sql`, `0002_description.sql`, etc.
+- Example: `migrations/0001_create_users_table.sql`
 
-**Important:** D1 uses SQLite syntax. Refer to [Cloudflare D1 documentation](https://developers.cloudflare.com/d1/) for query syntax and limitations.
+**Local Development:**
+
+Run all migrations against local D1:
+```bash
+npm run db:migrate
+```
+
+View local database schema:
+```bash
+npm run db:schema
+```
+
+**Production:**
+
+Run all migrations against production Cloudflare D1:
+```bash
+npm run db:migrate:prod
+```
+
+View production database schema:
+```bash
+npm run db:schema:prod
+```
+
+⚠️ **Important**: Always test migrations locally first before running against production. Production migrations should be done carefully as they may impact live users.
+
+### Using Database in Worker Code
+
+```typescript
+app.get('/api/v1/users', async (c) => {
+  const db = c.env.platform_db;
+  const result = await db.prepare('SELECT * FROM users').all();
+  return c.json(result.results);
+});
+```
+
+### Testing with Database Mocks
+
+Mock the D1 database in tests:
+```typescript
+const mockDb = {
+  prepare: vi.fn(() => ({
+    all: vi.fn(() => ({ results: [] }))
+  }))
+};
+
+// Pass to test context
+const c = { env: { platform_db: mockDb } };
+```
+
+**Important:**
+- D1 uses SQLite syntax. Refer to [Cloudflare D1 documentation](https://developers.cloudflare.com/d1/) for query syntax and limitations.
+- The binding name is `platform_db` (specified in `wrangler.json`), not `DB`.
 
 ## Project-Specific Patterns
 
