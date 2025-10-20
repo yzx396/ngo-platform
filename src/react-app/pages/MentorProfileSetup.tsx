@@ -63,7 +63,7 @@ export function MentorProfileSetup() {
       const isValid = await form.trigger('mentoring_levels');
       if (isValid) setStep(3);
     } else if (step === 3) {
-      const isValid = await form.trigger(['hourly_rate', 'payment_types']);
+      const isValid = await form.trigger(['hourly_rate', 'availability']);
       if (isValid) setStep(4);
     }
   };
@@ -157,8 +157,14 @@ export function MentorProfileSetup() {
                       placeholder="50"
                       {...form.register('hourly_rate', { valueAsNumber: true })}
                     />
+                    {form.formState.errors.hourly_rate && (
+                      <p className="text-sm text-red-500">{form.formState.errors.hourly_rate.message}</p>
+                    )}
                   </div>
                   <AvailabilityInput control={form.control} />
+                  {form.formState.errors.availability && (
+                    <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
+                  )}
                 </div>
               )}
 
