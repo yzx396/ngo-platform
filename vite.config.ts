@@ -6,11 +6,7 @@ import path from "path";
 export default defineConfig({
   plugins: [
     react(),
-    cloudflare({
-      // Use local environment for development
-      // This replaces the --env local CLI argument
-      bindingMetadata: { env: "local" },
-    }),
+    cloudflare(),
   ],
   resolve: {
     alias: {

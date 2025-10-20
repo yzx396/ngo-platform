@@ -45,41 +45,41 @@ function App() {
  */
 function HomePage() {
   return (
-    <div className="container py-12">
-      <div className="max-w-4xl mx-auto space-y-12">
-        <div className="space-y-4">
-          <h1 className="text-5xl font-bold tracking-tighter">
+    <div className="container px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="max-w-4xl mx-auto space-y-8 sm:space-y-12">
+        <div className="space-y-3 sm:space-y-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tighter">
             Welcome to Lead Forward Platform
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-lg sm:text-xl text-muted-foreground">
             Connect with experienced mentors and grow your skills
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
           {/* Browse Mentors Card */}
-          <div className="bg-card border rounded-lg p-8 space-y-4 hover:shadow-md transition-shadow">
-            <div className="text-4xl">🔍</div>
-            <h2 className="text-2xl font-bold">Browse Mentors</h2>
-            <p className="text-muted-foreground">
+          <div className="bg-card border rounded-lg p-6 sm:p-8 space-y-4 hover:shadow-md transition-shadow">
+            <div className="text-3xl sm:text-4xl">🔍</div>
+            <h2 className="text-xl sm:text-2xl font-bold">Browse Mentors</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Search and discover mentors by expertise, availability, and rates
             </p>
             <a href="/mentors/browse" className="inline-block">
-              <button className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90">
+              <button className="px-4 sm:px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 text-sm sm:text-base">
                 Start Browsing →
               </button>
             </a>
           </div>
 
           {/* Create Mentor Profile Card */}
-          <div className="bg-card border rounded-lg p-8 space-y-4 hover:shadow-md transition-shadow">
-            <div className="text-4xl">👤</div>
-            <h2 className="text-2xl font-bold">Become a Mentor</h2>
-            <p className="text-muted-foreground">
+          <div className="bg-card border rounded-lg p-6 sm:p-8 space-y-4 hover:shadow-md transition-shadow">
+            <div className="text-3xl sm:text-4xl">👤</div>
+            <h2 className="text-xl sm:text-2xl font-bold">Become a Mentor</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Create your mentor profile and start helping mentees grow
             </p>
             <a href="/mentor/profile/setup" className="inline-block">
-              <button className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90">
+              <button className="px-4 sm:px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 text-sm sm:text-base">
                 Set Up Profile →
               </button>
             </a>
@@ -87,24 +87,24 @@ function HomePage() {
         </div>
 
         {/* Features Section */}
-        <div className="space-y-4 pt-8 border-t">
-          <h2 className="text-2xl font-bold">Key Features</h2>
-          <ul className="space-y-3 text-muted-foreground">
-            <li className="flex items-start gap-3">
-              <span className="text-2xl">✓</span>
-              <span>User-driven matching - search and connect with mentors directly</span>
+        <div className="space-y-4 pt-6 sm:pt-8 border-t">
+          <h2 className="text-xl sm:text-2xl font-bold">Key Features</h2>
+          <ul className="space-y-2 sm:space-y-3 text-muted-foreground">
+            <li className="flex items-start gap-2 sm:gap-3">
+              <span className="text-lg sm:text-2xl flex-shrink-0">✓</span>
+              <span className="text-sm sm:text-base">User-driven matching - search and connect with mentors directly</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="text-2xl">✓</span>
-              <span>Flexible mentoring levels - Entry, Senior, Staff, Management</span>
+            <li className="flex items-start gap-2 sm:gap-3">
+              <span className="text-lg sm:text-2xl flex-shrink-0">✓</span>
+              <span className="text-sm sm:text-base">Flexible mentoring levels - Entry, Senior, Staff, Management</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="text-2xl">✓</span>
-              <span>Multiple payment methods - Venmo, PayPal, Zelle, Alipay, WeChat, Crypto</span>
+            <li className="flex items-start gap-2 sm:gap-3">
+              <span className="text-lg sm:text-2xl flex-shrink-0">✓</span>
+              <span className="text-sm sm:text-base">Multiple payment methods - Venmo, PayPal, Zelle, Alipay, WeChat, Crypto</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="text-2xl">✓</span>
-              <span>Manage your mentorship matches and track progress</span>
+            <li className="flex items-start gap-2 sm:gap-3">
+              <span className="text-lg sm:text-2xl flex-shrink-0">✓</span>
+              <span className="text-sm sm:text-base">Manage your mentorship matches and track progress</span>
             </li>
           </ul>
         </div>
