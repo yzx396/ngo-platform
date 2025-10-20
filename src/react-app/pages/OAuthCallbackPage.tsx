@@ -56,8 +56,12 @@ export function OAuthCallbackPage() {
         // Save token and user info
         login(data.token, data.user);
 
-        // Redirect to home page
-        navigate('/', { replace: true });
+        // Check if there's a return URL saved
+        const returnUrl = localStorage.getItem('auth_return_url');
+        localStorage.removeItem('auth_return_url'); // Clear it
+
+        // Redirect to return URL or home page
+        navigate(returnUrl || '/', { replace: true });
       } catch (err) {
         console.error('OAuth callback error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');

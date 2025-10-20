@@ -313,6 +313,24 @@ app.post("/api/v1/mentors/profiles", async (c) => {
 });
 
 /**
+ * GET /api/v1/mentors/profiles/by-user/:userId - Get mentor profile by user ID
+ */
+app.get("/api/v1/mentors/profiles/by-user/:userId", async (c) => {
+  const userId = c.req.param("userId");
+
+  const profile = await c.env.platform_db
+    .prepare("SELECT * FROM mentor_profiles WHERE user_id = ?")
+    .bind(userId)
+    .first<MentorProfile>();
+
+  if (!profile) {
+    return c.json({ error: "Mentor profile not found" }, 404);
+  }
+
+  return c.json<MentorProfile>(profile);
+});
+
+/**
  * GET /api/v1/mentors/profiles/:id - Get mentor profile by ID
  */
 app.get("/api/v1/mentors/profiles/:id", async (c) => {

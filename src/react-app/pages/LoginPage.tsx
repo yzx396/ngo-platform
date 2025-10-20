@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import '../styles/LoginPage.css';
 
 export function LoginPage() {
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Save the return URL when landing on login page
+  useEffect(() => {
+    const from = (location.state as { from?: string })?.from;
+    if (from) {
+      localStorage.setItem('auth_return_url', from);
+    }
+  }, [location]);
 
   /**
    * Initiates Google OAuth login flow

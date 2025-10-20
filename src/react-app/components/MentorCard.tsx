@@ -32,11 +32,17 @@ export function MentorCard({
   const paymentNames = getPaymentTypeNames(mentor.payment_types);
 
   const handleRequestMentorship = async () => {
+    // If parent provided a callback, use it (allows parent to check auth)
+    if (onRequestMentorship) {
+      onRequestMentorship();
+      return;
+    }
+    
+    // Otherwise, make the API call directly (for authenticated contexts)
     setIsRequesting(true);
     try {
       await createMatch(mentor.user_id);
       showSuccessToast('Mentorship request sent!');
-      onRequestMentorship?.();
     } catch (error) {
       handleApiError(error);
     } finally {

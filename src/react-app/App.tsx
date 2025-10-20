@@ -35,15 +35,10 @@ function App() {
               {/* Home Page - Public but shows different content based on auth state */}
               <Route path="/" element={<HomePage />} />
 
+              {/* Public mentor browsing */}
+              <Route path="/mentors/browse" element={<MentorBrowse />} />
+
               {/* Protected Routes */}
-              <Route
-                path="/mentors/browse"
-                element={
-                  <ProtectedRoute>
-                    <MentorBrowse />
-                  </ProtectedRoute>
-                }
-              />
               <Route
                 path="/mentor/profile/setup"
                 element={

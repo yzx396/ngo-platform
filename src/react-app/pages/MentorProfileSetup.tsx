@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,9 +12,10 @@ import { Checkbox } from '../components/ui/checkbox';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { AvailabilityInput } from '../components/AvailabilityInput';
-import { createMentorProfile } from '../services/mentorService';
+import { createMentorProfile, getMentorProfileByUserId, updateMentorProfile } from '../services/mentorService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
+import type { MentorProfile } from '../../types/mentor';
 
 // Zod validation schema
 const mentorProfileSchema = z.object({
@@ -38,6 +39,8 @@ type MentorProfileFormData = z.infer<typeof mentorProfileSchema>;
 export function MentorProfileSetup() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [existingProfile, setExistingProfile] = useState<MentorProfile | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -55,6 +58,41 @@ export function MentorProfileSetup() {
       allow_recording: true,
     },
   });
+
+  // Fetch existing mentor profile on mount
+  useEffect(() => {
+    const loadExistingProfile = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const profile = await getMentorProfileByUserId(user.id);
+        if (profile) {
+          setExistingProfile(profile);
+          // Populate form with existing data
+          form.reset({
+            nick_name: profile.nick_name,
+            bio: profile.bio,
+            mentoring_levels: profile.mentoring_levels,
+            availability: profile.availability || '',
+            hourly_rate: profile.hourly_rate || 50,
+            payment_types: profile.payment_types,
+            allow_reviews: profile.allow_reviews,
+            allow_recording: profile.allow_recording,
+          });
+        }
+      } catch (error) {
+        // If profile doesn't exist, that's fine - user is creating a new one
+        console.error('Error loading mentor profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingProfile();
+  }, [user, form]);
 
   const handleNext = async () => {
     // Validate fields for current step
@@ -81,15 +119,26 @@ export function MentorProfileSetup() {
         throw new Error('User not authenticated');
       }
 
-      await createMentorProfile({
-        ...data,
-        user_id: user.id,
-        hourly_rate: data.hourly_rate || undefined,
-        availability: data.availability || undefined,
-      });
+      if (existingProfile) {
+        // Update existing profile
+        await updateMentorProfile(existingProfile.id, {
+          ...data,
+          hourly_rate: data.hourly_rate || undefined,
+          availability: data.availability || undefined,
+        });
+        showSuccessToast('Mentor profile updated successfully!');
+      } else {
+        // Create new profile
+        await createMentorProfile({
+          ...data,
+          user_id: user.id,
+          hourly_rate: data.hourly_rate || undefined,
+          availability: data.availability || undefined,
+        });
+        showSuccessToast('Mentor profile created successfully!');
+      }
 
-      showSuccessToast('Mentor profile created successfully!');
-      // Redirect to browse page after successful creation
+      // Redirect to browse page after successful creation/update
       navigate('/mentors/browse');
     } catch (error) {
       handleApiError(error);
@@ -98,11 +147,24 @@ export function MentorProfileSetup() {
     }
   };
 
+  // Show loading state while fetching profile
+  if (isLoading) {
+    return (
+      <div className="container py-12">
+        <div className="max-w-2xl mx-auto text-center">
+          <p className="text-lg text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold">Create Your Mentor Profile</h1>
+          <h1 className="text-4xl font-bold">
+            {existingProfile ? 'Edit Your Mentor Profile' : 'Create Your Mentor Profile'}
+          </h1>
           <p className="text-lg text-muted-foreground">Step {step} of 4</p>
         </div>
 
@@ -211,7 +273,9 @@ export function MentorProfileSetup() {
                 </Button>
               ) : (
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Profile'}
+                  {isSubmitting 
+                    ? (existingProfile ? 'Updating...' : 'Creating...') 
+                    : (existingProfile ? 'Update Profile' : 'Create Profile')}
                 </Button>
               )}
             </div>

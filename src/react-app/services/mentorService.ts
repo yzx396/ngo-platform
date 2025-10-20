@@ -28,6 +28,23 @@ export async function getMentorProfile(id: string): Promise<MentorProfile> {
 }
 
 /**
+ * Get mentor profile by user ID
+ * @param userId - User ID
+ * @returns Mentor profile data or null if not found
+ */
+export async function getMentorProfileByUserId(userId: string): Promise<MentorProfile | null> {
+  try {
+    return await apiGet<MentorProfile>(`/api/v1/mentors/profiles/by-user/${userId}`);
+  } catch (error: any) {
+    // Return null if profile doesn't exist (404)
+    if (error?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
  * Update mentor profile
  * @param id - Mentor profile ID
  * @param data - Partial mentor profile data to update

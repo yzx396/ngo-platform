@@ -515,13 +515,22 @@ Token is stored in browser localStorage and automatically sent with all API requ
 
 ### Protected Routes
 
-Routes that require authentication:
+**Public Routes (no authentication required):**
 - `GET /api/v1/mentors/search` - Search mentors
+- `GET /api/v1/mentors/profiles/:id` - Get mentor profile by ID
+- Frontend route `/mentors/browse` - Browse and search mentors
+
+**Protected Routes (authentication required):**
 - `POST /api/v1/mentors/profiles` - Create mentor profile
+- `PUT /api/v1/mentors/profiles/:id` - Update mentor profile
+- `DELETE /api/v1/mentors/profiles/:id` - Delete mentor profile
 - `GET /api/v1/matches` - List user's matches
 - `POST /api/v1/matches` - Create match request
-- `PUT /api/v1/matches/:id` - Update match status
+- `POST /api/v1/matches/:id/respond` - Respond to match request
+- `PATCH /api/v1/matches/:id/complete` - Mark match as completed
 - `DELETE /api/v1/matches/:id` - Delete match
+- Frontend route `/mentor/profile/setup` - Create mentor profile
+- Frontend route `/matches` - View matches
 
 Frontend enforces protection with `ProtectedRoute` wrapper component that redirects unauthenticated users to `/login`.
 

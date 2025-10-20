@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -11,6 +12,7 @@ import { MentorCard } from '../components/MentorCard';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { searchMentors } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
 /**
@@ -19,6 +21,8 @@ import type { MentorProfile } from '../../types/mentor';
  * Displays filtered mentor list with pagination
  */
 export function MentorBrowse() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,11 +72,23 @@ export function MentorBrowse() {
   };
 
   const handleViewDetails = (mentor: MentorProfile) => {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/mentors/browse' } });
+      return;
+    }
+    
     // TODO: Open modal or navigate to detail view
     console.log('View details for:', mentor.nick_name);
   };
 
   const handleRequestMentorship = async (mentor: MentorProfile) => {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/mentors/browse' } });
+      return;
+    }
+    
     // TODO: Create match request
     console.log('Request mentorship from:', mentor.nick_name);
   };
