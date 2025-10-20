@@ -41,12 +41,15 @@
 	 */
 	"vars": { },
 	/**
-	 * Note: Use secrets to store sensitive data.
+	 * Local Development Secrets
+	 * For local development, use .dev.vars file (auto-loaded by Wrangler)
+	 * See .dev.vars.example for required variables
+	 *
+	 * For production, use secrets set via CLI:
+	 * - wrangler secret put GOOGLE_CLIENT_ID
+	 * - wrangler secret put GOOGLE_CLIENT_SECRET
+	 * - wrangler secret put JWT_SECRET
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 * Add these secrets for production:
-	 * - GOOGLE_CLIENT_ID: Your Google OAuth Client ID
-	 * - GOOGLE_CLIENT_SECRET: Your Google OAuth Client Secret
-	 * - JWT_SECRET: A random secret key for JWT signing
 	 */
 	/**
 	 * Static Assets
@@ -76,12 +79,7 @@
 					"database_name": "platform-db-local",
 					"database_id": "LOCAL"
 				}
-			],
-			"vars": {
-				"GOOGLE_CLIENT_ID": "YOUR_LOCAL_GOOGLE_CLIENT_ID",
-				"GOOGLE_CLIENT_SECRET": "YOUR_LOCAL_GOOGLE_CLIENT_SECRET",
-				"JWT_SECRET": "dev-secret-key-change-in-production"
-			}
+			]
 		}
 	}
 }

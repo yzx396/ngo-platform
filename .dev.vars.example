@@ -1,0 +1,10 @@
+# Local Development Environment Variables
+# Copy this file to .dev.vars and fill in the actual values
+# See GOOGLE_OAUTH_SETUP.md for instructions on obtaining these values
+
+# Google OAuth credentials from Google Cloud Console
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Secret key for JWT signing (use a random string, change for production)
+JWT_SECRET=dev-secret-key-change-in-production
