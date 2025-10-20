@@ -8,7 +8,7 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc && vite build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev --env local",
+		"dev": "wrangler dev",
 		"db:migrate": "for file in migrations/*.sql; do npx wrangler d1 execute platform-db-local --local --env local --file=\"$file\"; done",
 		"db:schema": "npx wrangler d1 execute platform-db-local --local --env local --command=\"SELECT sql FROM sqlite_master WHERE type='table' ORDER BY name;\"",
 		"lint": "eslint .",
