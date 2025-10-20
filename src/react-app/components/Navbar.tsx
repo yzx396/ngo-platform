@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Navbar component
@@ -10,6 +11,8 @@ import { Button } from './ui/button';
  */
 export function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
@@ -20,6 +23,12 @@ export function Navbar() {
     { href: '/matches', label: 'My Matches' },
     { href: '/mentor/profile/setup', label: 'My Profile' },
   ];
+
+  const handleLogout = () => {
+    logout();
+    setIsOpen(false);
+    navigate('/login', { replace: true });
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -48,14 +57,22 @@ export function Navbar() {
           ))}
         </div>
 
-        {/* Auth Buttons - Hidden on mobile, visible on sm+ */}
+        {/* Auth Section - Hidden on mobile, visible on sm+ */}
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <Button variant="outline" size="sm">
-            Login
-          </Button>
-          <Button size="sm">
-            Sign Up
-          </Button>
+          {isAuthenticated && user ? (
+            <>
+              <span className="text-sm text-muted-foreground">{user.name}</span>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <Link to="/login">
+              <Button size="sm">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -100,12 +117,27 @@ export function Navbar() {
               </Link>
             ))}
             <div className="pt-2 border-t space-y-2">
-              <Button variant="outline" size="sm" className="w-full">
-                Login
-              </Button>
-              <Button size="sm" className="w-full">
-                Sign Up
-              </Button>
+              {isAuthenticated && user ? (
+                <>
+                  <div className="px-2 py-2 text-sm">
+                    Signed in as {user.name}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Link to="/login" className="w-full block">
+                  <Button size="sm" className="w-full">
+                    Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

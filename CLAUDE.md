@@ -452,3 +452,156 @@ The platform uses a **mentee-initiated** matching system (not algorithm-based):
 - Match progresses: `pending` → `accepted` → `active` → `completed`
 
 This keeps the UX simple and gives users full control over matching.
+
+## Authentication System
+
+### Overview
+
+The platform uses **Google OAuth 2.0** for user authentication with **JWT tokens** for session management. This approach is stateless and works well with Cloudflare's edge computing model.
+
+**Key Features:**
+- Single sign-on via Google OAuth 2.0
+- Stateless JWT-based authentication
+- No passwords stored in database
+- Automatic user account creation on first login
+- Email linking for returning users
+
+### Setup Guide
+
+See `GOOGLE_OAUTH_SETUP.md` for detailed step-by-step instructions to:
+1. Create a Google Cloud Console project
+2. Set up OAuth credentials
+3. Configure redirect URIs for local and production environments
+4. Add environment variables to your development setup
+
+### Architecture
+
+**Backend (Cloudflare Worker):**
+- `src/worker/auth/jwt.ts` - JWT token creation and verification using `jose`
+- `src/worker/auth/middleware.ts` - Authentication middleware that extracts and validates JWT from Authorization header
+- `src/worker/auth/google.ts` - Google OAuth flow (login URL generation, code exchange, user profile fetch)
+- Routes:
+  - `GET /api/v1/auth/google/login` - Returns Google OAuth login URL
+  - `GET /api/v1/auth/google/callback` - Handles OAuth callback, exchanges code for token
+  - `GET /api/v1/auth/me` - Returns current authenticated user
+  - `POST /api/v1/auth/logout` - Logout endpoint (frontend clears token)
+
+**Frontend (React):**
+- `src/react-app/context/AuthContext.tsx` - Auth state management and hooks (`useAuth()`)
+- `src/react-app/pages/LoginPage.tsx` - Login page with "Sign in with Google" button
+- `src/react-app/pages/OAuthCallbackPage.tsx` - Handles OAuth redirect and token exchange
+- `src/react-app/components/ProtectedRoute.tsx` - Route wrapper that requires authentication
+- `src/react-app/services/apiClient.ts` - Automatically attaches JWT token to all API requests
+
+**Database:**
+- Users table includes `google_id` column (stores Google's user ID)
+- Enables account linking if user signs up with same email
+- See `migrations/0002_add_google_oauth.sql`
+
+### JWT Token Format
+
+Tokens include the following claims:
+```typescript
+{
+  userId: string;      // User ID from database
+  email: string;       // User email
+  name: string;        // User display name
+  iat: number;         // Issued at (Unix timestamp)
+  exp: number;         // Expires at (Unix timestamp, default 7 days)
+}
+```
+
+Token is stored in browser localStorage and automatically sent with all API requests in the `Authorization: Bearer <token>` header.
+
+### Protected Routes
+
+Routes that require authentication:
+- `GET /api/v1/mentors/search` - Search mentors
+- `POST /api/v1/mentors/profiles` - Create mentor profile
+- `GET /api/v1/matches` - List user's matches
+- `POST /api/v1/matches` - Create match request
+- `PUT /api/v1/matches/:id` - Update match status
+- `DELETE /api/v1/matches/:id` - Delete match
+
+Frontend enforces protection with `ProtectedRoute` wrapper component that redirects unauthenticated users to `/login`.
+
+### Environment Variables
+
+**Local Development** (in `wrangler.json` env.local):
+```json
+"vars": {
+  "GOOGLE_CLIENT_ID": "your-client-id.apps.googleusercontent.com",
+  "GOOGLE_CLIENT_SECRET": "your-client-secret",
+  "JWT_SECRET": "dev-secret-key"
+}
+```
+
+**Production** (set via `wrangler secret put`):
+```bash
+wrangler secret put GOOGLE_CLIENT_ID
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put JWT_SECRET
+```
+
+### User Flow
+
+1. **Login**
+   - User clicks "Sign In with Google" on `/login`
+   - Frontend calls `GET /api/v1/auth/google/login` to get OAuth URL
+   - User redirected to Google's consent screen
+   - Google redirects back to `/auth/google/callback?code=...`
+
+2. **Token Exchange**
+   - Frontend calls `GET /api/v1/auth/google/callback` with authorization code
+   - Backend exchanges code for access token with Google
+   - Backend fetches user profile from Google
+   - Backend creates or links user account (by google_id or email)
+   - Backend generates JWT token and returns to frontend
+
+3. **Session Management**
+   - Frontend stores JWT in localStorage
+   - Frontend sends token with all subsequent API requests
+   - Backend validates token with `authMiddleware`
+   - If token invalid or expired, user gets 401 response
+   - Frontend redirects to login
+
+4. **Logout**
+   - User clicks "Sign Out" button
+   - Frontend clears JWT from localStorage
+   - Frontend redirects to `/login`
+   - No server-side session to invalidate (stateless JWT)
+
+### Security Considerations
+
+**Strengths:**
+- No passwords stored
+- OAuth credentials never exposed to frontend
+- JWT tokens are short-lived (7 days default)
+- Stateless design scales with edge computing
+- Email linking prevents duplicate accounts
+
+**Recommendations:**
+- Use HTTPS in production (enforced by Cloudflare)
+- Set strong JWT_SECRET (use `wrangler secret put`)
+- Rotate JWT_SECRET periodically for production deployments
+- Monitor login attempts for suspicious patterns
+- Consider rate limiting on `/api/v1/auth/*` endpoints
+- Add email verification for security-sensitive operations
+
+### Testing
+
+**Backend Auth Tests** (`src/worker/__tests__/auth.test.ts`):
+- JWT token creation and verification
+- OAuth code exchange
+- User auto-creation from Google profile
+- Protected route authorization checks
+- Token expiration handling
+
+**Frontend Auth Tests** (`src/react-app/__tests__/auth.test.tsx`):
+- AuthContext state management
+- Login flow and token storage
+- Protected route redirects
+- API client JWT attachment
+- Logout functionality
+
+Run tests: `npm run test:watch -- --project=worker` or `npm run test:watch -- --project=react`

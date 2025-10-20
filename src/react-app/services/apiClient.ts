@@ -3,13 +3,10 @@ import { toast } from 'sonner';
 /**
  * API Client Configuration
  * Handles all HTTP requests with:
- * - X-User-ID header injection (mock auth)
+ * - JWT Bearer token authentication
  * - Retry logic with exponential backoff
  * - Error handling and logging
  */
-
-// Mock user ID for development/testing
-const MOCK_USER_ID = 'user-123';
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -41,6 +38,13 @@ function isRetryableError(error: unknown): boolean {
 }
 
 /**
+ * Get JWT token from localStorage
+ */
+function getAuthToken(): string | null {
+  return localStorage.getItem('auth_token');
+}
+
+/**
  * Main API fetch function with retry logic
  * @param url - API endpoint URL
  * @param options - Fetch options including custom retries count
@@ -58,8 +62,11 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // Inject mock user ID header for authentication
-  headers.set('X-User-ID', MOCK_USER_ID);
+  // Inject JWT token for authentication
+  const token = getAuthToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const finalOptions: RequestInit = {
     ...fetchOptions,
@@ -204,11 +211,4 @@ export function handleApiError(error: unknown): string {
  */
 export function showSuccessToast(message: string = 'Success'): void {
   toast.success(message);
-}
-
-/**
- * Get mock user ID (for development context)
- */
-export function getMockUserId(): string {
-  return MOCK_USER_ID;
 }

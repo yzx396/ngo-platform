@@ -4,6 +4,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
+import { LoginPage } from './pages/LoginPage';
+import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { MentorBrowse } from './pages/MentorBrowse';
 import { MentorProfileSetup } from './pages/MentorProfileSetup';
 import { MatchesList } from './pages/MatchesList';
@@ -19,22 +23,52 @@ import { MatchesList } from './pages/MatchesList';
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/mentors/browse" element={<MentorBrowse />} />
-            <Route path="/mentor/profile/setup" element={<MentorProfileSetup />} />
-            <Route path="/matches" element={<MatchesList />} />
-            {/* TODO: Add more routes:
-              - /mentor/profile/edit
-              - /mentors/:id (detail view)
-            */}
-          </Routes>
-          <Toaster />
-        </div>
-      </Router>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/google/callback" element={<OAuthCallbackPage />} />
+
+              {/* Home Page - Public but shows different content based on auth state */}
+              <Route path="/" element={<HomePage />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/mentors/browse"
+                element={
+                  <ProtectedRoute>
+                    <MentorBrowse />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mentor/profile/setup"
+                element={
+                  <ProtectedRoute>
+                    <MentorProfileSetup />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/matches"
+                element={
+                  <ProtectedRoute>
+                    <MatchesList />
+                  </ProtectedRoute>
+                }
+              />
+              {/* TODO: Add more routes:
+                - /mentor/profile/edit
+                - /mentors/:id (detail view)
+              */}
+            </Routes>
+            <Toaster />
+          </div>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

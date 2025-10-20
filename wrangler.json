@@ -39,10 +39,14 @@
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	// "vars": { "MY_VARIABLE": "production_value" }
+	"vars": { },
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 * Add these secrets for production:
+	 * - GOOGLE_CLIENT_ID: Your Google OAuth Client ID
+	 * - GOOGLE_CLIENT_SECRET: Your Google OAuth Client Secret
+	 * - JWT_SECRET: A random secret key for JWT signing
 	 */
 	/**
 	 * Static Assets
@@ -72,7 +76,12 @@
 					"database_name": "platform-db-local",
 					"database_id": "LOCAL"
 				}
-			]
+			],
+			"vars": {
+				"GOOGLE_CLIENT_ID": "YOUR_LOCAL_GOOGLE_CLIENT_ID",
+				"GOOGLE_CLIENT_SECRET": "YOUR_LOCAL_GOOGLE_CLIENT_SECRET",
+				"JWT_SECRET": "dev-secret-key-change-in-production"
+			}
 		}
 	}
 }

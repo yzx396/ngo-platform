@@ -12,8 +12,20 @@ import type {
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
+import { authMiddleware, requireAuth } from "./auth/middleware";
+import {
+  getGoogleLoginUrl,
+  exchangeGoogleCode,
+  getGoogleUserProfile,
+  findOrCreateUserFromGoogle,
+  createAuthPayload,
+} from "./auth/google";
+import { createToken } from "./auth/jwt";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Apply authentication middleware to all routes
+app.use(authMiddleware);
 
 // ============================================================================
 // Utility Functions
@@ -814,6 +826,124 @@ app.delete("/api/v1/matches/:id", async (c) => {
     .run();
 
   return c.json({ success: true });
+});
+
+// ============================================================================
+// Google OAuth Routes (/api/v1/auth)
+// ============================================================================
+
+/**
+ * GET /api/v1/auth/google/login - Initiate Google OAuth login
+ * Redirects user to Google's OAuth consent screen
+ */
+app.get("/api/v1/auth/google/login", (c) => {
+  try {
+    const clientId = c.env.GOOGLE_CLIENT_ID;
+    const redirectUri = c.req.query("redirect_uri") || `${c.req.url.split("/api")[0]}/auth/google/callback`;
+
+    if (!clientId) {
+      return c.json({ error: "Google OAuth is not configured" }, 500);
+    }
+
+    const loginUrl = getGoogleLoginUrl(clientId, redirectUri);
+    return c.json({ url: loginUrl });
+  } catch (error) {
+    return c.json({ error: "Failed to generate login URL" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/auth/google/callback - Handle Google OAuth callback
+ * Exchanges authorization code for access token and creates/updates user
+ */
+app.get("/api/v1/auth/google/callback", async (c) => {
+  try {
+    const code = c.req.query("code");
+    const state = c.req.query("state");
+    const error = c.req.query("error");
+
+    // Handle OAuth errors
+    if (error) {
+      return c.json(
+        { error: `Google OAuth error: ${error}`, error_description: c.req.query("error_description") },
+        400
+      );
+    }
+
+    if (!code) {
+      return c.json({ error: "Missing authorization code" }, 400);
+    }
+
+    const clientId = c.env.GOOGLE_CLIENT_ID;
+    const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
+    const jwtSecret = c.env.JWT_SECRET;
+    const redirectUri = `${c.req.url.split("/api")[0]}/api/v1/auth/google/callback`;
+
+    if (!clientId || !clientSecret || !jwtSecret) {
+      return c.json({ error: "OAuth configuration missing" }, 500);
+    }
+
+    // Exchange code for access token
+    const tokenResponse = await exchangeGoogleCode(code, clientId, clientSecret, redirectUri);
+
+    // Fetch user profile
+    const googleProfile = await getGoogleUserProfile(tokenResponse.access_token);
+
+    // Find or create user
+    const user = await findOrCreateUserFromGoogle(googleProfile, c.env.platform_db);
+
+    // Create JWT token
+    const authPayload = createAuthPayload(user);
+    const token = await createToken(authPayload, jwtSecret);
+
+    // Return token and user info
+    return c.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    });
+  } catch (error) {
+    console.error("OAuth callback error:", error);
+    return c.json({ error: "Authentication failed" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/auth/me - Get current authenticated user
+ */
+app.get("/api/v1/auth/me", async (c) => {
+  try {
+    const authPayload = c.get("user");
+
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    // Fetch full user details from database
+    const user = await c.env.platform_db
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .bind(authPayload.userId)
+      .first<User>();
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    return c.json(user);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch user" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/auth/logout - Logout (token invalidation on frontend)
+ * Note: JWT tokens are stateless, so logout is handled by frontend token removal
+ */
+app.post("/api/v1/auth/logout", (c) => {
+  return c.json({ success: true, message: "Logged out successfully" });
 });
 
 // ============================================================================

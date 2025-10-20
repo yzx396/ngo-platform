@@ -78,10 +78,10 @@ describe('App', () => {
       expect(screen.getByText(/Flexible mentoring levels/i)).toBeInTheDocument();
     });
 
-    it('should have auth buttons in navbar', () => {
+    it('should have auth button in navbar', () => {
       render(<App />);
-      expect(screen.getByRole('button', { name: /Login/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Sign Up/i })).toBeInTheDocument();
+      // When not authenticated, should show "Sign In" button
+      expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument();
     });
   });
 });
