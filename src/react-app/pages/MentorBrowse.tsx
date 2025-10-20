@@ -8,7 +8,6 @@ import { Label } from '../components/ui/label';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { MentorCard } from '../components/MentorCard';
-import { Skeleton } from '../components/ui/skeleton';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { searchMentors } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
@@ -21,7 +20,7 @@ import type { MentorProfile } from '../../types/mentor';
  */
 export function MentorBrowse() {
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const itemsPerPage = 12;
@@ -138,13 +137,7 @@ export function MentorBrowse() {
 
           {/* Results */}
           <div className="lg:col-span-3 space-y-6">
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-96" />
-                ))}
-              </div>
-            ) : mentors.length === 0 ? (
+            {mentors.length === 0 && !loading ? (
               <Empty>
                 <EmptyContent>
                   <EmptyTitle>No mentors found</EmptyTitle>
@@ -154,6 +147,10 @@ export function MentorBrowse() {
                   </Button>
                 </EmptyContent>
               </Empty>
+            ) : loading ? (
+              <div className="flex justify-center items-center py-12">
+                <p className="text-muted-foreground">Loading...</p>
+              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

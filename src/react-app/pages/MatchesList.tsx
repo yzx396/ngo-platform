@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '../components/ui/card';
 import { StatusBadge } from '../components/StatusBadge';
-import { Skeleton } from '../components/ui/skeleton';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Label } from '../components/ui/label';
@@ -18,7 +17,7 @@ import type { Match } from '../../types/match';
  */
 export function MatchesList() {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<'mentor' | 'mentee'>('mentee');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
 
@@ -76,26 +75,6 @@ export function MatchesList() {
   const pendingCount = matches.filter((m) => m.status === 'pending').length;
   const activeCount = matches.filter((m) => m.status === 'active' || m.status === 'accepted').length;
   const completedCount = matches.filter((m) => m.status === 'completed' || m.status === 'rejected').length;
-
-  if (loading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <Skeleton className="h-12 w-64" />
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <Skeleton className="h-96" />
-          </div>
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-96" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -184,7 +163,11 @@ export function MatchesList() {
 
         {/* Results Grid */}
         <div className="lg:col-span-3 space-y-6">
-          {filteredMatches.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <p className="text-muted-foreground">Loading...</p>
+            </div>
+          ) : filteredMatches.length === 0 ? (
             <Empty>
               <EmptyContent>
                 <EmptyTitle>No matches found</EmptyTitle>
