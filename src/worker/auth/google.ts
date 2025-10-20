@@ -22,6 +22,41 @@ interface GoogleUserProfile {
 }
 
 /**
+ * Decoded JWT payload from id_token
+ */
+interface GoogleIdTokenPayload {
+  sub: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  email_verified?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Decodes a JWT token (without verification) to extract payload
+ * Used to extract user info from id_token as a fallback
+ */
+function decodeJwt(token: string): GoogleIdTokenPayload | null {
+  try {
+    // JWT format: header.payload.signature
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    // Decode the payload (add padding if needed)
+    const payload = parts[1];
+    const paddedPayload = payload + '='.repeat((4 - (payload.length % 4)) % 4);
+    const decoded = atob(paddedPayload);
+    return JSON.parse(decoded) as GoogleIdTokenPayload;
+  } catch (error) {
+    console.error('Failed to decode JWT:', error);
+    return null;
+  }
+}
+
+/**
  * Generates Google OAuth login URL
  */
 export function getGoogleLoginUrl(clientId: string, redirectUri: string): string {
@@ -63,7 +98,13 @@ export async function exchangeGoogleCode(
 
   if (!response.ok) {
     const error = await response.json() as Record<string, unknown>;
-    throw new Error(`Google token exchange failed: ${error.error_description || 'Unknown error'}`);
+    console.error('Google token exchange error:', {
+      status: response.status,
+      error: error.error,
+      error_description: error.error_description,
+      redirectUri, // Log the redirect_uri being used
+    });
+    throw new Error(`Google token exchange failed: ${error.error_description || error.error || 'Unknown error'}`);
   }
 
   return response.json();
@@ -71,8 +112,12 @@ export async function exchangeGoogleCode(
 
 /**
  * Fetches user profile from Google using access token
+ * Includes fallback logic in case id_token is needed
  */
-export async function getGoogleUserProfile(accessToken: string): Promise<GoogleUserProfile> {
+export async function getGoogleUserProfile(
+  accessToken: string,
+  idToken?: string
+): Promise<GoogleUserProfile> {
   const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -80,10 +125,56 @@ export async function getGoogleUserProfile(accessToken: string): Promise<GoogleU
   });
 
   if (!response.ok) {
+    // If userinfo fetch fails, try to extract from id_token
+    if (idToken) {
+      console.warn('Userinfo endpoint failed, attempting to use id_token');
+      const payload = decodeJwt(idToken);
+      if (payload && payload.sub && payload.email) {
+        return {
+          sub: payload.sub,
+          email: payload.email,
+          name: payload.name || payload.email.split('@')[0],
+          picture: payload.picture,
+          email_verified: payload.email_verified,
+        };
+      }
+    }
     throw new Error('Failed to fetch Google user profile');
   }
 
-  return response.json();
+  const profile = await response.json() as Record<string, unknown>;
+
+  // Log what Google returned for debugging
+  console.log('Google userinfo response keys:', Object.keys(profile));
+
+  // If 'sub' is missing but we have id_token, try fallback
+  if (!profile.sub && idToken) {
+    console.warn('Missing sub in userinfo response, attempting fallback to id_token');
+    const payload = decodeJwt(idToken);
+    if (payload && payload.sub && payload.email) {
+      return {
+        sub: payload.sub,
+        email: payload.email as string,
+        name: payload.name as string || (payload.email as string).split('@')[0],
+        picture: payload.picture as string | undefined,
+        email_verified: payload.email_verified as boolean | undefined,
+      };
+    }
+  }
+
+  // Validate required fields
+  if (!profile.sub || !profile.email) {
+    console.error('Missing required fields in Google profile:', {
+      hasSub: !!profile.sub,
+      hasEmail: !!profile.email,
+      responseKeys: Object.keys(profile),
+    });
+    throw new Error(
+      `Google profile missing required fields. Got: ${Object.keys(profile).join(', ')}`
+    );
+  }
+
+  return profile as unknown as GoogleUserProfile;
 }
 
 /**
@@ -93,6 +184,15 @@ export async function findOrCreateUserFromGoogle(
   googleProfile: GoogleUserProfile,
   db: D1Database
 ): Promise<User> {
+  // Validate required fields from Google profile
+  // D1 does not accept undefined values in .bind(), so we must validate first
+  if (!googleProfile.sub) {
+    throw new Error('Google profile missing required field: sub');
+  }
+  if (!googleProfile.email) {
+    throw new Error('Google profile missing required field: email');
+  }
+
   // Try to find existing user by google_id
   const existing = await db
     .prepare('SELECT * FROM users WHERE google_id = ?')
@@ -127,18 +227,20 @@ export async function findOrCreateUserFromGoogle(
   // Create new user
   const userId = `user-${Date.now()}-${Math.random().toString(36).substring(7)}`;
   const now = Date.now();
+  // Fallback to email username if name not provided
+  const userName = googleProfile.name || googleProfile.email.split('@')[0];
 
   await db
     .prepare(
       'INSERT INTO users (id, email, name, google_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
     )
-    .bind(userId, googleProfile.email, googleProfile.name, googleProfile.sub, now, now)
+    .bind(userId, googleProfile.email, userName, googleProfile.sub, now, now)
     .run();
 
   return {
     id: userId,
     email: googleProfile.email,
-    name: googleProfile.name,
+    name: userName,
     google_id: googleProfile.sub,
     created_at: now,
     updated_at: now,

@@ -860,11 +860,14 @@ app.delete("/api/v1/matches/:id", async (c) => {
 app.get("/api/v1/auth/google/login", (c) => {
   try {
     const clientId = c.env.GOOGLE_CLIENT_ID;
-    const redirectUri = c.req.query("redirect_uri") || `${c.req.url.split("/api")[0]}/auth/google/callback`;
 
     if (!clientId) {
       return c.json({ error: "Google OAuth is not configured" }, 500);
     }
+
+    // Construct redirect URI using proper URL parsing
+    const requestUrl = new URL(c.req.url);
+    const redirectUri = c.req.query("redirect_uri") || `${requestUrl.protocol}//${requestUrl.host}/auth/google/callback`;
 
     const loginUrl = getGoogleLoginUrl(clientId, redirectUri);
     return c.json({ url: loginUrl });
@@ -897,7 +900,12 @@ app.get("/api/v1/auth/google/callback", async (c) => {
     const clientId = c.env.GOOGLE_CLIENT_ID;
     const clientSecret = c.env.GOOGLE_CLIENT_SECRET;
     const jwtSecret = c.env.JWT_SECRET;
-    const redirectUri = `${c.req.url.split("/api")[0]}/api/v1/auth/google/callback`;
+
+    // Construct redirect URI using proper URL parsing
+    // IMPORTANT: Must match the redirect_uri used in the login endpoint
+    // Google validates that both URIs are identical during token exchange
+    const requestUrl = new URL(c.req.url);
+    const redirectUri = `${requestUrl.protocol}//${requestUrl.host}/auth/google/callback`;
 
     if (!clientId || !clientSecret || !jwtSecret) {
       return c.json({ error: "OAuth configuration missing" }, 500);
@@ -906,8 +914,11 @@ app.get("/api/v1/auth/google/callback", async (c) => {
     // Exchange code for access token
     const tokenResponse = await exchangeGoogleCode(code, clientId, clientSecret, redirectUri);
 
-    // Fetch user profile
-    const googleProfile = await getGoogleUserProfile(tokenResponse.access_token);
+    // Fetch user profile (pass id_token as fallback if available)
+    const googleProfile = await getGoogleUserProfile(
+      tokenResponse.access_token,
+      tokenResponse.id_token
+    );
 
     // Find or create user
     const user = await findOrCreateUserFromGoogle(googleProfile, c.env.platform_db);
@@ -926,7 +937,20 @@ app.get("/api/v1/auth/google/callback", async (c) => {
       },
     });
   } catch (error) {
+    // Detailed error logging for OAuth debugging
     console.error("OAuth callback error:", error);
+
+    // Log additional context if available
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+
+    // Log request details (without sensitive data)
+    const requestUrl = new URL(c.req.url);
+    console.error("Request URL:", requestUrl.pathname);
+    console.error("Has authorization code:", !!c.req.query("code"));
+
     return c.json({ error: "Authentication failed" }, 500);
   }
 });
