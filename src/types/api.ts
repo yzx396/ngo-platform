@@ -1,15 +1,8 @@
-/**
- * API request and response type definitions
- * Defines the contract between frontend and backend
- */
+import { MentorProfile } from './mentor';
+import { User } from './user';
+import { Match, MatchStatus } from './match';
 
-import type { MentorProfile } from './mentor';
-import type { MatchStatus } from './match';
-
-// ============================================================================
-// User API Types
-// ============================================================================
-
+// User API
 export interface CreateUserRequest {
   email: string;
   name: string;
@@ -20,10 +13,7 @@ export interface UpdateUserRequest {
   email?: string;
 }
 
-// ============================================================================
-// Mentor Profile API Types
-// ============================================================================
-
+// Mentor Profile API
 export interface CreateMentorProfileRequest {
   user_id: string;
   nick_name: string;
@@ -47,10 +37,7 @@ export interface UpdateMentorProfileRequest {
   allow_recording?: boolean;
 }
 
-// ============================================================================
-// Search API Types
-// ============================================================================
-
+// Search API
 export interface SearchMentorsRequest {
   mentoring_levels?: number; // Bit flags to filter
   payment_types?: number; // Bit flags to filter
@@ -68,10 +55,7 @@ export interface SearchMentorsResponse {
   offset: number;
 }
 
-// ============================================================================
-// Match API Types
-// ============================================================================
-
+// Match API
 export interface CreateMatchRequest {
   mentor_id: string;
 }
@@ -83,4 +67,8 @@ export interface RespondToMatchRequest {
 export interface GetMatchesRequest {
   status?: MatchStatus;
   role?: 'mentor' | 'mentee';
+}
+
+export interface GetMatchesResponse {
+  matches: Match[];
 }

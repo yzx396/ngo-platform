@@ -1,6 +1,17 @@
 import { Hono } from "hono";
 import type { User } from "../types/user";
-import type { CreateUserRequest, UpdateUserRequest } from "../types/api";
+import type {
+  CreateUserRequest,
+  UpdateUserRequest,
+  CreateMentorProfileRequest,
+  UpdateMentorProfileRequest,
+  SearchMentorsResponse,
+  CreateMatchRequest,
+  RespondToMatchRequest,
+  GetMatchesResponse
+} from "../types/api";
+import type { MentorProfile } from "../types/mentor";
+import type { Match, MatchStatus } from "../types/match";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -177,7 +188,7 @@ app.put("/api/v1/users/:id", async (c) => {
  */
 app.post("/api/v1/mentors/profiles", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json<CreateMentorProfileRequest>();
 
     // Validation: Required fields
     if (!body.user_id || !body.nick_name || !body.bio ||
@@ -247,7 +258,7 @@ app.post("/api/v1/mentors/profiles", async (c) => {
       )
       .run();
 
-    const profile = {
+    const profile: MentorProfile = {
       id,
       user_id: body.user_id,
       nick_name: body.nick_name,
@@ -262,7 +273,7 @@ app.post("/api/v1/mentors/profiles", async (c) => {
       updated_at: timestamp,
     };
 
-    return c.json(profile, 201);
+    return c.json<MentorProfile>(profile, 201);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
   }
@@ -277,13 +288,13 @@ app.get("/api/v1/mentors/profiles/:id", async (c) => {
   const profile = await c.env.platform_db
     .prepare("SELECT * FROM mentor_profiles WHERE id = ?")
     .bind(id)
-    .first();
+    .first<MentorProfile>();
 
   if (!profile) {
     return c.json({ error: "Mentor profile not found" }, 404);
   }
 
-  return c.json(profile);
+  return c.json<MentorProfile>(profile);
 });
 
 /**
@@ -292,7 +303,7 @@ app.get("/api/v1/mentors/profiles/:id", async (c) => {
 app.put("/api/v1/mentors/profiles/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const body = await c.req.json();
+    const body = await c.req.json<UpdateMentorProfileRequest>();
 
     // Validation: At least one field must be provided
     const hasUpdates = body.nick_name || body.bio || body.mentoring_levels !== undefined ||
@@ -371,9 +382,9 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
     const updated = await c.env.platform_db
       .prepare("SELECT * FROM mentor_profiles WHERE id = ?")
       .bind(id)
-      .first();
+      .first<MentorProfile>();
 
-    return c.json(updated);
+    return c.json<MentorProfile>(updated);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
   }
@@ -517,14 +528,16 @@ app.get("/api/v1/mentors/search", async (c) => {
     const results = await c.env.platform_db
       .prepare(selectQuery)
       .bind(...params, limit, offset)
-      .all();
+      .all<MentorProfile>();
 
-    return c.json({
+    const response: SearchMentorsResponse = {
       mentors: results.results || [],
       total,
       limit,
       offset,
-    });
+    };
+
+    return c.json<SearchMentorsResponse>(response);
   } catch (error) {
     console.error("Search error:", error);
     return c.json({ error: "Invalid request", details: error instanceof Error ? error.message : String(error) }, 400);
@@ -540,7 +553,7 @@ app.get("/api/v1/mentors/search", async (c) => {
  */
 app.post("/api/v1/matches", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await c.req.json<CreateMatchRequest>();
 
     // Validation: Required fields
     if (!body.mentor_id) {
@@ -600,7 +613,7 @@ app.post("/api/v1/matches", async (c) => {
       .bind(matchId, body.mentor_id, menteeId, "pending", timestamp, timestamp)
       .run();
 
-    const match = {
+    const match: Match = {
       id: matchId,
       mentor_id: body.mentor_id,
       mentee_id: menteeId,
@@ -609,7 +622,7 @@ app.post("/api/v1/matches", async (c) => {
       updated_at: timestamp,
     };
 
-    return c.json(match, 201);
+    return c.json<Match>(match, 201);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
   }
@@ -663,11 +676,13 @@ app.get("/api/v1/matches", async (c) => {
     const results = await c.env.platform_db
       .prepare(`SELECT * FROM matches ${whereClause} ORDER BY created_at DESC`)
       .bind(...params)
-      .all();
+      .all<Match>();
 
-    return c.json({
+    const response: GetMatchesResponse = {
       matches: results.results || [],
-    });
+    };
+
+    return c.json<GetMatchesResponse>(response);
   } catch (error) {
     return c.json({ error: "Invalid request" }, 400);
   }
@@ -679,7 +694,7 @@ app.get("/api/v1/matches", async (c) => {
 app.post("/api/v1/matches/:id/respond", async (c) => {
   try {
     const matchId = c.req.param("id");
-    const body = await c.req.json();
+    const body = await c.req.json<RespondToMatchRequest>();
 
     // Validation: action must be provided
     if (!body.action || !["accept", "reject"].includes(body.action)) {
@@ -715,9 +730,9 @@ app.post("/api/v1/matches/:id/respond", async (c) => {
     const updated = await c.env.platform_db
       .prepare("SELECT * FROM matches WHERE id = ?")
       .bind(matchId)
-      .first();
+      .first<Match>();
 
-    return c.json(updated);
+    return c.json<Match>(updated);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
   }
@@ -756,9 +771,9 @@ app.patch("/api/v1/matches/:id/complete", async (c) => {
     const updated = await c.env.platform_db
       .prepare("SELECT * FROM matches WHERE id = ?")
       .bind(matchId)
-      .first();
+      .first<Match>();
 
-    return c.json(updated);
+    return c.json<Match>(updated);
   } catch (error) {
     return c.json({ error: "Invalid request" }, 400);
   }

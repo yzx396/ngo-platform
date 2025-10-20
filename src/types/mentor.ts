@@ -1,12 +1,4 @@
-/**
- * Mentor profile types and bit flag utilities
- * Uses bit flags for efficient storage and querying of mentoring levels and payment types
- */
-
-/**
- * Bit flag enums for mentoring levels
- * Each level is a power of 2, allowing efficient bitwise operations
- */
+// Bit flag enums
 export enum MentoringLevel {
   Entry = 1,       // 0001 (2^0)
   Senior = 2,      // 0010 (2^1)
@@ -14,10 +6,6 @@ export enum MentoringLevel {
   Management = 8   // 1000 (2^3)
 }
 
-/**
- * Bit flag enums for payment types
- * Each type is a power of 2, allowing efficient bitwise operations
- */
 export enum PaymentType {
   Venmo = 1,       // 000001 (2^0)
   Paypal = 2,      // 000010 (2^1)
@@ -27,10 +15,6 @@ export enum PaymentType {
   Crypto = 32      // 100000 (2^5)
 }
 
-/**
- * Mentor profile interface
- * Stores mentor information with bit flags for levels and payment types
- */
 export interface MentorProfile {
   id: string;
   user_id: string;
@@ -46,55 +30,23 @@ export interface MentorProfile {
   updated_at: number;
 }
 
-// ============================================================================
-// Mentoring Level Helper Functions
-// ============================================================================
-
-/**
- * Check if a mentoring level is set in the bit flags
- * @param levels - The bit flags representing mentoring levels
- * @param level - The level to check
- * @returns true if the level is set, false otherwise
- */
+// Helper functions for bit flag manipulation
 export function hasLevel(levels: number, level: MentoringLevel): boolean {
   return (levels & level) !== 0;
 }
 
-/**
- * Add a mentoring level to the bit flags
- * @param levels - The current bit flags
- * @param level - The level to add
- * @returns The updated bit flags
- */
 export function addLevel(levels: number, level: MentoringLevel): number {
   return levels | level;
 }
 
-/**
- * Remove a mentoring level from the bit flags
- * @param levels - The current bit flags
- * @param level - The level to remove
- * @returns The updated bit flags
- */
 export function removeLevel(levels: number, level: MentoringLevel): number {
   return levels & ~level;
 }
 
-/**
- * Toggle a mentoring level in the bit flags
- * @param levels - The current bit flags
- * @param level - The level to toggle
- * @returns The updated bit flags
- */
 export function toggleLevel(levels: number, level: MentoringLevel): number {
   return levels ^ level;
 }
 
-/**
- * Get the names of all set mentoring levels
- * @param levels - The bit flags representing mentoring levels
- * @returns Array of level names (e.g., ['Entry', 'Senior'])
- */
 export function getLevelNames(levels: number): string[] {
   const names: string[] = [];
   if (levels & MentoringLevel.Entry) names.push('Entry');
@@ -104,55 +56,22 @@ export function getLevelNames(levels: number): string[] {
   return names;
 }
 
-// ============================================================================
-// Payment Type Helper Functions
-// ============================================================================
-
-/**
- * Check if a payment type is set in the bit flags
- * @param types - The bit flags representing payment types
- * @param type - The payment type to check
- * @returns true if the type is set, false otherwise
- */
 export function hasPaymentType(types: number, type: PaymentType): boolean {
   return (types & type) !== 0;
 }
 
-/**
- * Add a payment type to the bit flags
- * @param types - The current bit flags
- * @param type - The payment type to add
- * @returns The updated bit flags
- */
 export function addPaymentType(types: number, type: PaymentType): number {
   return types | type;
 }
 
-/**
- * Remove a payment type from the bit flags
- * @param types - The current bit flags
- * @param type - The payment type to remove
- * @returns The updated bit flags
- */
 export function removePaymentType(types: number, type: PaymentType): number {
   return types & ~type;
 }
 
-/**
- * Toggle a payment type in the bit flags
- * @param types - The current bit flags
- * @param type - The payment type to toggle
- * @returns The updated bit flags
- */
 export function togglePaymentType(types: number, type: PaymentType): number {
   return types ^ type;
 }
 
-/**
- * Get the names of all set payment types
- * @param types - The bit flags representing payment types
- * @returns Array of payment type names (e.g., ['Venmo', 'Paypal'])
- */
 export function getPaymentTypeNames(types: number): string[] {
   const names: string[] = [];
   if (types & PaymentType.Venmo) names.push('Venmo');
@@ -164,15 +83,7 @@ export function getPaymentTypeNames(types: number): string[] {
   return names;
 }
 
-// ============================================================================
-// Conversion Functions (String Array ↔ Bit Flags)
-// ============================================================================
-
-/**
- * Convert an array of level names to bit flags
- * @param names - Array of level names (case-insensitive)
- * @returns The combined bit flags
- */
+// Convert array of level names to bit flags
 export function levelsFromNames(names: string[]): number {
   let levels = 0;
   for (const name of names) {
@@ -186,11 +97,7 @@ export function levelsFromNames(names: string[]): number {
   return levels;
 }
 
-/**
- * Convert an array of payment type names to bit flags
- * @param names - Array of payment type names (case-insensitive)
- * @returns The combined bit flags
- */
+// Convert array of payment type names to bit flags
 export function paymentTypesFromNames(names: string[]): number {
   let types = 0;
   for (const name of names) {
