@@ -11,7 +11,7 @@ import type {
   GetMatchesResponse
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
-import type { Match, MatchStatus } from "../types/match";
+import type { Match } from "../types/match";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -384,6 +384,10 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
       .bind(id)
       .first<MentorProfile>();
 
+    if (!updated) {
+      return c.json({ error: "Mentor profile not found" }, 404);
+    }
+
     return c.json<MentorProfile>(updated);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
@@ -732,6 +736,10 @@ app.post("/api/v1/matches/:id/respond", async (c) => {
       .bind(matchId)
       .first<Match>();
 
+    if (!updated) {
+      return c.json({ error: "Match not found" }, 404);
+    }
+
     return c.json<Match>(updated);
   } catch (error) {
     return c.json({ error: "Invalid request body" }, 400);
@@ -772,6 +780,10 @@ app.patch("/api/v1/matches/:id/complete", async (c) => {
       .prepare("SELECT * FROM matches WHERE id = ?")
       .bind(matchId)
       .first<Match>();
+
+    if (!updated) {
+      return c.json({ error: "Match not found" }, 404);
+    }
 
     return c.json<Match>(updated);
   } catch (error) {

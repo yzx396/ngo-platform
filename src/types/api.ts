@@ -1,5 +1,4 @@
 import { MentorProfile } from './mentor';
-import { User } from './user';
 import { Match, MatchStatus } from './match';
 
 // User API
@@ -58,6 +57,7 @@ export interface SearchMentorsResponse {
 // Match API
 export interface CreateMatchRequest {
   mentor_id: string;
+  mentee_id?: string; // Optional, for testing. In production, comes from auth headers.
 }
 
 export interface RespondToMatchRequest {
