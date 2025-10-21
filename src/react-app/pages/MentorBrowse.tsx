@@ -72,6 +72,12 @@ export function MentorBrowse() {
   };
 
   const handleViewDetails = (mentor: MentorProfile) => {
+    // Redirect to login if not authenticated
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/mentors/browse' } });
+      return;
+    }
+    
     // Navigate to mentor detail page
     navigate(`/mentors/${mentor.id}`);
   };

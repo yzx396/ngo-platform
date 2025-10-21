@@ -521,7 +521,7 @@ app.delete("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
  * - limit: results per page (default: 20, max: 100)
  * - offset: pagination offset (default: 0)
  */
-app.get("/api/v1/mentors/search", requireAuth, async (c) => {
+app.get("/api/v1/mentors/search", async (c) => {
   try {
     // Parse query parameters
     const url = new URL(c.req.url);
