@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,13 +17,16 @@ import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
-// Zod validation schema
+// Zod validation schema with custom refinement for hourly_rate
 const mentorProfileSchema = z.object({
   nick_name: z.string().min(2, 'Nickname must be at least 2 characters'),
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
   mentoring_levels: z.number().min(1, 'Select at least one mentoring level'),
   availability: z.string().optional(),
-  hourly_rate: z.number().positive('Hourly rate must be positive').optional(),
+  hourly_rate: z.number().refine(
+    (val) => isNaN(val) || val > 0,
+    'Hourly rate must be positive'
+  ).optional(),
   payment_types: z.number().min(1, 'Select at least one payment method'),
   allow_reviews: z.boolean(),
   allow_recording: z.boolean(),
@@ -77,7 +80,7 @@ export function MentorProfileSetup() {
             bio: profile.bio,
             mentoring_levels: profile.mentoring_levels,
             availability: profile.availability || '',
-            hourly_rate: profile.hourly_rate || 50,
+            hourly_rate: profile.hourly_rate ?? 50,
             payment_types: profile.payment_types,
             allow_reviews: profile.allow_reviews,
             allow_recording: profile.allow_recording,
@@ -92,7 +95,8 @@ export function MentorProfileSetup() {
     };
 
     loadExistingProfile();
-  }, [user, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleNext = async () => {
     // Validate fields for current step
@@ -119,12 +123,16 @@ export function MentorProfileSetup() {
         throw new Error('User not authenticated');
       }
 
+      // Filter out NaN and falsy values
+      const hourlyRate = data.hourly_rate && !isNaN(data.hourly_rate) ? data.hourly_rate : undefined;
+      const availability = data.availability || undefined;
+
       if (existingProfile) {
         // Update existing profile
         await updateMentorProfile(existingProfile.id, {
           ...data,
-          hourly_rate: data.hourly_rate || undefined,
-          availability: data.availability || undefined,
+          hourly_rate: hourlyRate,
+          availability,
         });
         showSuccessToast('Mentor profile updated successfully!');
       } else {
@@ -132,8 +140,8 @@ export function MentorProfileSetup() {
         await createMentorProfile({
           ...data,
           user_id: user.id,
-          hourly_rate: data.hourly_rate || undefined,
-          availability: data.availability || undefined,
+          hourly_rate: hourlyRate,
+          availability,
         });
         showSuccessToast('Mentor profile created successfully!');
       }
@@ -243,14 +251,32 @@ export function MentorProfileSetup() {
                   )}
 
                   <div className="space-y-3">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <Checkbox {...form.register('allow_reviews')} />
-                      <span>Allow mentees to leave reviews</span>
-                    </label>
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                      <Checkbox {...form.register('allow_recording')} />
-                      <span>Allow recording of mentoring sessions</span>
-                    </label>
+                    <Controller
+                      control={form.control}
+                      name="allow_reviews"
+                      render={({ field }) => (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span>Allow mentees to leave reviews</span>
+                        </label>
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name="allow_recording"
+                      render={({ field }) => (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span>Allow recording of mentoring sessions</span>
+                        </label>
+                      )}
+                    />
                   </div>
                 </div>
               )}

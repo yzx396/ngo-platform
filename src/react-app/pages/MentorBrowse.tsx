@@ -120,12 +120,10 @@ export function MentorBrowse() {
               </div>
 
               <div className="space-y-3">
-                <Label>Mentoring Levels</Label>
                 <MentoringLevelPicker control={form.control} />
               </div>
 
               <div className="space-y-3">
-                <Label>Payment Methods</Label>
                 <PaymentTypePicker control={form.control} />
               </div>
 

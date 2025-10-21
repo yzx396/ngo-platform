@@ -35,9 +35,9 @@ export async function getMentorProfile(id: string): Promise<MentorProfile> {
 export async function getMentorProfileByUserId(userId: string): Promise<MentorProfile | null> {
   try {
     return await apiGet<MentorProfile>(`/api/v1/mentors/profiles/by-user/${userId}`);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Return null if profile doesn't exist (404)
-    if (error?.status === 404) {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
       return null;
     }
     throw error;

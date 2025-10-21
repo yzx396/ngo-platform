@@ -219,14 +219,22 @@ app.put("/api/v1/users/:id", async (c) => {
 /**
  * POST /api/v1/mentors/profiles - Create mentor profile
  */
-app.post("/api/v1/mentors/profiles", async (c) => {
+app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
   try {
     const body = await c.req.json<CreateMentorProfileRequest>();
+
+    // Get authenticated user
+    const authUser = c.get('user') as AuthPayload;
 
     // Validation: Required fields
     if (!body.user_id || !body.nick_name || !body.bio ||
         body.mentoring_levels === undefined || body.payment_types === undefined) {
       return c.json({ error: "user_id, nick_name, bio, mentoring_levels, and payment_types are required" }, 400);
+    }
+
+    // Authorization: Users can only create profiles for themselves
+    if (body.user_id !== authUser.userId) {
+      return c.json({ error: "Cannot create mentor profile for another user" }, 403);
     }
 
     // Validation: Bit flags must be non-negative integers
@@ -351,10 +359,13 @@ app.get("/api/v1/mentors/profiles/:id", async (c) => {
 /**
  * PUT /api/v1/mentors/profiles/:id - Update mentor profile
  */
-app.put("/api/v1/mentors/profiles/:id", async (c) => {
+app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json<UpdateMentorProfileRequest>();
+
+    // Get authenticated user
+    const authUser = c.get('user') as AuthPayload;
 
     // Validation: At least one field must be provided
     const hasUpdates = body.nick_name || body.bio || body.mentoring_levels !== undefined ||
@@ -376,10 +387,27 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
     const existing = await c.env.platform_db
       .prepare("SELECT * FROM mentor_profiles WHERE id = ?")
       .bind(id)
-      .first();
+      .first<MentorProfile>();
 
     if (!existing) {
       return c.json({ error: "Mentor profile not found" }, 404);
+    }
+
+    // Authorization: Users can only update their own profiles
+    if (existing.user_id !== authUser.userId) {
+      return c.json({ error: "Cannot update another user's mentor profile" }, 403);
+    }
+
+    // If nickname is being changed, check for duplicates
+    if (body.nick_name !== undefined && body.nick_name !== existing.nick_name) {
+      const nicknameExists = await c.env.platform_db
+        .prepare("SELECT id FROM mentor_profiles WHERE nick_name = ? AND id != ?")
+        .bind(body.nick_name, id)
+        .first();
+
+      if (nicknameExists) {
+        return c.json({ error: "Mentor with this nickname already exists" }, 409);
+      }
     }
 
     // Build update query dynamically
@@ -448,17 +476,25 @@ app.put("/api/v1/mentors/profiles/:id", async (c) => {
 /**
  * DELETE /api/v1/mentors/profiles/:id - Delete mentor profile
  */
-app.delete("/api/v1/mentors/profiles/:id", async (c) => {
+app.delete("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
   const id = c.req.param("id");
+
+  // Get authenticated user
+  const authUser = c.get('user') as AuthPayload;
 
   // Check if profile exists
   const existing = await c.env.platform_db
-    .prepare("SELECT id FROM mentor_profiles WHERE id = ?")
+    .prepare("SELECT * FROM mentor_profiles WHERE id = ?")
     .bind(id)
-    .first();
+    .first<MentorProfile>();
 
   if (!existing) {
     return c.json({ error: "Mentor profile not found" }, 404);
+  }
+
+  // Authorization: Users can only delete their own profiles
+  if (existing.user_id !== authUser.userId) {
+    return c.json({ error: "Cannot delete another user's mentor profile" }, 403);
   }
 
   // Delete the profile
@@ -485,7 +521,7 @@ app.delete("/api/v1/mentors/profiles/:id", async (c) => {
  * - limit: results per page (default: 20, max: 100)
  * - offset: pagination offset (default: 0)
  */
-app.get("/api/v1/mentors/search", async (c) => {
+app.get("/api/v1/mentors/search", requireAuth, async (c) => {
   try {
     // Parse query parameters
     const url = new URL(c.req.url);
