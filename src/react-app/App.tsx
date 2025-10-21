@@ -9,6 +9,7 @@ import { AuthProvider } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { MentorBrowse } from './pages/MentorBrowse';
+import { MentorDetailPage } from './pages/MentorDetailPage';
 import { MentorProfileSetup } from './pages/MentorProfileSetup';
 import { MatchesList } from './pages/MatchesList';
 
@@ -37,6 +38,7 @@ function App() {
 
               {/* Public mentor browsing */}
               <Route path="/mentors/browse" element={<MentorBrowse />} />
+              <Route path="/mentors/:id" element={<MentorDetailPage />} />
 
               {/* Protected Routes */}
               <Route
@@ -57,7 +59,6 @@ function App() {
               />
               {/* TODO: Add more routes:
                 - /mentor/profile/edit
-                - /mentors/:id (detail view)
               */}
             </Routes>
             <Toaster />

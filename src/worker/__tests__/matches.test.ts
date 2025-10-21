@@ -216,9 +216,13 @@ async function createTestUser(mockEnv: Env, email: string, name: string) {
 }
 
 async function createTestMentorProfile(mockEnv: Env, userId: string, nickName: string) {
+  const token = await createTestToken(userId, 'test@example.com', 'Test User');
   const req = new Request('http://localhost/api/v1/mentors/profiles', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
     body: JSON.stringify({
       user_id: userId,
       nick_name: nickName,

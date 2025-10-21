@@ -12,6 +12,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import app from '../index';
 import { MentoringLevel, PaymentType } from '../../types/mentor';
+import { createToken } from '../auth/jwt';
+import type { AuthPayload } from '../../types/user';
+
+interface Env {
+  platform_db: D1Database;
+  JWT_SECRET: string;
+}
+
+const JWT_SECRET = 'test-jwt-secret';
+
+/**
+ * Create a JWT token for testing
+ */
+async function createTestToken(userId: string, email: string, name: string): Promise<string> {
+  const payload: AuthPayload = { userId, email, name };
+  return createToken(payload, JWT_SECRET);
+}
 
 // ============================================================================
 // Mock D1 Database
@@ -174,6 +191,7 @@ describe('Mentor Profile CRUD API', () => {
     mockDb = createMockDb();
     mockEnv = {
       platform_db: mockDb as unknown,
+      JWT_SECRET: 'test-jwt-secret',
     } as Env;
 
     // Create a test user for mentor profiles
@@ -198,9 +216,14 @@ describe('Mentor Profile CRUD API', () => {
         allow_recording: true,
       };
 
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(profileData),
       });
 
@@ -234,9 +257,14 @@ describe('Mentor Profile CRUD API', () => {
         payment_types: PaymentType.Venmo,
       };
 
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify(profileData),
       });
 
@@ -254,9 +282,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 400 when required fields are missing', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ user_id: testUser.id }), // Missing nick_name, bio, etc
       });
 
@@ -268,9 +301,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 400 when user_id does not exist', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: 'nonexistent-user-id',
           nick_name: 'TestMentor',
@@ -282,9 +320,9 @@ describe('Mentor Profile CRUD API', () => {
 
       const res = await app.fetch(req, mockEnv);
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       const data = await res.json();
-      expect(data.error).toContain('User not found');
+      expect(data.error).toContain('Cannot create mentor profile for another user');
     });
 
     it('should return 409 when nick_name already exists', async () => {
@@ -297,9 +335,14 @@ describe('Mentor Profile CRUD API', () => {
       };
 
       // Create first profile
+      const token1 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req1 = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token1}`,
+        },
         body: JSON.stringify(profileData),
       });
       await app.fetch(req1, mockEnv);
@@ -308,9 +351,14 @@ describe('Mentor Profile CRUD API', () => {
       const user2 = await createTestUser(mockEnv, 'mentor2@example.com', 'Second Mentor');
 
       // Try to create second profile with same nickname
+      const token2 = await createTestToken(user2.id as string, user2.email as string, user2.name as string);
+      
       const req2 = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token2}`,
+        },
         body: JSON.stringify({ ...profileData, user_id: user2.id }),
       });
       const res = await app.fetch(req2, mockEnv);
@@ -322,9 +370,14 @@ describe('Mentor Profile CRUD API', () => {
 
     it('should return 409 when user already has a mentor profile', async () => {
       // Create first profile
+      const token1 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req1 = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token1}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'FirstProfile',
@@ -336,9 +389,14 @@ describe('Mentor Profile CRUD API', () => {
       await app.fetch(req1, mockEnv);
 
       // Try to create second profile for same user
+      const token2 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req2 = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token2}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'SecondProfile',
@@ -355,9 +413,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should validate bit flags are non-negative integers', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'TestMentor',
@@ -382,9 +445,14 @@ describe('Mentor Profile CRUD API', () => {
   describe('GET /api/v1/mentors/profiles/:id', () => {
     it('should return mentor profile when ID exists', async () => {
       // Create a profile first
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'GetTestMentor',
@@ -429,9 +497,14 @@ describe('Mentor Profile CRUD API', () => {
     let createdProfile: Record<string, unknown>;
 
     beforeEach(async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'UpdateTestMentor',
@@ -446,9 +519,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should update mentor profile bio', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${createdProfile.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ bio: 'Updated bio' }),
       });
       const updateRes = await app.fetch(updateReq, mockEnv);
@@ -462,9 +540,14 @@ describe('Mentor Profile CRUD API', () => {
     it('should update mentoring levels using bit flags', async () => {
       const newLevels = MentoringLevel.Senior | MentoringLevel.Staff | MentoringLevel.Management;
 
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${createdProfile.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ mentoring_levels: newLevels }),
       });
       const updateRes = await app.fetch(updateReq, mockEnv);
@@ -475,9 +558,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should update hourly rate', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${createdProfile.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ hourly_rate: 150 }),
       });
       const updateRes = await app.fetch(updateReq, mockEnv);
@@ -488,9 +576,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should update multiple fields at once', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${createdProfile.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           bio: 'New bio',
           hourly_rate: 200,
@@ -509,9 +602,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 404 when updating non-existent profile', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles/nonexistent-id', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ bio: 'New bio' }),
       });
       const res = await app.fetch(req, mockEnv);
@@ -520,9 +618,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 400 when no fields provided to update', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request(`http://localhost/api/v1/mentors/profiles/${createdProfile.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({}),
       });
       const res = await app.fetch(req, mockEnv);
@@ -540,9 +643,14 @@ describe('Mentor Profile CRUD API', () => {
   describe('DELETE /api/v1/mentors/profiles/:id', () => {
     it('should delete mentor profile', async () => {
       // Create a profile first
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'DeleteTestMentor',
@@ -557,6 +665,9 @@ describe('Mentor Profile CRUD API', () => {
       // Delete the profile
       const deleteReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
         method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const deleteRes = await app.fetch(deleteReq, mockEnv);
 
@@ -573,8 +684,13 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 404 when deleting non-existent profile', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles/nonexistent-id', {
         method: 'DELETE',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -591,10 +707,14 @@ describe('Mentor Profile CRUD API', () => {
   describe('Edge Cases', () => {
     it('should handle very long bio (500+ characters)', async () => {
       const longBio = 'A'.repeat(1000);
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
 
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'LongBioMentor',
@@ -610,9 +730,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should handle special characters in nickname', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'Code-Master_2024',
@@ -629,9 +754,14 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should handle zero hourly rate (free mentoring)', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'FreeMentor',
@@ -653,9 +783,14 @@ describe('Mentor Profile CRUD API', () => {
       const allLevels = MentoringLevel.Entry | MentoringLevel.Senior |
                         MentoringLevel.Staff | MentoringLevel.Management;
 
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'AllLevelsMentor',
@@ -675,9 +810,14 @@ describe('Mentor Profile CRUD API', () => {
       const allPayments = PaymentType.Venmo | PaymentType.Paypal | PaymentType.Zelle |
                           PaymentType.Alipay | PaymentType.Wechat | PaymentType.Crypto;
 
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      
       const req = new Request('http://localhost/api/v1/mentors/profiles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           user_id: testUser.id,
           nick_name: 'AllPaymentsMentor',

@@ -229,13 +229,9 @@ async function createTestUser(mockEnv: Env, email: string, name: string) {
 }
 
 async function createTestMentorProfile(mockEnv: Env, profileData: Record<string, unknown>) {
-  const token = await createTestToken(profileData.user_id as string, 'test@example.com', 'Test User');
   const req = new Request('http://localhost/api/v1/mentors/profiles', {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(profileData),
   });
   const res = await app.fetch(req, mockEnv);
@@ -399,13 +395,9 @@ describe('Mentor Search API', () => {
 
     it('should filter mentors with Entry OR Senior (bit flag: 3)', async () => {
       const levels = MentoringLevel.Entry | MentoringLevel.Senior; // 3
-      const token = await createTestToken('test-user-id', 'test@example.com', 'Test User');
 
       const req = new Request(`http://localhost/api/v1/mentors/search?mentoring_levels=${levels}`, {
         method: 'GET',
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -482,6 +474,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=1', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -499,6 +492,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=2', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -516,6 +510,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=32', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -572,6 +567,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_max=100', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -590,6 +586,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_min=50', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -608,6 +605,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_min=50&hourly_rate_max=100', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -661,6 +659,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=Code', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -679,6 +678,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=code', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -695,6 +695,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=Python', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -732,6 +733,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -751,6 +753,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -769,6 +772,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10&offset=20', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -788,6 +792,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10&offset=100', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -844,6 +849,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=2&payment_types=1', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -861,6 +867,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=2&payment_types=1&hourly_rate_max=80&nick_name=Code', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -878,6 +885,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=4&payment_types=32&hourly_rate_max=10', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -901,6 +909,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?limit=-10', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -917,6 +926,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?offset=-10', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -933,6 +943,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?limit=200', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },
@@ -949,6 +960,7 @@ describe('Mentor Search API', () => {
       
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=abc', {
         method: 'GET',
+      ,
         headers: { 
           'Authorization': `Bearer ${token}`,
         },

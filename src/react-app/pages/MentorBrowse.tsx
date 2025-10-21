@@ -72,14 +72,8 @@ export function MentorBrowse() {
   };
 
   const handleViewDetails = (mentor: MentorProfile) => {
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/mentors/browse' } });
-      return;
-    }
-    
-    // TODO: Open modal or navigate to detail view
-    console.log('View details for:', mentor.nick_name);
+    // Navigate to mentor detail page
+    navigate(`/mentors/${mentor.id}`);
   };
 
   const handleRequestMentorship = async (mentor: MentorProfile) => {

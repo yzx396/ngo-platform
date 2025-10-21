@@ -7,7 +7,9 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
 import { getMatches, acceptMatch, rejectMatch, completeMatch } from '../services/matchService';
+import { getMentorProfileByUserId } from '../services/mentorService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 import type { Match } from '../../types/match';
 
 /**
@@ -16,10 +18,32 @@ import type { Match } from '../../types/match';
  * Matches the layout pattern of MentorBrowse page
  */
 export function MatchesList() {
+  const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<'mentor' | 'mentee'>('mentee');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
+
+  // Check if user is a mentor on mount and set default role accordingly
+  useEffect(() => {
+    const checkMentorStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const mentorProfile = await getMentorProfileByUserId(user.id);
+        
+        // Set default role to mentor if user has a mentor profile
+        if (mentorProfile !== null) {
+          setRole('mentor');
+        }
+      } catch (error) {
+        // If error, keep default as mentee
+        console.error('Failed to check mentor status:', error);
+      }
+    };
+
+    checkMentorStatus();
+  }, [user]);
 
   const fetchMatches = useCallback(async () => {
     setLoading(true);
