@@ -138,7 +138,14 @@
     "requestSent": "申请已发送！",
     "requestAccepted": "申请已接受！",
     "requestRejected": "申请已拒绝",
-    "matchCompleted": "配对已标记为已完成"
+    "matchCompleted": "配对已标记为已完成",
+    "introduction": "个人介绍",
+    "introductionPlaceholder": "请介绍一下您自己，以及为什么想要这位导师的辅导...（至少10个字符）",
+    "preferredTime": "希望的辅导时间",
+    "preferredTimePlaceholder": "例如：每周二晚上、周末下午等",
+    "requestDialogTitle": "申请辅导",
+    "requestDialogDescription": "请填写以下信息，导师将根据您的情况决定是否接受申请",
+    "sendRequest": "发送申请"
   },
   "status": {
     "pending": "待处理",

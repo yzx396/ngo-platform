@@ -57,6 +57,8 @@ export interface SearchMentorsResponse {
 // Match API
 export interface CreateMatchRequest {
   mentor_id: string;
+  introduction: string;
+  preferred_time: string;
   mentee_id?: string; // Optional, for testing. In production, comes from auth headers.
 }
 

@@ -137,7 +137,14 @@
     "requestSent": "Request sent!",
     "requestAccepted": "Request accepted!",
     "requestRejected": "Request rejected",
-    "matchCompleted": "Match marked as completed"
+    "matchCompleted": "Match marked as completed",
+    "introduction": "Personal Introduction",
+    "introductionPlaceholder": "Please introduce yourself and explain why you're interested in this mentor's guidance... (at least 10 characters)",
+    "preferredTime": "Preferred Mentoring Time",
+    "preferredTimePlaceholder": "For example: Tuesday evenings, weekend afternoons, etc.",
+    "requestDialogTitle": "Request Mentorship",
+    "requestDialogDescription": "Please fill in the following information. The mentor will decide whether to accept your request based on your details.",
+    "sendRequest": "Send Request"
   },
   "status": {
     "pending": "Pending",

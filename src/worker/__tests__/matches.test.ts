@@ -265,10 +265,12 @@ describe('Match Management API', () => {
   // ==========================================================================
 
   describe('POST /api/v1/matches - Create match', () => {
-    it('should create a new match request with pending status', async () => {
+    it('should create a new match request with pending status and all fields', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
       const matchData = {
         mentor_id: mentorProfile.user_id,
+        introduction: 'I am a software engineer looking for mentorship in system design.',
+        preferred_time: 'Weekends, preferably Saturday afternoons',
       };
 
       const req = new Request('http://localhost/api/v1/matches', {
@@ -289,6 +291,8 @@ describe('Match Management API', () => {
         mentor_id: mentorProfile.user_id,
         mentee_id: mentee.id,
         status: 'pending',
+        introduction: 'I am a software engineer looking for mentorship in system design.',
+        preferred_time: 'Weekends, preferably Saturday afternoons',
         created_at: expect.any(Number),
         updated_at: expect.any(Number),
       });
@@ -302,7 +306,10 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          introduction: 'Test introduction',
+          preferred_time: 'Weekends',
+        }),
       });
 
       const res = await app.fetch(req, mockEnv);
@@ -310,6 +317,51 @@ describe('Match Management API', () => {
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data).toHaveProperty('error');
+      expect(data.error).toContain('mentor_id');
+    });
+
+    it('should return 400 when introduction is missing', async () => {
+      const token = await createTestToken(mentee.id, mentee.email, mentee.name);
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          preferred_time: 'Weekends',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.error).toContain('introduction');
+    });
+
+    it('should return 400 when preferred_time is missing', async () => {
+      const token = await createTestToken(mentee.id, mentee.email, mentee.name);
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Test introduction',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.error).toContain('preferred_time');
     });
 
     it('should return 400 when mentor does not exist', async () => {
@@ -320,7 +372,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentor_id: 'nonexistent-user-id' }),
+        body: JSON.stringify({
+          mentor_id: 'nonexistent-user-id',
+          introduction: 'Test introduction',
+          preferred_time: 'Weekends',
+        }),
       });
 
       const res = await app.fetch(req, mockEnv);
@@ -338,7 +394,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentor_id: mentee.id }), // User without mentor profile
+        body: JSON.stringify({
+          mentor_id: mentee.id, // User without mentor profile
+          introduction: 'Test introduction',
+          preferred_time: 'Weekends',
+        }),
       });
 
       const res = await app.fetch(req, mockEnv);
@@ -359,7 +419,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentor_id: mentee.id }),
+        body: JSON.stringify({
+          mentor_id: mentee.id,
+          introduction: 'Test introduction',
+          preferred_time: 'Weekends',
+        }),
       });
 
       const res = await app.fetch(req, mockEnv);
@@ -371,6 +435,11 @@ describe('Match Management API', () => {
 
     it('should return 409 when duplicate match already exists', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
+      const matchData = {
+        mentor_id: mentorProfile.user_id,
+        introduction: 'First attempt',
+        preferred_time: 'Weekends',
+      };
 
       // Create first match
       const req1 = new Request('http://localhost/api/v1/matches', {
@@ -379,7 +448,7 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify(matchData),
       });
       await app.fetch(req1, mockEnv);
 
@@ -390,7 +459,7 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify(matchData),
       });
       const res = await app.fetch(req2, mockEnv);
 
@@ -417,7 +486,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Looking for guidance on career development',
+          preferred_time: 'Flexible schedule',
+        }),
       });
       const res = await app.fetch(req, mockEnv);
       await res.json();
@@ -498,7 +571,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'I need mentorship in system design and scalability',
+          preferred_time: 'Weekdays after 6 PM',
+        }),
       });
       const res = await app.fetch(req, mockEnv);
       testMatch = await res.json();
@@ -603,7 +680,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Interested in learning from experienced mentor',
+          preferred_time: 'Weekday evenings',
+        }),
       });
       const createRes = await app.fetch(createReq, mockEnv);
       testMatch = await createRes.json();
@@ -664,7 +745,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${newMenteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Test introduction for pending match',
+          preferred_time: 'Weekend mornings',
+        }),
       });
       const createRes = await app.fetch(createReq, mockEnv);
       const pendingMatch = await createRes.json();
@@ -701,7 +786,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Test introduction for deletion',
+          preferred_time: 'Morning sessions',
+        }),
       });
       const createRes = await app.fetch(createReq, mockEnv);
       const testMatch = await createRes.json();
@@ -750,7 +839,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Lifecycle integration test introduction',
+          preferred_time: 'Any time works',
+        }),
       });
       const createRes = await app.fetch(createReq, mockEnv);
       let match = await createRes.json();
@@ -795,7 +888,11 @@ describe('Match Management API', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${menteeToken}`,
         },
-        body: JSON.stringify({ mentor_id: mentorProfile.user_id }),
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Lifecycle integration test introduction',
+          preferred_time: 'Any time works',
+        }),
       });
       const createRes = await app.fetch(createReq, mockEnv);
       let match = await createRes.json();

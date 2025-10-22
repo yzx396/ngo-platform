@@ -6,10 +6,10 @@ import { Card, CardContent, CardFooter, CardHeader } from '../components/ui/card
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { AvailabilityDisplay } from '../components/AvailabilityDisplay';
+import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { getLevelNames, getPaymentTypeNames } from '../../types/mentor';
 import { getMentorProfile } from '../services/mentorService';
-import { createMatch } from '../services/matchService';
-import { handleApiError, showSuccessToast } from '../services/apiClient';
+import { handleApiError } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
@@ -26,7 +26,7 @@ export function MentorDetailPage() {
   const [mentor, setMentor] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRequesting, setIsRequesting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -50,24 +50,17 @@ export function MentorDetailPage() {
     fetchMentor();
   }, [id]);
 
-  const handleRequestMentorship = async () => {
+  const handleRequestMentorship = () => {
     if (!isAuthenticated) {
       navigate('/login', { state: { from: `/mentors/${id}` } });
       return;
     }
 
-    if (!mentor) return;
+    setIsDialogOpen(true);
+  };
 
-    setIsRequesting(true);
-    try {
-      await createMatch(mentor.user_id);
-      showSuccessToast(t('matches.requestSent'));
-      navigate('/matches');
-    } catch (err) {
-      handleApiError(err);
-    } finally {
-      setIsRequesting(false);
-    }
+  const handleDialogSuccess = () => {
+    navigate('/matches');
   };
 
   const handleBack = () => {
@@ -191,12 +184,19 @@ export function MentorDetailPage() {
               size="lg"
               className="w-full"
               onClick={handleRequestMentorship}
-              disabled={isRequesting}
             >
-              {isRequesting ? t('mentor.sending') : t('mentor.requestMentorship')}
+              {t('mentor.requestMentorship')}
             </Button>
           </CardFooter>
         </Card>
+
+        {/* Mentorship Request Dialog */}
+        <RequestMentorshipDialog
+          mentor={mentor}
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSuccess={handleDialogSuccess}
+        />
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ export interface Match {
   mentor_id: string;
   mentee_id: string;
   status: MatchStatus;
+  introduction: string;
+  preferred_time: string;
   created_at: number;
   updated_at: number;
 }

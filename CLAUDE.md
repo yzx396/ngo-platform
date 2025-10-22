@@ -356,15 +356,39 @@ When adding database functionality:
 
 ### Creating and Running Migrations
 
-**Create migrations** in `migrations/` directory following SQLite syntax:
+This project uses **Cloudflare D1's native migration system** which automatically tracks applied migrations in a `d1_migrations` table. This prevents accidental re-runs of the same migration.
+
+**Migration Files:**
+- Located in `migrations/` directory
 - Name format: `0001_description.sql`, `0002_description.sql`, etc.
 - Example: `migrations/0001_create_users_table.sql`
+- All migrations are written in SQLite syntax with idempotent DDL (`IF NOT EXISTS`, `IF NOT EXISTS INDEX`, etc.)
+
+**Creating New Migrations:**
+
+Create a new migration file manually:
+```bash
+# Create migration file: migrations/0006_your_change.sql
+# Follow the existing naming convention and include descriptive comments
+```
+
+Or use Wrangler to create and apply:
+```bash
+wrangler d1 migrations create platform-db "your change description"
+# Edit the generated file in migrations/ directory
+npm run db:migrate
+```
 
 **Local Development:**
 
-Run all migrations against local D1:
+Apply all pending migrations to local D1:
 ```bash
 npm run db:migrate
+```
+
+List which migrations have been applied locally:
+```bash
+npm run db:list
 ```
 
 View local database schema:
@@ -374,9 +398,14 @@ npm run db:schema
 
 **Production:**
 
-Run all migrations against production Cloudflare D1:
+Apply all pending migrations to production Cloudflare D1:
 ```bash
 npm run db:migrate:prod
+```
+
+List which migrations have been applied in production:
+```bash
+npm run db:list:prod
 ```
 
 View production database schema:
@@ -384,7 +413,34 @@ View production database schema:
 npm run db:schema:prod
 ```
 
-⚠️ **Important**: Always test migrations locally first before running against production. Production migrations should be done carefully as they may impact live users.
+**How It Works:**
+
+1. D1 creates a `d1_migrations` table in your database
+2. Each applied migration's name is recorded in this table
+3. The `wrangler d1 migrations apply` command only runs migrations that aren't in the table
+4. This ensures migrations are idempotent at the workflow level (never re-run the same migration)
+
+**Migration Best Practices:**
+
+- ✅ **DO**: Create new migrations for each schema change (never edit existing ones)
+- ✅ **DO**: Write idempotent SQL using `IF NOT EXISTS`, `IF NOT EXISTS INDEX`
+- ✅ **DO**: Test migrations locally with `npm run db:migrate` before production
+- ✅ **DO**: Use descriptive filenames and include comments explaining the change
+- ❌ **DON'T**: Edit or delete existing migration files after they've been applied
+- ❌ **DON'T**: Re-run `npm run db:migrate` expecting it to fail gracefully (D1 tracking prevents re-runs)
+
+**Resetting Local Database (Development Only):**
+
+If you need to start fresh locally:
+```bash
+# Delete local D1 database (be careful!)
+rm -rf .wrangler/state/d1/
+
+# Re-run all migrations
+npm run db:migrate
+```
+
+⚠️ **Important**: Always test migrations locally first before running against production. Production migrations should be done carefully as they may impact live users. Never delete or modify migrations that have been applied to production.
 
 ### Using Database in Worker Code
 

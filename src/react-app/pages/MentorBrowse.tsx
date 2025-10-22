@@ -10,6 +10,7 @@ import { Label } from '../components/ui/label';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { MentorCard } from '../components/MentorCard';
+import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { searchMentors } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
@@ -29,6 +30,8 @@ export function MentorBrowse() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedMentor, setSelectedMentor] = useState<MentorProfile | null>(null);
   const itemsPerPage = 12;
 
   const form = useForm({
@@ -84,15 +87,20 @@ export function MentorBrowse() {
     navigate(`/mentors/${mentor.id}`);
   };
 
-  const handleRequestMentorship = async (mentor: MentorProfile) => {
+  const handleRequestMentorship = (mentor: MentorProfile) => {
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
       navigate('/login', { state: { from: '/mentors/browse' } });
       return;
     }
-    
-    // TODO: Create match request
-    console.log('Request mentorship from:', mentor.nick_name);
+
+    // Open dialog to collect introduction and preferred time
+    setSelectedMentor(mentor);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogSuccess = () => {
+    navigate('/matches');
   };
 
   const totalPages = Math.ceil(total / itemsPerPage);
@@ -211,6 +219,14 @@ export function MentorBrowse() {
             )}
           </div>
         </FormProvider>
+
+        {/* Mentorship Request Dialog */}
+        <RequestMentorshipDialog
+          mentor={selectedMentor}
+          isOpen={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSuccess={handleDialogSuccess}
+        />
       </div>
     </div>
   );

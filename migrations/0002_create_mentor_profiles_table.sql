@@ -1,7 +1,7 @@
 -- Migration: Create mentor_profiles table
 -- Description: Mentor profile information with bit flags for levels and payment types
 
-CREATE TABLE mentor_profiles (
+CREATE TABLE IF NOT EXISTS mentor_profiles (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL UNIQUE,
   nick_name TEXT NOT NULL UNIQUE,
@@ -21,7 +21,7 @@ CREATE TABLE mentor_profiles (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_mentor_user_id ON mentor_profiles(user_id);
-CREATE INDEX idx_mentor_levels ON mentor_profiles(mentoring_levels);
-CREATE INDEX idx_mentor_payment ON mentor_profiles(payment_types);
-CREATE INDEX idx_mentor_hourly_rate ON mentor_profiles(hourly_rate);
+CREATE INDEX IF NOT EXISTS idx_mentor_user_id ON mentor_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_mentor_levels ON mentor_profiles(mentoring_levels);
+CREATE INDEX IF NOT EXISTS idx_mentor_payment ON mentor_profiles(payment_types);
+CREATE INDEX IF NOT EXISTS idx_mentor_hourly_rate ON mentor_profiles(hourly_rate);

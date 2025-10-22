@@ -1,12 +1,9 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { AvailabilityDisplay } from './AvailabilityDisplay';
 import { getLevelNames, getPaymentTypeNames } from '../../types/mentor';
-import { createMatch } from '../services/matchService';
-import { handleApiError, showSuccessToast } from '../services/apiClient';
 import type { MentorProfile } from '../../types/mentor';
 
 interface MentorCardProps {
@@ -30,26 +27,13 @@ export function MentorCard({
   isMatched = false
 }: MentorCardProps) {
   const { t } = useTranslation();
-  const [isRequesting, setIsRequesting] = useState(false);
   const levelNames = getLevelNames(mentor.mentoring_levels);
   const paymentNames = getPaymentTypeNames(mentor.payment_types);
 
-  const handleRequestMentorship = async () => {
-    // If parent provided a callback, use it (allows parent to check auth)
+  const handleRequestMentorship = () => {
+    // Parent must provide callback (which opens dialog with intro/time fields)
     if (onRequestMentorship) {
       onRequestMentorship();
-      return;
-    }
-
-    // Otherwise, make the API call directly (for authenticated contexts)
-    setIsRequesting(true);
-    try {
-      await createMatch(mentor.user_id);
-      showSuccessToast(t('matches.requestSent'));
-    } catch (error) {
-      handleApiError(error);
-    } finally {
-      setIsRequesting(false);
     }
   };
 
@@ -120,9 +104,8 @@ export function MentorCard({
             size="sm"
             className="flex-1"
             onClick={handleRequestMentorship}
-            disabled={isRequesting}
           >
-            {isRequesting ? t('mentor.sending') : t('mentor.requestMentorship')}
+            {t('mentor.requestMentorship')}
           </Button>
         )}
         {isMatched && (

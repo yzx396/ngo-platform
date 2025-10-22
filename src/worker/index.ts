@@ -664,6 +664,12 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
     if (!body.mentor_id) {
       return c.json({ error: "mentor_id is required" }, 400);
     }
+    if (!body.introduction) {
+      return c.json({ error: "introduction is required" }, 400);
+    }
+    if (!body.preferred_time) {
+      return c.json({ error: "preferred_time is required" }, 400);
+    }
 
     // Check if mentor user exists
     const mentorUser = await c.env.platform_db
@@ -710,9 +716,9 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
 
     await c.env.platform_db
       .prepare(
-        "INSERT INTO matches (id, mentor_id, mentee_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO matches (id, mentor_id, mentee_id, status, introduction, preferred_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(matchId, body.mentor_id, menteeId, "pending", timestamp, timestamp)
+      .bind(matchId, body.mentor_id, menteeId, "pending", body.introduction, body.preferred_time, timestamp, timestamp)
       .run();
 
     const match: Match = {
@@ -720,6 +726,8 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
       mentor_id: body.mentor_id,
       mentee_id: menteeId,
       status: "pending",
+      introduction: body.introduction,
+      preferred_time: body.preferred_time,
       created_at: timestamp,
       updated_at: timestamp,
     };

@@ -14,11 +14,10 @@ import type {
 
 /**
  * Create a new match request (mentee initiates)
- * @param mentor_id - ID of the mentor to request
+ * @param data - Match request data including mentor_id, introduction, and preferred_time
  * @returns Created match object
  */
-export async function createMatch(mentor_id: string): Promise<Match> {
-  const data: CreateMatchRequest = { mentor_id };
+export async function createMatch(data: CreateMatchRequest): Promise<Match> {
   return apiPost<Match>('/api/v1/matches', data);
 }
 

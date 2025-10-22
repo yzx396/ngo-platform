@@ -302,6 +302,24 @@ function MatchCard({
           <p className="text-xs font-medium text-muted-foreground mb-1">Status</p>
           <p className="text-sm capitalize">{match.status}</p>
         </div>
+
+        {/* Show introduction and preferred_time for mentors viewing pending requests */}
+        {match.status === 'pending' && role === 'mentor' && (
+          <>
+            {match.introduction && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Introduction</p>
+                <p className="text-sm line-clamp-3 text-foreground">{match.introduction}</p>
+              </div>
+            )}
+            {match.preferred_time && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Preferred Time</p>
+                <p className="text-sm text-foreground">{match.preferred_time}</p>
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
 
       <CardFooter className="flex gap-2 pt-3">
