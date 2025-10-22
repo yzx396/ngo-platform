@@ -47,7 +47,11 @@
     "platformDescription": "连接导师和咨询者，共同成长和学习",
     "loginError": "登录失败，请重试",
     "unauthorized": "未授权的访问",
-    "sessionExpired": "会话已过期，请重新登录"
+    "sessionExpired": "会话已过期，请重新登录",
+    "signingInTitle": "登录中...",
+    "signingInMessage": "请稍候，我们正在验证您的账户。",
+    "authenticationFailed": "身份验证失败",
+    "backToLogin": "返回登录"
   },
   "mentor": {
     "findYourMentor": "找到您的导师",

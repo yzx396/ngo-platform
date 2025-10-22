@@ -3,8 +3,15 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  height: 100vh;
   background-color: var(--color-background);
   padding: 16px;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .login-card {
@@ -14,6 +21,8 @@
   padding: 48px 40px;
   max-width: 400px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .login-header {

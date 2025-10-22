@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
 export function OAuthCallbackPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const hasHandledRef = useRef(false);
 
@@ -74,10 +76,10 @@ export function OAuthCallbackPage() {
   if (error) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
-        <h1>Authentication Failed</h1>
+        <h1>{t('auth.authenticationFailed')}</h1>
         <p>{error}</p>
         <button onClick={() => navigate('/login', { replace: true })}>
-          Back to Login
+          {t('auth.backToLogin')}
         </button>
       </div>
     );
@@ -85,8 +87,8 @@ export function OAuthCallbackPage() {
 
   return (
     <div style={{ textAlign: 'center', padding: '40px' }}>
-      <h1>Signing in...</h1>
-      <p>Please wait while we authenticate your account.</p>
+      <h1>{t('auth.signingInTitle')}</h1>
+      <p>{t('auth.signingInMessage')}</p>
       <div style={{ marginTop: '20px' }}>
         <div style={{
           display: 'inline-block',

@@ -46,7 +46,11 @@
     "platformDescription": "Connecting mentors and learners for mutual growth and development",
     "loginError": "Sign in failed. Please try again.",
     "unauthorized": "Unauthorized access",
-    "sessionExpired": "Your session has expired. Please sign in again."
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "signingInTitle": "Signing in...",
+    "signingInMessage": "Please wait while we authenticate your account.",
+    "authenticationFailed": "Authentication Failed",
+    "backToLogin": "Back to Login"
   },
   "mentor": {
     "findYourMentor": "Find Your Mentor",
