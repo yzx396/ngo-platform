@@ -74,6 +74,20 @@ function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+/**
+ * Convert mentor profile with SQLite boolean integers (0/1) to JavaScript booleans
+ * SQLite stores BOOLEAN as INTEGER, so we need to convert 0->false, 1->true
+ * This ensures the TypeScript types match the runtime values
+ */
+function normalizeMentorProfile(profile: MentorProfile): MentorProfile {
+  const dbProfile = profile as unknown as Record<string, unknown>;
+  return {
+    ...profile,
+    allow_reviews: dbProfile.allow_reviews === 1 || dbProfile.allow_reviews === true,
+    allow_recording: dbProfile.allow_recording === 1 || dbProfile.allow_recording === true,
+  };
+}
+
 // ============================================================================
 // User Management API (/api/v1/users)
 // ============================================================================
@@ -335,7 +349,7 @@ app.get("/api/v1/mentors/profiles/by-user/:userId", async (c) => {
     return c.json({ error: "Mentor profile not found" }, 404);
   }
 
-  return c.json<MentorProfile>(profile);
+  return c.json<MentorProfile>(normalizeMentorProfile(profile));
 });
 
 /**
@@ -353,7 +367,7 @@ app.get("/api/v1/mentors/profiles/:id", async (c) => {
     return c.json({ error: "Mentor profile not found" }, 404);
   }
 
-  return c.json<MentorProfile>(profile);
+  return c.json<MentorProfile>(normalizeMentorProfile(profile));
 });
 
 /**
@@ -467,7 +481,7 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
       return c.json({ error: "Mentor profile not found" }, 404);
     }
 
-    return c.json<MentorProfile>(updated);
+    return c.json<MentorProfile>(normalizeMentorProfile(updated));
   } catch {
     return c.json({ error: "Invalid request body" }, 400);
   }
@@ -622,7 +636,7 @@ app.get("/api/v1/mentors/search", async (c) => {
       .all<MentorProfile>();
 
     const response: SearchMentorsResponse = {
-      mentors: results.results || [],
+      mentors: (results.results || []).map(normalizeMentorProfile),
       total,
       limit,
       offset,

@@ -487,6 +487,43 @@ describe('Mentor Profile CRUD API', () => {
       expect(data).toHaveProperty('error');
       expect(data.error).toContain('not found');
     });
+
+    it('should return boolean values (not database integers) for allow_reviews and allow_recording', async () => {
+      // Create a profile
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: 'BooleanTestMentor',
+          bio: 'Testing boolean conversion',
+          mentoring_levels: MentoringLevel.Entry,
+          payment_types: PaymentType.Venmo,
+          allow_reviews: true,
+          allow_recording: false,
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Get the profile and verify boolean types
+      const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'GET',
+      });
+      const getRes = await app.fetch(getReq, mockEnv);
+      const data = await getRes.json();
+
+      // Verify that values are strict booleans, not integers
+      expect(typeof data.allow_reviews).toBe('boolean');
+      expect(typeof data.allow_recording).toBe('boolean');
+      expect(data.allow_reviews).toBe(true);
+      expect(data.allow_recording).toBe(false);
+    });
   });
 
   // ==========================================================================
