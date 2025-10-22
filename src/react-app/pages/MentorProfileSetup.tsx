@@ -164,6 +164,10 @@ export function MentorProfileSetup() {
           </p>
         </div>
 
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-sm text-gray-700 whitespace-pre-line">
+          {t('mentor.setupInstructions')}
+        </div>
+
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
             <Card className="p-8 space-y-8">

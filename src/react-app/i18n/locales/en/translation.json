@@ -85,6 +85,7 @@
     "editTitle": "Edit Your Mentor Profile",
     "createSubtitle": "Share your expertise and help others grow",
     "editSubtitle": "Update your mentor profile information",
+    "setupInstructions": "Want to provide career mentoring services on our platform? Please fill in the information below to register as a mentor. Here's how it works:\n\n• Once your profile is saved, job seekers can see your basic information on the \"Find a Mentor\" page.\n• Job seekers can send you mentoring requests with their introduction and preferred mentoring times.\n• You can accept or reject requests within 48 hours. Requests that are not processed within 48 hours will be automatically cancelled.\n• After accepting a request, you can have one-on-one private chats with the job seeker to confirm mentoring times, payment methods, and meeting links.\n• You and the job seeker will have a one-on-one career mentoring session at the agreed time.\n• After the mentoring session, the job seeker can leave a review of your service.",
     "validationNickname": "Nickname must be at least 2 characters",
     "validationBio": "Bio must be at least 10 characters",
     "validationLevel": "Select at least one mentoring level",
