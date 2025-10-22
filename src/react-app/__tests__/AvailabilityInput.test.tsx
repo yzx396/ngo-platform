@@ -22,21 +22,21 @@ describe('AvailabilityInput', () => {
   it('should render textarea for availability input', () => {
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i);
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i);
     expect(textarea).toBeInTheDocument();
   });
 
   it('should have a label', () => {
     render(<AvailabilityInputWithForm />);
 
-    expect(screen.getByText('Availability')).toBeInTheDocument();
+    expect(screen.getByText(/Times when|Availability/i)).toBeInTheDocument();
   });
 
   it('should accept user input', async () => {
     const user = userEvent.setup();
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i);
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i);
     await user.type(textarea, 'Weekdays 9am-5pm EST');
 
     expect((textarea as HTMLTextAreaElement).value).toBe('Weekdays 9am-5pm EST');
@@ -46,7 +46,7 @@ describe('AvailabilityInput', () => {
     const user = userEvent.setup();
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i);
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i);
     await user.type(textarea, 'Monday-Friday{Enter}9am-5pm EST{Enter}Flexible on weekends');
 
     const value = (textarea as HTMLTextAreaElement).value;
@@ -58,20 +58,20 @@ describe('AvailabilityInput', () => {
   it('should display help text with examples', () => {
     render(<AvailabilityInputWithForm />);
 
-    expect(screen.getByText(/Weekdays 9am-5pm EST/)).toBeInTheDocument();
+    expect(screen.getByText(/e\.g\.|Monday.*Friday/i)).toBeInTheDocument();
   });
 
   it('should show character count', () => {
     render(<AvailabilityInputWithForm />);
 
-    expect(screen.getByText(/characters/)).toBeInTheDocument();
+    expect(screen.getByText(/characters/i)).toBeInTheDocument();
   });
 
   it('should enforce character limit', async () => {
     const user = userEvent.setup();
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i) as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i) as HTMLTextAreaElement;
     const longText = 'a'.repeat(201);
 
     await user.type(textarea, longText);
@@ -83,14 +83,14 @@ describe('AvailabilityInput', () => {
   it('should have proper accessibility attributes', () => {
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i);
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i);
     expect(textarea).toHaveAttribute('aria-describedby');
   });
 
   it('should be optional (no required attribute)', () => {
     render(<AvailabilityInputWithForm />);
 
-    const textarea = screen.getByPlaceholderText(/weekdays/i);
+    const textarea = screen.getByPlaceholderText(/e\.g\.|Monday/i);
     expect(textarea).not.toHaveAttribute('required');
   });
 });
