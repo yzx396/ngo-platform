@@ -41,6 +41,7 @@ describe('MentorCard', () => {
   it('should display mentoring level badges', () => {
     render(<MentorCard mentor={mockMentor} />);
 
+    // Should display all mentoring levels
     expect(screen.getByText('Entry')).toBeInTheDocument();
     expect(screen.getByText('Senior')).toBeInTheDocument();
   });

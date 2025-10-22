@@ -57,7 +57,7 @@
     "nicknameHelp": "不同于论坛用户名，昵称可进行修改",
     "mentoringLevels": "您愿意提供什么级别的求职咨询",
     "paymentTypes": "您的收款方式",
-    "hourlyRate": "时间费率",
+    "hourlyRate": "每小时咨询定价(美元)",
     "hourlyRateLabel": "您的每小时咨询定价(美元)",
     "availability": "您可以接受咨询的时间",
     "availabilityExample": "例如：工作日 9am-5pm EST，周末灵活",

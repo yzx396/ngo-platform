@@ -127,7 +127,7 @@ export function MentorDetailPage() {
               </Avatar>
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-2">{mentor.nick_name}</h1>
-                <p className="text-lg text-muted-foreground">{mentor.bio}</p>
+                <p className="text-lg text-muted-foreground whitespace-pre-wrap">{mentor.bio}</p>
               </div>
             </div>
           </CardHeader>

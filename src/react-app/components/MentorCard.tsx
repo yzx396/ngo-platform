@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
-import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
 import { AvailabilityDisplay } from './AvailabilityDisplay';
 import { getLevelNames, getPaymentTypeNames } from '../../types/mentor';
@@ -21,6 +20,8 @@ interface MentorCardProps {
  * MentorCard component
  * Displays a compact mentor profile card with key info and action buttons
  * Used in browse/search views and match lists
+ *
+ * Layout: Header with name and price, bio, mentoring level, payment methods, availability, and action buttons
  */
 export function MentorCard({
   mentor,
@@ -52,79 +53,63 @@ export function MentorCard({
     }
   };
 
-  // Get initials for avatar fallback
-  const initials = mentor.nick_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
-  // Truncate bio to 100 chars
-  const bioPreview = mentor.bio.length > 100 ? mentor.bio.substring(0, 100) + '...' : mentor.bio;
-
   return (
     <Card className="flex flex-col h-full hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
+      {/* Header: Name and Price */}
+      <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="text-xs font-bold">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg leading-tight">{mentor.nick_name}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">{bioPreview}</p>
+          <h3 className="font-semibold text-lg leading-tight">{mentor.nick_name}</h3>
+          {mentor.hourly_rate && (
+            <div className="text-right">
+              <p className="text-sm font-semibold text-orange-600">
+                ${mentor.hourly_rate}/hr
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-3">
+      {/* Content Section */}
+      <CardContent className="flex-1 space-y-3 pb-3">
+        {/* Bio */}
+        <p className="text-sm text-muted-foreground line-clamp-2">{mentor.bio}</p>
+
         {/* Mentoring Levels */}
         {levelNames.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">{t('mentor.levels')}</p>
-            <div className="flex flex-wrap gap-1">
-              {levelNames.slice(0, 3).map((level) => (
-                <Badge key={level} variant="outline" className="text-xs">
-                  {level}
-                </Badge>
-              ))}
-              {levelNames.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{levelNames.length - 3}
-                </Badge>
-              )}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {levelNames.map((level) => (
+              <Badge key={level} variant="default" className="text-xs">
+                {level}
+              </Badge>
+            ))}
           </div>
         )}
 
-        {/* Hourly Rate */}
-        {mentor.hourly_rate && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{t('mentor.rate')}:</span>
-            <Badge variant="secondary">${mentor.hourly_rate}/hr</Badge>
-          </div>
-        )}
-
-        {/* Payment Types */}
+        {/* Payment Methods as Chips */}
         {paymentNames.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">{t('mentor.accepts')}</p>
-            <p className="text-sm">{paymentNames.slice(0, 3).join(', ')}</p>
+          <div className="flex flex-wrap gap-2">
+            {paymentNames.map((payment) => (
+              <button
+                key={payment}
+                className="px-3 py-1 text-xs border border-gray-300 rounded-full bg-white hover:bg-gray-50 transition-colors"
+                disabled
+              >
+                {payment}
+              </button>
+            ))}
           </div>
         )}
 
         {/* Availability */}
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">{t('mentor.availability')}</p>
-          <p className="text-sm">
+        {mentor.availability && (
+          <p className="text-sm text-gray-600">
             <AvailabilityDisplay availability={mentor.availability} />
           </p>
-        </div>
+        )}
       </CardContent>
 
-      <CardFooter className="flex gap-2 pt-3">
+      {/* Footer: Action Buttons */}
+      <CardFooter className="flex gap-2 pt-2">
         {onViewDetails && (
           <Button variant="outline" size="sm" className="flex-1" onClick={onViewDetails}>
             {t('mentor.viewDetails')}
