@@ -17,10 +17,13 @@ export interface CreateMentorProfileRequest {
   user_id: string;
   nick_name: string;
   bio: string;
-  mentoring_levels: number; // Bit flags
+  mentoring_levels: number; // Bit flags - which levels can this mentor guide
   availability?: string | null; // Free text description
   hourly_rate?: number | null;
   payment_types: number; // Bit flags
+  expertise_domains?: number; // Bit flags - professional domains
+  expertise_topics_preset?: number; // Bit flags - predefined expertise topics
+  expertise_topics_custom?: string[]; // Custom topic tags
   allow_reviews?: boolean;
   allow_recording?: boolean;
 }
@@ -32,14 +35,20 @@ export interface UpdateMentorProfileRequest {
   availability?: string | null; // Free text description
   hourly_rate?: number | null;
   payment_types?: number;
+  expertise_domains?: number;
+  expertise_topics_preset?: number;
+  expertise_topics_custom?: string[];
   allow_reviews?: boolean;
   allow_recording?: boolean;
 }
 
 // Search API
 export interface SearchMentorsRequest {
-  mentoring_levels?: number; // Bit flags to filter
+  mentoring_levels?: number; // Bit flags to filter - which levels mentor can guide
   payment_types?: number; // Bit flags to filter
+  expertise_domains?: number; // Bit flags - filter by mentor's professional domains
+  expertise_topics?: number; // Bit flags - filter by mentor's expertise topics (preset only)
+  expertise_topics_custom?: string[]; // Filter by custom topic tags
   hourly_rate_max?: number;
   hourly_rate_min?: number;
   nick_name?: string;

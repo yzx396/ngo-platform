@@ -25,7 +25,8 @@
     "refresh": "Refresh",
     "tryAgain": "Try Again",
     "goHome": "Go Home",
-    "noDataAvailable": "No data available"
+    "noDataAvailable": "No data available",
+    "add": "Add"
   },
   "home": {
     "title": "Welcome to Lead Forward Platform",
@@ -58,7 +59,7 @@
     "searchByName": "Search by Name",
     "nickname": "Your Nickname (Editable)",
     "nicknameHelp": "Different from forum username, you can modify your nickname",
-    "mentoringLevels": "What level of job mentoring are you willing to provide",
+    "mentoringLevels": "Career levels you can mentor",
     "paymentTypes": "Your Payment Methods",
     "hourlyRate": "Hourly Rate",
     "hourlyRateLabel": "Your Hourly Consulting Rate (USD)",
@@ -97,8 +98,15 @@
     "validationRate": "Hourly rate must be positive",
     "validationPayment": "Select at least one payment method",
     "validationAvailability": "Availability must be at least 10 characters",
+    "validationExpertiseDomain": "Select at least one professional domain",
+    "validationExpertiseTopic": "Select at least one area of expertise",
     "noMentorsFound": "No mentors found",
-    "adjustFilters": "Try adjusting your filters..."
+    "adjustFilters": "Try adjusting your filters...",
+    "expertiseDomains": "Your Professional Domains",
+    "expertiseTopics": "Your Areas of Expertise",
+    "customTopics": "Custom Expertise Tags",
+    "addCustomTopicPlaceholder": "Enter expertise tag (e.g., startup strategy)",
+    "customTopicsHint": "Press Enter or click \"Add\" to add a tag"
   },
   "mentoringLevel": {
     "entry": "Entry level (Google L3-4)",
@@ -173,5 +181,23 @@
     "chinese": "中文",
     "english": "English",
     "selectLanguage": "Select Language"
+  },
+  "expertiseDomain": {
+    "technicalDevelopment": "Technical Development",
+    "productAndProject": "Product & Project",
+    "managementAndStrategy": "Management & Strategy",
+    "careerDevelopment": "Career Development"
+  },
+  "expertiseTopic": {
+    "careerTransition": "Career Transition",
+    "technicalSkills": "Technical Skills",
+    "leadership": "Leadership",
+    "communication": "Communication",
+    "interviewPrep": "Interview Preparation",
+    "negotiation": "Negotiation",
+    "timeManagement": "Time Management",
+    "fundraising": "Fundraising",
+    "volunteerManagement": "Volunteer Management",
+    "strategicPlanning": "Strategic Planning"
   }
 }

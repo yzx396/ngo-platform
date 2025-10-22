@@ -78,13 +78,41 @@ function isValidEmail(email: string): boolean {
  * Convert mentor profile with SQLite boolean integers (0/1) to JavaScript booleans
  * SQLite stores BOOLEAN as INTEGER, so we need to convert 0->false, 1->true
  * This ensures the TypeScript types match the runtime values
+ * Also parses JSON fields like expertise_topics_custom
  */
-function normalizeMentorProfile(profile: MentorProfile): MentorProfile {
-  const dbProfile = profile as unknown as Record<string, unknown>;
+function normalizeMentorProfile(profile: unknown): MentorProfile {
+  const dbProfile = profile as Record<string, unknown>;
+
+  // Parse expertise_topics_custom from JSON string to array
+  let expertise_topics_custom: string[] = [];
+  if (dbProfile.expertise_topics_custom) {
+    try {
+      const parsed = typeof dbProfile.expertise_topics_custom === 'string'
+        ? JSON.parse(dbProfile.expertise_topics_custom as string)
+        : dbProfile.expertise_topics_custom;
+      expertise_topics_custom = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      expertise_topics_custom = [];
+    }
+  }
+
+  // Explicitly construct the response to ensure correct types
   return {
-    ...profile,
+    id: dbProfile.id as string,
+    user_id: dbProfile.user_id as string,
+    nick_name: dbProfile.nick_name as string,
+    bio: dbProfile.bio as string,
+    mentoring_levels: dbProfile.mentoring_levels as number,
+    availability: (dbProfile.availability as string | null) || null,
+    hourly_rate: dbProfile.hourly_rate as number | null,
+    payment_types: dbProfile.payment_types as number,
+    expertise_domains: dbProfile.expertise_domains as number,
+    expertise_topics_preset: dbProfile.expertise_topics_preset as number,
+    expertise_topics_custom,
     allow_reviews: dbProfile.allow_reviews === 1 || dbProfile.allow_reviews === true,
     allow_recording: dbProfile.allow_recording === 1 || dbProfile.allow_recording === true,
+    created_at: dbProfile.created_at as number,
+    updated_at: dbProfile.updated_at as number,
   };
 }
 
@@ -256,6 +284,21 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
       return c.json({ error: "Bit flags must be non-negative integers" }, 400);
     }
 
+    // Set default values for expertise fields if not provided
+    const expertise_domains = body.expertise_domains !== undefined ? body.expertise_domains : 0;
+    const expertise_topics_preset = body.expertise_topics_preset !== undefined ? body.expertise_topics_preset : 0;
+    const expertise_topics_custom = body.expertise_topics_custom || [];
+
+    // Validation: Expertise bit flags must be non-negative if provided
+    if (expertise_domains < 0 || expertise_topics_preset < 0) {
+      return c.json({ error: "Expertise bit flags must be non-negative integers" }, 400);
+    }
+
+    // Validation: expertise_topics_custom must be an array if provided
+    if (!Array.isArray(expertise_topics_custom)) {
+      return c.json({ error: "expertise_topics_custom must be an array" }, 400);
+    }
+
     // Check if user exists
     const userExists = await c.env.platform_db
       .prepare("SELECT id FROM users WHERE id = ?")
@@ -294,8 +337,9 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
       .prepare(
         `INSERT INTO mentor_profiles (
           id, user_id, nick_name, bio, mentoring_levels, availability,
-          hourly_rate, payment_types, allow_reviews, allow_recording, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          hourly_rate, payment_types, expertise_domains, expertise_topics_preset,
+          expertise_topics_custom, allow_reviews, allow_recording, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         id,
@@ -306,6 +350,9 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
         body.availability !== undefined ? body.availability : null,
         body.hourly_rate !== undefined ? body.hourly_rate : null,
         body.payment_types,
+        expertise_domains,
+        expertise_topics_preset,
+        JSON.stringify(expertise_topics_custom),
         body.allow_reviews !== undefined ? body.allow_reviews : true,
         body.allow_recording !== undefined ? body.allow_recording : true,
         timestamp,
@@ -322,6 +369,9 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
       availability: body.availability !== undefined ? body.availability : null,
       hourly_rate: body.hourly_rate !== undefined ? body.hourly_rate : null,
       payment_types: body.payment_types,
+      expertise_domains,
+      expertise_topics_preset,
+      expertise_topics_custom,
       allow_reviews: body.allow_reviews !== undefined ? body.allow_reviews : true,
       allow_recording: body.allow_recording !== undefined ? body.allow_recording : true,
       created_at: timestamp,
@@ -384,8 +434,9 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
     // Validation: At least one field must be provided
     const hasUpdates = body.nick_name || body.bio || body.mentoring_levels !== undefined ||
                        body.availability !== undefined || body.hourly_rate !== undefined ||
-                       body.payment_types !== undefined || body.allow_reviews !== undefined ||
-                       body.allow_recording !== undefined;
+                       body.payment_types !== undefined || body.expertise_domains !== undefined ||
+                       body.expertise_topics_preset !== undefined || body.expertise_topics_custom !== undefined ||
+                       body.allow_reviews !== undefined || body.allow_recording !== undefined;
 
     if (!hasUpdates) {
       return c.json({ error: "At least one field must be provided for update" }, 400);
@@ -393,8 +444,15 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
 
     // Validation: Bit flags must be non-negative if provided
     if ((body.mentoring_levels !== undefined && body.mentoring_levels < 0) ||
-        (body.payment_types !== undefined && body.payment_types < 0)) {
+        (body.payment_types !== undefined && body.payment_types < 0) ||
+        (body.expertise_domains !== undefined && body.expertise_domains < 0) ||
+        (body.expertise_topics_preset !== undefined && body.expertise_topics_preset < 0)) {
       return c.json({ error: "Bit flags must be non-negative integers" }, 400);
+    }
+
+    // Validation: expertise_topics_custom must be an array if provided
+    if (body.expertise_topics_custom !== undefined && !Array.isArray(body.expertise_topics_custom)) {
+      return c.json({ error: "expertise_topics_custom must be an array" }, 400);
     }
 
     // Check if profile exists
@@ -451,6 +509,18 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
     if (body.payment_types !== undefined) {
       updates.push("payment_types = ?");
       params.push(body.payment_types);
+    }
+    if (body.expertise_domains !== undefined) {
+      updates.push("expertise_domains = ?");
+      params.push(body.expertise_domains);
+    }
+    if (body.expertise_topics_preset !== undefined) {
+      updates.push("expertise_topics_preset = ?");
+      params.push(body.expertise_topics_preset);
+    }
+    if (body.expertise_topics_custom !== undefined) {
+      updates.push("expertise_topics_custom = ?");
+      params.push(JSON.stringify(body.expertise_topics_custom));
     }
     if (body.allow_reviews !== undefined) {
       updates.push("allow_reviews = ?");
@@ -529,6 +599,9 @@ app.delete("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
  * Query parameters:
  * - mentoring_levels: bit flags (e.g., 3 = Entry OR Senior)
  * - payment_types: bit flags (e.g., 1 = Venmo)
+ * - expertise_domains: bit flags for professional domains
+ * - expertise_topics: bit flags for preset expertise topics
+ * - expertise_topics_custom: comma-separated custom topic tags
  * - hourly_rate_max: maximum hourly rate
  * - hourly_rate_min: minimum hourly rate
  * - nick_name: partial nickname search (case-insensitive)
@@ -541,6 +614,9 @@ app.get("/api/v1/mentors/search", async (c) => {
     const url = new URL(c.req.url);
     const mentoring_levels = url.searchParams.get("mentoring_levels");
     const payment_types = url.searchParams.get("payment_types");
+    const expertise_domains = url.searchParams.get("expertise_domains");
+    const expertise_topics = url.searchParams.get("expertise_topics");
+    const expertise_topics_custom = url.searchParams.get("expertise_topics_custom");
     const hourly_rate_max = url.searchParams.get("hourly_rate_max");
     const hourly_rate_min = url.searchParams.get("hourly_rate_min");
     const nick_name = url.searchParams.get("nick_name");
@@ -568,6 +644,12 @@ app.get("/api/v1/mentors/search", async (c) => {
     if (payment_types && isNaN(parseInt(payment_types, 10))) {
       return c.json({ error: "payment_types must be a valid integer" }, 400);
     }
+    if (expertise_domains && isNaN(parseInt(expertise_domains, 10))) {
+      return c.json({ error: "expertise_domains must be a valid integer" }, 400);
+    }
+    if (expertise_topics && isNaN(parseInt(expertise_topics, 10))) {
+      return c.json({ error: "expertise_topics must be a valid integer" }, 400);
+    }
     if (hourly_rate_max && isNaN(parseInt(hourly_rate_max, 10))) {
       return c.json({ error: "hourly_rate_max must be a valid number" }, 400);
     }
@@ -589,6 +671,32 @@ app.get("/api/v1/mentors/search", async (c) => {
       const types = parseInt(payment_types, 10);
       conditions.push("payment_types & ? > 0");
       params.push(types);
+    }
+
+    if (expertise_domains) {
+      const domains = parseInt(expertise_domains, 10);
+      conditions.push("expertise_domains & ? > 0");
+      params.push(domains);
+    }
+
+    if (expertise_topics) {
+      const topics = parseInt(expertise_topics, 10);
+      conditions.push("expertise_topics_preset & ? > 0");
+      params.push(topics);
+    }
+
+    if (expertise_topics_custom) {
+      // Parse comma-separated custom topics
+      const customTopics = expertise_topics_custom.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (customTopics.length > 0) {
+        // For each custom topic, check if it exists in the JSON array
+        // Using SQLite's json_each function to search within the JSON array
+        const customConditions = customTopics.map(() =>
+          "EXISTS (SELECT 1 FROM json_each(expertise_topics_custom) WHERE value = ?)"
+        );
+        conditions.push(`(${customConditions.join(" OR ")})`);
+        customTopics.forEach(topic => params.push(topic));
+      }
     }
 
     if (hourly_rate_max) {

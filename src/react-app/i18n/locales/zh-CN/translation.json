@@ -26,7 +26,8 @@
     "refresh": "刷新",
     "tryAgain": "重试",
     "goHome": "返回主页",
-    "noDataAvailable": "暂无数据"
+    "noDataAvailable": "暂无数据",
+    "add": "添加"
   },
   "home": {
     "title": "欢迎来到 Lead Forward 平台",
@@ -59,7 +60,7 @@
     "searchByName": "按名字搜索",
     "nickname": "您的昵称(可修改)",
     "nicknameHelp": "不同于论坛用户名，昵称可进行修改",
-    "mentoringLevels": "您愿意提供什么级别的求职咨询",
+    "mentoringLevels": "您能指导的职业级别",
     "paymentTypes": "您的收款方式",
     "hourlyRate": "每小时咨询定价(美元)",
     "hourlyRateLabel": "您的每小时咨询定价(美元)",
@@ -98,8 +99,15 @@
     "validationRate": "时间费率必须为正数",
     "validationPayment": "至少选择一个付款方式",
     "validationAvailability": "可用时间至少需要 10 个字符",
+    "validationExpertiseDomain": "至少选择一个专业领域",
+    "validationExpertiseTopic": "至少选择一个专长方向",
     "noMentorsFound": "未找到导师",
-    "adjustFilters": "尝试调整您的筛选条件..."
+    "adjustFilters": "尝试调整您的筛选条件...",
+    "expertiseDomains": "您的专业领域",
+    "expertiseTopics": "您的专长方向",
+    "customTopics": "自定义专长标签",
+    "addCustomTopicPlaceholder": "输入专长标签（如：创业指导）",
+    "customTopicsHint": "按回车键或点击'添加'按钮添加标签"
   },
   "mentoringLevel": {
     "entry": "Entry level (对标谷歌L3-4)",
@@ -174,5 +182,23 @@
     "chinese": "中文",
     "english": "English",
     "selectLanguage": "选择语言"
+  },
+  "expertiseDomain": {
+    "technicalDevelopment": "技术开发",
+    "productAndProject": "产品与项目",
+    "managementAndStrategy": "管理与战略",
+    "careerDevelopment": "职业发展"
+  },
+  "expertiseTopic": {
+    "careerTransition": "职业转型",
+    "technicalSkills": "技术能力",
+    "leadership": "领导力",
+    "communication": "沟通能力",
+    "interviewPrep": "面试准备",
+    "negotiation": "谈判技巧",
+    "timeManagement": "时间管理",
+    "fundraising": "融资与募款",
+    "volunteerManagement": "志愿者管理",
+    "strategicPlanning": "战略规划"
   }
 }

@@ -9,6 +9,8 @@ import { Slider } from '../components/ui/slider';
 import { Label } from '../components/ui/label';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
+import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
+import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { MentorCard } from '../components/MentorCard';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
@@ -41,6 +43,9 @@ export function MentorBrowse() {
       hourly_rate_min: 0,
       hourly_rate_max: 200,
       nick_name: '',
+      expertise_domains: 0,
+      expertise_topics_preset: 0,
+      expertise_topics_custom: [],
     },
   });
 
@@ -56,6 +61,9 @@ export function MentorBrowse() {
         payment_types: values.payment_types > 0 ? values.payment_types : undefined,
         hourly_rate_min: values.hourly_rate_min > 0 ? values.hourly_rate_min : undefined,
         hourly_rate_max: values.hourly_rate_max < 200 ? values.hourly_rate_max : undefined,
+        expertise_domains: values.expertise_domains > 0 ? values.expertise_domains : undefined,
+        expertise_topics: values.expertise_topics_preset > 0 ? values.expertise_topics_preset : undefined,
+        expertise_topics_custom: values.expertise_topics_custom && values.expertise_topics_custom.length > 0 ? values.expertise_topics_custom : undefined,
       });
       setMentors(data.mentors || []);
       setTotal(data.total || 0);
@@ -127,6 +135,14 @@ export function MentorBrowse() {
                   {...form.register('nick_name')}
                   onChange={handleFilterChange}
                 />
+              </div>
+
+              <div className="space-y-3">
+                <ExpertiseDomainPicker control={form.control} required={true} />
+              </div>
+
+              <div className="space-y-3">
+                <ExpertiseTopicPicker control={form.control} required={true} />
               </div>
 
               <div className="space-y-3">

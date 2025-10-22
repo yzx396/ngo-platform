@@ -12,6 +12,8 @@ import { Card } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
+import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
+import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { AvailabilityInput } from '../components/AvailabilityInput';
 import { createMentorProfile, getMentorProfileByUserId, updateMentorProfile } from '../services/mentorService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
@@ -22,10 +24,13 @@ import type { MentorProfile } from '../../types/mentor';
 const createMentorProfileSchema = (t: (key: string) => string) => z.object({
   nick_name: z.string().min(2, t('mentor.validationNickname')),
   bio: z.string().min(10, t('mentor.validationBio')),
+  expertise_domains: z.number().min(1, t('mentor.validationExpertiseDomain')),
+  expertise_topics_preset: z.number().min(1, t('mentor.validationExpertiseTopic')),
   mentoring_levels: z.number().min(1, t('mentor.validationLevel')),
   availability: z.string().min(10, t('mentor.validationAvailability')),
   hourly_rate: z.number().min(1, t('mentor.validationRateRequired')),
   payment_types: z.number().min(1, t('mentor.validationPayment')),
+  expertise_topics_custom: z.array(z.string()),
   allow_reviews: z.boolean().refine(
     (val) => val === true,
     t('mentor.validationReviewsRequired')
@@ -61,6 +66,9 @@ export function MentorProfileSetup() {
       availability: '',
       hourly_rate: 50,
       payment_types: 0,
+      expertise_domains: 0,
+      expertise_topics_preset: 0,
+      expertise_topics_custom: [],
       allow_reviews: false,
       allow_recording: false,
     },
@@ -86,6 +94,9 @@ export function MentorProfileSetup() {
             availability: profile.availability || '',
             hourly_rate: profile.hourly_rate ?? 50,
             payment_types: profile.payment_types,
+            expertise_domains: profile.expertise_domains,
+            expertise_topics_preset: profile.expertise_topics_preset,
+            expertise_topics_custom: profile.expertise_topics_custom || [],
             allow_reviews: profile.allow_reviews,
             allow_recording: profile.allow_recording,
           });
@@ -205,15 +216,30 @@ export function MentorProfileSetup() {
                 </div>
               </div>
 
-              {/* Section 2: Mentoring Levels */}
+              {/* Section 2: Expertise Domains and Topics */}
+              <div className="space-y-6">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <ExpertiseDomainPicker control={form.control as any} required={true} />
+                {form.formState.errors.expertise_domains && (
+                  <p className="text-sm text-red-500">{form.formState.errors.expertise_domains.message}</p>
+                )}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <ExpertiseTopicPicker control={form.control as any} required={true} />
+                {form.formState.errors.expertise_topics_preset && (
+                  <p className="text-sm text-red-500">{form.formState.errors.expertise_topics_preset.message}</p>
+                )}
+              </div>
+
+              {/* Section 3: Mentoring Levels */}
               <div className="space-y-4">
-                <MentoringLevelPicker control={form.control} />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <MentoringLevelPicker control={form.control as any} />
                 {form.formState.errors.mentoring_levels && (
                   <p className="text-sm text-red-500">{form.formState.errors.mentoring_levels.message}</p>
                 )}
               </div>
 
-              {/* Section 3: Rate & Availability */}
+              {/* Section 4: Rate & Availability */}
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="hourly_rate">
@@ -231,20 +257,25 @@ export function MentorProfileSetup() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <AvailabilityInput control={form.control} />
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <AvailabilityInput control={form.control as any} />
                   {form.formState.errors.availability && (
                     <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
                   )}
                 </div>
               </div>
 
-              {/* Section 4: Payment & Preferences */}
+              {/* Section 5: Payment & Preferences */}
               <div className="space-y-6">
-                <PaymentTypePicker control={form.control} />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <PaymentTypePicker control={form.control as any} />
                 {form.formState.errors.payment_types && (
                   <p className="text-sm text-red-500">{form.formState.errors.payment_types.message}</p>
                 )}
+              </div>
 
+              {/* Payment & Preferences (continued) */}
+              <div className="space-y-6">
                 {/* Consent Section */}
                 <div className="space-y-6">
                   {/* Reviews Consent */}

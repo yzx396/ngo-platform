@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { AvailabilityDisplay } from './AvailabilityDisplay';
-import { getLevelNames, getPaymentTypeNames } from '../../types/mentor';
+import { getLevelNames, getPaymentTypeNames, getDomainNames, getTopicNames } from '../../types/mentor';
 import type { MentorProfile } from '../../types/mentor';
 
 interface MentorCardProps {
@@ -29,6 +29,8 @@ export function MentorCard({
   const { t } = useTranslation();
   const levelNames = getLevelNames(mentor.mentoring_levels);
   const paymentNames = getPaymentTypeNames(mentor.payment_types);
+  const domainNames = getDomainNames(mentor.expertise_domains);
+  const topicNames = getTopicNames(mentor.expertise_topics_preset);
 
   const handleRequestMentorship = () => {
     // Parent must provide callback (which opens dialog with intro/time fields)
@@ -64,6 +66,33 @@ export function MentorCard({
             {levelNames.map((level) => (
               <Badge key={level} variant="default" className="text-xs">
                 {level}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Expertise Domains */}
+        {domainNames.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {domainNames.map((domain) => (
+              <Badge key={domain} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                {t(`expertiseDomain.${domain.charAt(0).toLowerCase() + domain.slice(1)}`)}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Expertise Topics */}
+        {(topicNames.length > 0 || (mentor.expertise_topics_custom && mentor.expertise_topics_custom.length > 0)) && (
+          <div className="flex flex-wrap gap-2">
+            {topicNames.map((topic) => (
+              <Badge key={topic} variant="outline" className="text-xs">
+                {t(`expertiseTopic.${topic.charAt(0).toLowerCase() + topic.slice(1)}`)}
+              </Badge>
+            ))}
+            {mentor.expertise_topics_custom && mentor.expertise_topics_custom.map((custom) => (
+              <Badge key={custom} variant="outline" className="text-xs bg-green-50 border-green-200">
+                {custom}
               </Badge>
             ))}
           </div>
