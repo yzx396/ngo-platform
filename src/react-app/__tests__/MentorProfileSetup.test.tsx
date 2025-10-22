@@ -9,14 +9,17 @@ const mentorProfileSchema = z.object({
   nick_name: z.string().min(2, 'Nickname must be at least 2 characters'),
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
   mentoring_levels: z.number().min(1, 'Select at least one mentoring level'),
-  availability: z.string().optional(),
-  hourly_rate: z.number().refine(
-    (val) => isNaN(val) || val > 0,
-    'Hourly rate must be positive'
-  ).optional(),
+  availability: z.string().min(10, 'Availability must be at least 10 characters'),
+  hourly_rate: z.number().min(1, 'Hourly rate is required'),
   payment_types: z.number().min(1, 'Select at least one payment method'),
-  allow_reviews: z.boolean(),
-  allow_recording: z.boolean(),
+  allow_reviews: z.boolean().refine(
+    (val) => val === true,
+    'You must accept this term to continue'
+  ),
+  allow_recording: z.boolean().refine(
+    (val) => val === true,
+    'You must accept this term to continue'
+  ),
 });
 
 describe('MentorProfileSetup - Single Form Validation', () => {
@@ -120,13 +123,13 @@ describe('MentorProfileSetup - Single Form Validation', () => {
     }
   });
 
-  it('should fail validation when hourly_rate is negative', () => {
+  it('should fail validation when hourly_rate is zero or negative', () => {
     const invalidData = {
       nick_name: 'TestMentor',
       bio: 'This is a test bio for mentoring',
       mentoring_levels: 1,
-      availability: 'Flexible schedule',
-      hourly_rate: -10, // Invalid: negative rate
+      availability: 'Flexible weekday evenings',
+      hourly_rate: 0, // Invalid: must be at least 1
       payment_types: 1,
       allow_reviews: true,
       allow_recording: true,
@@ -137,24 +140,92 @@ describe('MentorProfileSetup - Single Form Validation', () => {
 
     if (!result.success) {
       const rateError = result.error.issues.find((err) => err.path[0] === 'hourly_rate');
-      expect(rateError?.message).toBe('Hourly rate must be positive');
+      expect(rateError?.message).toBe('Hourly rate is required');
     }
   });
 
-  it('should allow hourly_rate and availability to be optional/empty', () => {
-    const optionalData = {
+  it('should fail validation when availability is missing', () => {
+    const invalidData = {
       nick_name: 'TestMentor',
       bio: 'This is a test bio for mentoring',
       mentoring_levels: 1,
-      availability: '', // Empty is okay since it's optional
-      hourly_rate: undefined, // Undefined is okay since it's optional
+      availability: '', // Empty availability is invalid
+      hourly_rate: 50,
       payment_types: 1,
       allow_reviews: true,
       allow_recording: true,
     };
 
-    const result = mentorProfileSchema.safeParse(optionalData);
-    expect(result.success).toBe(true);
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const availError = result.error.issues.find((err) => err.path[0] === 'availability');
+      expect(availError?.message).toBe('Availability must be at least 10 characters');
+    }
+  });
+
+  it('should fail validation when availability is too short', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Weekdays', // Too short (less than 10 chars)
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const availError = result.error.issues.find((err) => err.path[0] === 'availability');
+      expect(availError?.message).toBe('Availability must be at least 10 characters');
+    }
+  });
+
+  it('should fail when allow_reviews is not explicitly accepted', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible weekday evenings',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: false, // Must be true
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const reviewsError = result.error.issues.find((err) => err.path[0] === 'allow_reviews');
+      expect(reviewsError?.message).toBe('You must accept this term to continue');
+    }
+  });
+
+  it('should fail when allow_recording is not explicitly accepted', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible weekday evenings',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: false, // Must be true
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const recordingError = result.error.issues.find((err) => err.path[0] === 'allow_recording');
+      expect(recordingError?.message).toBe('You must accept this term to continue');
+    }
   });
 
   it('should accept multiple field errors at once', () => {
@@ -163,11 +234,11 @@ describe('MentorProfileSetup - Single Form Validation', () => {
       nick_name: 'T', // Too short
       bio: 'Short', // Too short
       mentoring_levels: 0, // None selected
-      availability: 'Flexible schedule',
-      hourly_rate: -10, // Negative
+      availability: 'Brief', // Too short
+      hourly_rate: 0, // Invalid
       payment_types: 0, // None selected
-      allow_reviews: true,
-      allow_recording: true,
+      allow_reviews: false, // Not accepted
+      allow_recording: false, // Not accepted
     };
 
     const result = mentorProfileSchema.safeParse(multipleErrorsData);
@@ -182,7 +253,11 @@ describe('MentorProfileSetup - Single Form Validation', () => {
       expect(errorPaths).toContain('nick_name');
       expect(errorPaths).toContain('bio');
       expect(errorPaths).toContain('mentoring_levels');
+      expect(errorPaths).toContain('availability');
+      expect(errorPaths).toContain('hourly_rate');
       expect(errorPaths).toContain('payment_types');
+      expect(errorPaths).toContain('allow_reviews');
+      expect(errorPaths).toContain('allow_recording');
     }
   });
 });

@@ -37,6 +37,7 @@ export function PaymentTypePicker<T extends FieldValues = Record<string, unknown
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {t('mentor.paymentTypes')}
+            <span className="text-red-500 ml-1">*</span>
           </legend>
 
           <div className="grid grid-cols-2 gap-3">

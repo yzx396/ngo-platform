@@ -23,14 +23,17 @@ const createMentorProfileSchema = (t: (key: string) => string) => z.object({
   nick_name: z.string().min(2, t('mentor.validationNickname')),
   bio: z.string().min(10, t('mentor.validationBio')),
   mentoring_levels: z.number().min(1, t('mentor.validationLevel')),
-  availability: z.string().optional(),
-  hourly_rate: z.number().refine(
-    (val) => isNaN(val) || val > 0,
-    t('mentor.validationRate')
-  ).optional(),
+  availability: z.string().min(10, t('mentor.validationAvailability')),
+  hourly_rate: z.number().min(1, t('mentor.validationRateRequired')),
   payment_types: z.number().min(1, t('mentor.validationPayment')),
-  allow_reviews: z.boolean(),
-  allow_recording: z.boolean(),
+  allow_reviews: z.boolean().refine(
+    (val) => val === true,
+    t('mentor.validationReviewsRequired')
+  ),
+  allow_recording: z.boolean().refine(
+    (val) => val === true,
+    t('mentor.validationRecordingRequired')
+  ),
 });
 
 type MentorProfileFormData = z.infer<ReturnType<typeof createMentorProfileSchema>>;
@@ -58,8 +61,8 @@ export function MentorProfileSetup() {
       availability: '',
       hourly_rate: 50,
       payment_types: 0,
-      allow_reviews: true,
-      allow_recording: true,
+      allow_reviews: false,
+      allow_recording: false,
     },
   });
 
@@ -166,9 +169,11 @@ export function MentorProfileSetup() {
             <Card className="p-8 space-y-8">
               {/* Section 1: Basic Information */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">{t('mentor.sectionBasicInfo')}</h3>
                 <div className="space-y-2">
-                  <Label htmlFor="nick_name">{t('mentor.nickname')}</Label>
+                  <Label htmlFor="nick_name">
+                    {t('mentor.nickname')}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Input
                     id="nick_name"
                     placeholder={t('mentor.nicknameHelp')}
@@ -180,7 +185,10 @@ export function MentorProfileSetup() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">{t('mentor.bio')}</Label>
+                  <Label htmlFor="bio">
+                    {t('mentor.bio')}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Textarea
                     id="bio"
                     placeholder={t('mentor.bioHelp')}
@@ -195,7 +203,6 @@ export function MentorProfileSetup() {
 
               {/* Section 2: Mentoring Levels */}
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold">{t('mentor.sectionMentoringLevels')}</h3>
                 <MentoringLevelPicker control={form.control} />
                 {form.formState.errors.mentoring_levels && (
                   <p className="text-sm text-red-500">{form.formState.errors.mentoring_levels.message}</p>
@@ -204,9 +211,11 @@ export function MentorProfileSetup() {
 
               {/* Section 3: Rate & Availability */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">{t('mentor.sectionRateAvailability')}</h3>
                 <div className="space-y-2">
-                  <Label htmlFor="hourly_rate">{t('mentor.hourlyRateLabel')}</Label>
+                  <Label htmlFor="hourly_rate">
+                    {t('mentor.hourlyRateLabel')}
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
                   <Input
                     id="hourly_rate"
                     type="number"
@@ -217,54 +226,85 @@ export function MentorProfileSetup() {
                     <p className="text-sm text-red-500">{form.formState.errors.hourly_rate.message}</p>
                   )}
                 </div>
-                <AvailabilityInput control={form.control} />
-                {form.formState.errors.availability && (
-                  <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
-                )}
+                <div className="space-y-2">
+                  <AvailabilityInput control={form.control} />
+                  {form.formState.errors.availability && (
+                    <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
+                  )}
+                </div>
               </div>
 
               {/* Section 4: Payment & Preferences */}
               <div className="space-y-6">
-                <h3 className="text-xl font-semibold">{t('mentor.sectionPaymentPreferences')}</h3>
                 <PaymentTypePicker control={form.control} />
                 {form.formState.errors.payment_types && (
                   <p className="text-sm text-red-500">{form.formState.errors.payment_types.message}</p>
                 )}
 
-                <div className="space-y-3">
-                  <Controller
-                    control={form.control}
-                    name="allow_reviews"
-                    render={({ field }) => (
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <span>{t('mentor.allowReviews')}</span>
-                      </label>
+                {/* Consent Section */}
+                <div className="space-y-6">
+                  {/* Reviews Consent */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium">
+                      {t('mentor.allowReviews')}
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <Controller
+                      control={form.control}
+                      name="allow_reviews"
+                      render={({ field }) => (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span className="text-sm font-medium">
+                            {t('mentor.consentAccept')}
+                          </span>
+                        </label>
+                      )}
+                    />
+                    {form.formState.errors.allow_reviews && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.allow_reviews.message}
+                      </p>
                     )}
-                  />
-                  <Controller
-                    control={form.control}
-                    name="allow_recording"
-                    render={({ field }) => (
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                        <span>{t('mentor.allowRecording')}</span>
-                      </label>
+                  </div>
+
+                  {/* Recording Consent */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium">
+                      {t('mentor.allowRecording')}
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <Controller
+                      control={form.control}
+                      name="allow_recording"
+                      render={({ field }) => (
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                          <span className="text-sm font-medium">
+                            {t('mentor.consentAccept')}
+                          </span>
+                        </label>
+                      )}
+                    />
+                    {form.formState.errors.allow_recording && (
+                      <p className="text-sm text-red-500">
+                        {form.formState.errors.allow_recording.message}
+                      </p>
                     )}
-                  />
+                  </div>
                 </div>
               </div>
             </Card>
 
             {/* Submit Button */}
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
                 {isSubmitting
                   ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
                   : t('common.save')}

@@ -27,7 +27,10 @@ export function AvailabilityInput<T extends FieldValues = Record<string, unknown
       name={name}
       render={({ field }) => (
         <div className="space-y-2">
-          <Label htmlFor={name}>{t('mentor.availability')}</Label>
+          <Label htmlFor={name}>
+            {t('mentor.availability')}
+            <span className="text-red-500 ml-1">*</span>
+          </Label>
           <Textarea
             id={name}
             placeholder={t('mentor.availabilityPlaceholder')}

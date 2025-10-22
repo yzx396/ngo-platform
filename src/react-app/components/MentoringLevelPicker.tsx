@@ -35,6 +35,7 @@ export function MentoringLevelPicker<T extends FieldValues = Record<string, unkn
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {t('mentor.mentoringLevels')}
+            <span className="text-red-500 ml-1">*</span>
           </legend>
 
           <div className="space-y-2">
