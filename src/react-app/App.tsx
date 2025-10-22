@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { Suspense } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { I18nextProvider, useTranslation } from 'react-i18next';
@@ -9,12 +9,16 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
-import { LoginPage } from './pages/LoginPage';
-import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
-import { MentorBrowse } from './pages/MentorBrowse';
-import { MentorDetailPage } from './pages/MentorDetailPage';
-import { MentorProfileSetup } from './pages/MentorProfileSetup';
-import { MatchesList } from './pages/MatchesList';
+
+// Lazy load pages for route-based code splitting
+// Each page loads only when the user navigates to that route
+// This reduces the initial bundle size significantly
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage').then(m => ({ default: m.OAuthCallbackPage })));
+const MentorBrowse = lazy(() => import('./pages/MentorBrowse').then(m => ({ default: m.MentorBrowse })));
+const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m => ({ default: m.MentorDetailPage })));
+const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(m => ({ default: m.MentorProfileSetup })));
+const MatchesList = lazy(() => import('./pages/MatchesList').then(m => ({ default: m.MatchesList })));
 
 /**
  * Main App component with routing
@@ -79,6 +83,7 @@ function App() {
 /**
  * Home/Dashboard page
  * Entry point for the application
+ * Kept in App.tsx as inline component since it's critical path
  */
 function HomePage() {
   const { t } = useTranslation();
