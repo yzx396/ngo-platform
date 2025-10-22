@@ -22,13 +22,10 @@ export default defineConfig({
           'vendor-ui': [
             '@radix-ui/react-avatar',
             '@radix-ui/react-checkbox',
-            '@radix-ui/react-dialog',
             '@radix-ui/react-label',
-            '@radix-ui/react-select',
             '@radix-ui/react-separator',
             '@radix-ui/react-slider',
             '@radix-ui/react-slot',
-            '@radix-ui/react-tabs',
             'sonner',
           ],
           'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
