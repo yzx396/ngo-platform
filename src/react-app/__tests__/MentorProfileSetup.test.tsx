@@ -1,74 +1,126 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 
-// This test verifies the fix for Step 3 validation
-// Previously, Step 3 was validating 'payment_types' which is a Step 4 field
-// This caused the continue button to not work because payment_types defaulted to 0
-// which fails validation (requires min 1)
+// Tests for MentorProfileSetup single-form validation
+// The form now displays all fields at once (no wizard steps)
+// All validation runs on form submission
 
 const mentorProfileSchema = z.object({
   nick_name: z.string().min(2, 'Nickname must be at least 2 characters'),
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
   mentoring_levels: z.number().min(1, 'Select at least one mentoring level'),
   availability: z.string().optional(),
-  hourly_rate: z.number().positive('Hourly rate must be positive').optional(),
+  hourly_rate: z.number().refine(
+    (val) => isNaN(val) || val > 0,
+    'Hourly rate must be positive'
+  ).optional(),
   payment_types: z.number().min(1, 'Select at least one payment method'),
   allow_reviews: z.boolean(),
   allow_recording: z.boolean(),
 });
 
-describe('MentorProfileSetup - Step 3 Validation Fix', () => {
-  it('should validate only step 3 fields (hourly_rate and availability), not payment_types', () => {
-    // This test verifies the fix: we now validate only ['hourly_rate', 'availability'] on Step 3
-    // Previously we validated ['hourly_rate', 'payment_types'] which broke the flow
-
-    const step3Data = {
-      nick_name: 'TestMentor',
-      bio: 'This is a test bio for mentoring',
-      mentoring_levels: 1,
-      availability: 'Flexible schedule',
-      hourly_rate: 50, // This is the only Step 3 field that needs validation
-      payment_types: 0, // This should NOT be validated on Step 3 (defaults to 0, which would fail)
-      allow_reviews: true,
-      allow_recording: true,
-    };
-
-    // Before fix: This would fail because payment_types is 0 (min 1 required)
-    // After fix: This passes because we only validate hourly_rate and availability
-    const result = mentorProfileSchema.safeParse(step3Data);
-
-    // The result should fail because payment_types is missing a selection
-    // But when we validate ONLY step 3 fields, it should pass
-    expect(result.success).toBe(false);
-
-    // Verify payment_types is the issue, not hourly_rate or availability
-    if (!result.success) {
-      const paymentTypesError = result.error.issues.find(
-        (err) => err.path[0] === 'payment_types'
-      );
-      expect(paymentTypesError).toBeDefined();
-      expect(paymentTypesError?.message).toBe('Select at least one payment method');
-    }
-  });
-
-  it('should pass validation when step 3 fields are correct', () => {
-    // When all fields including payment_types are filled correctly
-    const completeData = {
+describe('MentorProfileSetup - Single Form Validation', () => {
+  it('should pass validation with complete valid data', () => {
+    const validData = {
       nick_name: 'TestMentor',
       bio: 'This is a test bio for mentoring',
       mentoring_levels: 1,
       availability: 'Flexible schedule',
       hourly_rate: 50,
-      payment_types: 1, // At least one payment method selected
+      payment_types: 1,
       allow_reviews: true,
       allow_recording: true,
     };
 
-    const result = mentorProfileSchema.safeParse(completeData);
+    const result = mentorProfileSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  it('should show error when hourly_rate is negative on step 3', () => {
+  it('should fail validation when nick_name is too short', () => {
+    const invalidData = {
+      nick_name: 'T', // Too short
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const nameError = result.error.issues.find((err) => err.path[0] === 'nick_name');
+      expect(nameError?.message).toBe('Nickname must be at least 2 characters');
+    }
+  });
+
+  it('should fail validation when bio is too short', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'Short', // Too short
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const bioError = result.error.issues.find((err) => err.path[0] === 'bio');
+      expect(bioError?.message).toBe('Bio must be at least 10 characters');
+    }
+  });
+
+  it('should fail validation when no mentoring levels are selected', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 0, // No levels selected
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const levelError = result.error.issues.find((err) => err.path[0] === 'mentoring_levels');
+      expect(levelError?.message).toBe('Select at least one mentoring level');
+    }
+  });
+
+  it('should fail validation when no payment types are selected', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 0, // No payment types selected
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const paymentError = result.error.issues.find((err) => err.path[0] === 'payment_types');
+      expect(paymentError?.message).toBe('Select at least one payment method');
+    }
+  });
+
+  it('should fail validation when hourly_rate is negative', () => {
     const invalidData = {
       nick_name: 'TestMentor',
       bio: 'This is a test bio for mentoring',
@@ -89,8 +141,7 @@ describe('MentorProfileSetup - Step 3 Validation Fix', () => {
     }
   });
 
-  it('should allow hourly_rate and availability to be optional/empty on step 3', () => {
-    // Both are optional fields, so empty values should be valid for Step 3
+  it('should allow hourly_rate and availability to be optional/empty', () => {
     const optionalData = {
       nick_name: 'TestMentor',
       bio: 'This is a test bio for mentoring',
@@ -104,5 +155,34 @@ describe('MentorProfileSetup - Step 3 Validation Fix', () => {
 
     const result = mentorProfileSchema.safeParse(optionalData);
     expect(result.success).toBe(true);
+  });
+
+  it('should accept multiple field errors at once', () => {
+    // Test that all validations run together, not step-by-step
+    const multipleErrorsData = {
+      nick_name: 'T', // Too short
+      bio: 'Short', // Too short
+      mentoring_levels: 0, // None selected
+      availability: 'Flexible schedule',
+      hourly_rate: -10, // Negative
+      payment_types: 0, // None selected
+      allow_reviews: true,
+      allow_recording: true,
+    };
+
+    const result = mentorProfileSchema.safeParse(multipleErrorsData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      // Should have multiple errors
+      expect(result.error.issues.length).toBeGreaterThan(1);
+
+      // Verify we have errors for multiple fields
+      const errorPaths = result.error.issues.map(issue => issue.path[0]);
+      expect(errorPaths).toContain('nick_name');
+      expect(errorPaths).toContain('bio');
+      expect(errorPaths).toContain('mentoring_levels');
+      expect(errorPaths).toContain('payment_types');
+    }
   });
 });

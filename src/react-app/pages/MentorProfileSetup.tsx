@@ -37,12 +37,11 @@ type MentorProfileFormData = z.infer<ReturnType<typeof createMentorProfileSchema
 
 /**
  * MentorProfileSetup page
- * Multi-step form for mentors to create their profile
+ * Single form for mentors to create their profile
  * Includes validation and saving to backend
  */
 export function MentorProfileSetup() {
   const { t } = useTranslation();
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [existingProfile, setExistingProfile] = useState<MentorProfile | null>(null);
@@ -99,24 +98,6 @@ export function MentorProfileSetup() {
     loadExistingProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  const handleNext = async () => {
-    // Validate fields for current step
-    if (step === 1) {
-      const isValid = await form.trigger(['nick_name', 'bio']);
-      if (isValid) setStep(2);
-    } else if (step === 2) {
-      const isValid = await form.trigger('mentoring_levels');
-      if (isValid) setStep(3);
-    } else if (step === 3) {
-      const isValid = await form.trigger(['hourly_rate', 'availability']);
-      if (isValid) setStep(4);
-    }
-  };
-
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
-  };
 
   const handleSubmit = async (data: MentorProfileFormData) => {
     setIsSubmitting(true);
@@ -175,137 +156,119 @@ export function MentorProfileSetup() {
           <h1 className="text-4xl font-bold">
             {existingProfile ? t('mentor.editTitle') : t('mentor.createTitle')}
           </h1>
-          <p className="text-lg text-muted-foreground">{t('mentor.step', { current: step })}</p>
+          <p className="text-lg text-muted-foreground">
+            {existingProfile ? t('mentor.editSubtitle') : t('mentor.createSubtitle')}
+          </p>
         </div>
 
         <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-            <Card className="p-8 space-y-6 min-h-96">
-              {/* Step 1: Basic Info */}
-              {step === 1 && (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="nick_name">{t('mentor.nickname')}</Label>
-                    <Input
-                      id="nick_name"
-                      placeholder={t('mentor.nicknameHelp')}
-                      {...form.register('nick_name')}
-                    />
-                    {form.formState.errors.nick_name && (
-                      <p className="text-sm text-red-500">{form.formState.errors.nick_name.message}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">{t('mentor.bio')}</Label>
-                    <Textarea
-                      id="bio"
-                      placeholder={t('mentor.bioHelp')}
-                      rows={6}
-                      {...form.register('bio')}
-                    />
-                    {form.formState.errors.bio && (
-                      <p className="text-sm text-red-500">{form.formState.errors.bio.message}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Mentoring Levels */}
-              {step === 2 && (
-                <div className="space-y-4">
-                  <p className="text-lg font-semibold">What mentoring levels can you help with?</p>
-                  <MentoringLevelPicker control={form.control} />
-                  {form.formState.errors.mentoring_levels && (
-                    <p className="text-sm text-red-500">{form.formState.errors.mentoring_levels.message}</p>
+            <Card className="p-8 space-y-8">
+              {/* Section 1: Basic Information */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">{t('mentor.sectionBasicInfo')}</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="nick_name">{t('mentor.nickname')}</Label>
+                  <Input
+                    id="nick_name"
+                    placeholder={t('mentor.nicknameHelp')}
+                    {...form.register('nick_name')}
+                  />
+                  {form.formState.errors.nick_name && (
+                    <p className="text-sm text-red-500">{form.formState.errors.nick_name.message}</p>
                   )}
                 </div>
-              )}
 
-              {/* Step 3: Rate & Availability */}
-              {step === 3 && (
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="hourly_rate">{t('mentor.hourlyRateLabel')}</Label>
-                    <Input
-                      id="hourly_rate"
-                      type="number"
-                      placeholder="50"
-                      {...form.register('hourly_rate', { valueAsNumber: true })}
-                    />
-                    {form.formState.errors.hourly_rate && (
-                      <p className="text-sm text-red-500">{form.formState.errors.hourly_rate.message}</p>
+                <div className="space-y-2">
+                  <Label htmlFor="bio">{t('mentor.bio')}</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder={t('mentor.bioHelp')}
+                    rows={6}
+                    {...form.register('bio')}
+                  />
+                  {form.formState.errors.bio && (
+                    <p className="text-sm text-red-500">{form.formState.errors.bio.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Section 2: Mentoring Levels */}
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold">{t('mentor.sectionMentoringLevels')}</h3>
+                <MentoringLevelPicker control={form.control} />
+                {form.formState.errors.mentoring_levels && (
+                  <p className="text-sm text-red-500">{form.formState.errors.mentoring_levels.message}</p>
+                )}
+              </div>
+
+              {/* Section 3: Rate & Availability */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">{t('mentor.sectionRateAvailability')}</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="hourly_rate">{t('mentor.hourlyRateLabel')}</Label>
+                  <Input
+                    id="hourly_rate"
+                    type="number"
+                    placeholder="50"
+                    {...form.register('hourly_rate', { valueAsNumber: true })}
+                  />
+                  {form.formState.errors.hourly_rate && (
+                    <p className="text-sm text-red-500">{form.formState.errors.hourly_rate.message}</p>
+                  )}
+                </div>
+                <AvailabilityInput control={form.control} />
+                {form.formState.errors.availability && (
+                  <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
+                )}
+              </div>
+
+              {/* Section 4: Payment & Preferences */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">{t('mentor.sectionPaymentPreferences')}</h3>
+                <PaymentTypePicker control={form.control} />
+                {form.formState.errors.payment_types && (
+                  <p className="text-sm text-red-500">{form.formState.errors.payment_types.message}</p>
+                )}
+
+                <div className="space-y-3">
+                  <Controller
+                    control={form.control}
+                    name="allow_reviews"
+                    render={({ field }) => (
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span>{t('mentor.allowReviews')}</span>
+                      </label>
                     )}
-                  </div>
-                  <AvailabilityInput control={form.control} />
-                  {form.formState.errors.availability && (
-                    <p className="text-sm text-red-500">{form.formState.errors.availability.message}</p>
-                  )}
+                  />
+                  <Controller
+                    control={form.control}
+                    name="allow_recording"
+                    render={({ field }) => (
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                        <span>{t('mentor.allowRecording')}</span>
+                      </label>
+                    )}
+                  />
                 </div>
-              )}
-
-              {/* Step 4: Payment & Preferences */}
-              {step === 4 && (
-                <div className="space-y-6">
-                  <PaymentTypePicker control={form.control} />
-                  {form.formState.errors.payment_types && (
-                    <p className="text-sm text-red-500">{form.formState.errors.payment_types.message}</p>
-                  )}
-
-                  <div className="space-y-3">
-                    <Controller
-                      control={form.control}
-                      name="allow_reviews"
-                      render={({ field }) => (
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <span>{t('mentor.allowReviews')}</span>
-                        </label>
-                      )}
-                    />
-                    <Controller
-                      control={form.control}
-                      name="allow_recording"
-                      render={({ field }) => (
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                          <span>{t('mentor.allowRecording')}</span>
-                        </label>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
+              </div>
             </Card>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={step === 1}
-              >
-                {t('common.back')}
+            {/* Submit Button */}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
+                  : t('common.save')}
               </Button>
-
-              {step < 4 ? (
-                <Button type="button" onClick={handleNext}>
-                  {t('common.next')}
-                </Button>
-              ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
-                    : t('common.save')}
-                </Button>
-              )}
             </div>
           </form>
         </FormProvider>
