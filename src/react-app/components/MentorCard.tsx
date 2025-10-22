@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -27,6 +28,7 @@ export function MentorCard({
   onRequestMentorship,
   isMatched = false
 }: MentorCardProps) {
+  const { t } = useTranslation();
   const [isRequesting, setIsRequesting] = useState(false);
   const levelNames = getLevelNames(mentor.mentoring_levels);
   const paymentNames = getPaymentTypeNames(mentor.payment_types);
@@ -37,12 +39,12 @@ export function MentorCard({
       onRequestMentorship();
       return;
     }
-    
+
     // Otherwise, make the API call directly (for authenticated contexts)
     setIsRequesting(true);
     try {
       await createMatch(mentor.user_id);
-      showSuccessToast('Mentorship request sent!');
+      showSuccessToast(t('matches.requestSent'));
     } catch (error) {
       handleApiError(error);
     } finally {
@@ -81,7 +83,7 @@ export function MentorCard({
         {/* Mentoring Levels */}
         {levelNames.length > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Levels</p>
+            <p className="text-xs font-medium text-muted-foreground">{t('mentor.levels')}</p>
             <div className="flex flex-wrap gap-1">
               {levelNames.slice(0, 3).map((level) => (
                 <Badge key={level} variant="outline" className="text-xs">
@@ -100,7 +102,7 @@ export function MentorCard({
         {/* Hourly Rate */}
         {mentor.hourly_rate && (
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Rate:</span>
+            <span className="text-sm font-medium">{t('mentor.rate')}:</span>
             <Badge variant="secondary">${mentor.hourly_rate}/hr</Badge>
           </div>
         )}
@@ -108,14 +110,14 @@ export function MentorCard({
         {/* Payment Types */}
         {paymentNames.length > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">Accepts</p>
+            <p className="text-xs font-medium text-muted-foreground">{t('mentor.accepts')}</p>
             <p className="text-sm">{paymentNames.slice(0, 3).join(', ')}</p>
           </div>
         )}
 
         {/* Availability */}
         <div className="space-y-1">
-          <p className="text-xs font-medium text-muted-foreground">Availability</p>
+          <p className="text-xs font-medium text-muted-foreground">{t('mentor.availability')}</p>
           <p className="text-sm">
             <AvailabilityDisplay availability={mentor.availability} />
           </p>
@@ -125,7 +127,7 @@ export function MentorCard({
       <CardFooter className="flex gap-2 pt-3">
         {onViewDetails && (
           <Button variant="outline" size="sm" className="flex-1" onClick={onViewDetails}>
-            View Details
+            {t('mentor.viewDetails')}
           </Button>
         )}
         {!isMatched && (
@@ -135,12 +137,12 @@ export function MentorCard({
             onClick={handleRequestMentorship}
             disabled={isRequesting}
           >
-            {isRequesting ? 'Requesting...' : 'Request Mentorship'}
+            {isRequesting ? t('mentor.sending') : t('mentor.requestMentorship')}
           </Button>
         )}
         {isMatched && (
           <Button size="sm" className="flex-1" disabled>
-            Already Matched
+            {t('mentor.alreadyMatched')}
           </Button>
         )}
       </CardFooter>

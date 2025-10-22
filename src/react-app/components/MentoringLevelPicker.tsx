@@ -1,4 +1,5 @@
 import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { MentoringLevel } from '../../types/mentor';
@@ -17,11 +18,13 @@ export function MentoringLevelPicker<T extends FieldValues = Record<string, unkn
   control,
   name = 'mentoring_levels' as Path<T>
 }: MentoringLevelPickerProps<T>) {
+  const { t } = useTranslation();
+
   const levels = [
-    { value: MentoringLevel.Entry, label: 'Entry' },
-    { value: MentoringLevel.Senior, label: 'Senior' },
-    { value: MentoringLevel.Staff, label: 'Staff' },
-    { value: MentoringLevel.Management, label: 'Management' },
+    { value: MentoringLevel.Entry, label: t('mentoringLevel.entry') },
+    { value: MentoringLevel.Senior, label: t('mentoringLevel.senior') },
+    { value: MentoringLevel.Staff, label: t('mentoringLevel.staff') },
+    { value: MentoringLevel.Management, label: t('mentoringLevel.management') },
   ];
 
   return (
@@ -31,7 +34,7 @@ export function MentoringLevelPicker<T extends FieldValues = Record<string, unkn
       render={({ field }) => (
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Mentoring Levels
+            {t('mentor.mentoringLevels')}
           </legend>
 
           <div className="space-y-2">

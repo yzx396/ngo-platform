@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '../components/ui/card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -18,6 +19,7 @@ import type { Match } from '../../types/match';
  * Matches the layout pattern of MentorBrowse page
  */
 export function MatchesList() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +67,10 @@ export function MatchesList() {
     try {
       if (action === 'accept') {
         await acceptMatch(matchId);
-        showSuccessToast('Match accepted');
+        showSuccessToast(t('matches.requestAccepted'));
       } else {
         await rejectMatch(matchId);
-        showSuccessToast('Match rejected');
+        showSuccessToast(t('matches.requestRejected'));
       }
       fetchMatches();
     } catch (error) {
@@ -79,7 +81,7 @@ export function MatchesList() {
   const handleComplete = async (matchId: string) => {
     try {
       await completeMatch(matchId);
-      showSuccessToast('Match completed');
+      showSuccessToast(t('matches.matchCompleted'));
       fetchMatches();
     } catch (error) {
       handleApiError(error);
@@ -103,9 +105,9 @@ export function MatchesList() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">My Matches</h1>
+        <h1 className="text-4xl font-bold">{t('matches.myMatches')}</h1>
         <p className="text-lg text-muted-foreground">
-          {role === 'mentor' ? 'Mentorship requests from mentees' : 'Your mentorship requests'}
+          {role === 'mentor' ? t('matches.menteeRequests') : t('matches.yourRequests')}
         </p>
       </div>
 
@@ -115,7 +117,7 @@ export function MatchesList() {
           <Card className="p-6 sticky top-4 space-y-6">
             {/* Role Selection */}
             <div className="space-y-3">
-              <Label>View As</Label>
+              <Label>{t('matches.viewAs')}</Label>
               <div className="space-y-2">
                 <button
                   onClick={() => {
@@ -128,7 +130,7 @@ export function MatchesList() {
                       : 'border-input hover:bg-accent'
                   }`}
                 >
-                  As Mentee
+                  {t('matches.asMentee')}
                 </button>
                 <button
                   onClick={() => {
@@ -141,7 +143,7 @@ export function MatchesList() {
                       : 'border-input hover:bg-accent'
                   }`}
                 >
-                  As Mentor
+                  {t('matches.asMentor')}
                 </button>
               </div>
             </div>
@@ -150,28 +152,28 @@ export function MatchesList() {
 
             {/* Status Filter */}
             <div className="space-y-3">
-              <Label>Filter by Status</Label>
+              <Label>{t('matches.filterByStatus')}</Label>
               <div className="space-y-2">
                 <StatusFilterButton
-                  label="All"
+                  label={t('matches.allStatus')}
                   count={matches.length}
                   isActive={statusFilter === 'all'}
                   onClick={() => setStatusFilter('all')}
                 />
                 <StatusFilterButton
-                  label="Pending"
+                  label={t('matches.pending')}
                   count={pendingCount}
                   isActive={statusFilter === 'pending'}
                   onClick={() => setStatusFilter('pending')}
                 />
                 <StatusFilterButton
-                  label="Active"
+                  label={t('matches.active')}
                   count={activeCount}
                   isActive={statusFilter === 'active'}
                   onClick={() => setStatusFilter('active')}
                 />
                 <StatusFilterButton
-                  label="Completed"
+                  label={t('matches.completed')}
                   count={completedCount}
                   isActive={statusFilter === 'completed'}
                   onClick={() => setStatusFilter('completed')}
@@ -180,7 +182,7 @@ export function MatchesList() {
             </div>
 
             <Button onClick={fetchMatches} className="w-full">
-              Refresh
+              {t('common.refresh')}
             </Button>
           </Card>
         </div>
@@ -189,18 +191,14 @@ export function MatchesList() {
         <div className="lg:col-span-3 space-y-6">
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <p className="text-muted-foreground">Loading...</p>
+              <p className="text-muted-foreground">{t('common.loading')}</p>
             </div>
           ) : filteredMatches.length === 0 ? (
             <Empty>
               <EmptyContent>
-                <EmptyTitle>No matches found</EmptyTitle>
+                <EmptyTitle>{t('matches.noMatches')}</EmptyTitle>
                 <EmptyDescription>
-                  {statusFilter === 'all'
-                    ? role === 'mentor'
-                      ? "You don't have any mentorship requests yet"
-                      : "You haven't sent any mentorship requests yet"
-                    : `No ${statusFilter} matches at this time`}
+                  {t('matches.noMatchesMessage')}
                 </EmptyDescription>
                 {statusFilter !== 'all' && (
                   <Button
@@ -208,7 +206,7 @@ export function MatchesList() {
                     variant="outline"
                     className="mt-4"
                   >
-                    Clear Filter
+                    {t('common.clear')}
                   </Button>
                 )}
               </EmptyContent>
@@ -276,6 +274,7 @@ function MatchCard({
   onRespond?: (matchId: string, action: 'accept' | 'reject') => void;
   onComplete?: (matchId: string) => void;
 }) {
+  const { t } = useTranslation();
   // For display, use mentor_id or mentee_id as fallback
   const displayName = role === 'mentor' ? `Mentee ${match.mentee_id.slice(0, 8)}` : `Mentor ${match.mentor_id.slice(0, 8)}`;
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -314,7 +313,7 @@ function MatchCard({
               className="flex-1"
               onClick={() => onRespond(match.id, 'accept')}
             >
-              Accept
+              {t('matches.accept')}
             </Button>
             <Button
               size="sm"
@@ -322,7 +321,7 @@ function MatchCard({
               className="flex-1"
               onClick={() => onRespond(match.id, 'reject')}
             >
-              Reject
+              {t('matches.reject')}
             </Button>
           </>
         )}
@@ -333,12 +332,12 @@ function MatchCard({
             className="w-full"
             onClick={() => onComplete(match.id)}
           >
-            Complete
+            {t('matches.complete')}
           </Button>
         )}
         {match.status === 'completed' && (
           <Button size="sm" variant="outline" className="w-full" disabled>
-            View Details
+            {t('matches.viewDetails')}
           </Button>
         )}
       </CardFooter>

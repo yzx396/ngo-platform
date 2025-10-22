@@ -3,6 +3,7 @@ import { useForm, FormProvider, Controller } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -17,22 +18,22 @@ import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
-// Zod validation schema with custom refinement for hourly_rate
-const mentorProfileSchema = z.object({
-  nick_name: z.string().min(2, 'Nickname must be at least 2 characters'),
-  bio: z.string().min(10, 'Bio must be at least 10 characters'),
-  mentoring_levels: z.number().min(1, 'Select at least one mentoring level'),
+// Create schema factory to use translations
+const createMentorProfileSchema = (t: (key: string) => string) => z.object({
+  nick_name: z.string().min(2, t('mentor.validationNickname')),
+  bio: z.string().min(10, t('mentor.validationBio')),
+  mentoring_levels: z.number().min(1, t('mentor.validationLevel')),
   availability: z.string().optional(),
   hourly_rate: z.number().refine(
     (val) => isNaN(val) || val > 0,
-    'Hourly rate must be positive'
+    t('mentor.validationRate')
   ).optional(),
-  payment_types: z.number().min(1, 'Select at least one payment method'),
+  payment_types: z.number().min(1, t('mentor.validationPayment')),
   allow_reviews: z.boolean(),
   allow_recording: z.boolean(),
 });
 
-type MentorProfileFormData = z.infer<typeof mentorProfileSchema>;
+type MentorProfileFormData = z.infer<ReturnType<typeof createMentorProfileSchema>>;
 
 /**
  * MentorProfileSetup page
@@ -40,6 +41,7 @@ type MentorProfileFormData = z.infer<typeof mentorProfileSchema>;
  * Includes validation and saving to backend
  */
 export function MentorProfileSetup() {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +50,7 @@ export function MentorProfileSetup() {
   const { user } = useAuth();
 
   const form = useForm<MentorProfileFormData>({
-    resolver: zodResolver(mentorProfileSchema),
+    resolver: zodResolver(createMentorProfileSchema(t)),
     mode: 'onChange',
     defaultValues: {
       nick_name: '',
@@ -134,7 +136,7 @@ export function MentorProfileSetup() {
           hourly_rate: hourlyRate,
           availability,
         });
-        showSuccessToast('Mentor profile updated successfully!');
+        showSuccessToast(t('mentor.profileUpdated'));
       } else {
         // Create new profile
         await createMentorProfile({
@@ -143,7 +145,7 @@ export function MentorProfileSetup() {
           hourly_rate: hourlyRate,
           availability,
         });
-        showSuccessToast('Mentor profile created successfully!');
+        showSuccessToast(t('mentor.profileCreated'));
       }
 
       // Redirect to browse page after successful creation/update
@@ -160,7 +162,7 @@ export function MentorProfileSetup() {
     return (
       <div className="container py-12">
         <div className="max-w-2xl mx-auto text-center">
-          <p className="text-lg text-muted-foreground">Loading...</p>
+          <p className="text-lg text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -171,9 +173,9 @@ export function MentorProfileSetup() {
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold">
-            {existingProfile ? 'Edit Your Mentor Profile' : 'Create Your Mentor Profile'}
+            {existingProfile ? t('mentor.editTitle') : t('mentor.createTitle')}
           </h1>
-          <p className="text-lg text-muted-foreground">Step {step} of 4</p>
+          <p className="text-lg text-muted-foreground">{t('mentor.step', { current: step })}</p>
         </div>
 
         <FormProvider {...form}>
@@ -183,10 +185,10 @@ export function MentorProfileSetup() {
               {step === 1 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="nick_name">Nickname</Label>
+                    <Label htmlFor="nick_name">{t('mentor.nickname')}</Label>
                     <Input
                       id="nick_name"
-                      placeholder="How do you want to be called?"
+                      placeholder={t('mentor.nicknameHelp')}
                       {...form.register('nick_name')}
                     />
                     {form.formState.errors.nick_name && (
@@ -195,10 +197,10 @@ export function MentorProfileSetup() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
+                    <Label htmlFor="bio">{t('mentor.bio')}</Label>
                     <Textarea
                       id="bio"
-                      placeholder="Tell mentees about your experience and expertise"
+                      placeholder={t('mentor.bioHelp')}
                       rows={6}
                       {...form.register('bio')}
                     />
@@ -224,7 +226,7 @@ export function MentorProfileSetup() {
               {step === 3 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+                    <Label htmlFor="hourly_rate">{t('mentor.hourlyRateLabel')}</Label>
                     <Input
                       id="hourly_rate"
                       type="number"
@@ -260,7 +262,7 @@ export function MentorProfileSetup() {
                             checked={field.value}
                             onCheckedChange={field.onChange}
                           />
-                          <span>Allow mentees to leave reviews</span>
+                          <span>{t('mentor.allowReviews')}</span>
                         </label>
                       )}
                     />
@@ -273,7 +275,7 @@ export function MentorProfileSetup() {
                             checked={field.value}
                             onCheckedChange={field.onChange}
                           />
-                          <span>Allow recording of mentoring sessions</span>
+                          <span>{t('mentor.allowRecording')}</span>
                         </label>
                       )}
                     />
@@ -290,18 +292,18 @@ export function MentorProfileSetup() {
                 onClick={handleBack}
                 disabled={step === 1}
               >
-                Back
+                {t('common.back')}
               </Button>
 
               {step < 4 ? (
                 <Button type="button" onClick={handleNext}>
-                  Next
+                  {t('common.next')}
                 </Button>
               ) : (
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting 
-                    ? (existingProfile ? 'Updating...' : 'Creating...') 
-                    : (existingProfile ? 'Update Profile' : 'Create Profile')}
+                  {isSubmitting
+                    ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
+                    : t('common.save')}
                 </Button>
               )}
             </div>

@@ -614,3 +614,127 @@ wrangler secret put JWT_SECRET
 - Logout functionality
 
 Run tests: `npm run test:watch -- --project=worker` or `npm run test:watch -- --project=react`
+
+## Internationalization (i18n)
+
+The platform supports multiple languages with **Simplified Chinese (zh-CN) as the default** and **English as fallback**. The implementation uses `react-i18next` for flexible, type-safe translations.
+
+### How It Works
+
+- **Framework**: `i18next` with `react-i18next` hooks
+- **Language detection**: Browser language preference, localStorage, HTML lang attribute (in order)
+- **Default language**: Simplified Chinese (zh-CN)
+- **Fallback language**: English (en)
+- **Translation files**: JSON files in `src/react-app/i18n/locales/`
+
+### File Structure
+
+```
+src/react-app/i18n/
+├── index.ts                              # i18n configuration and initialization
+├── locales/
+│   ├── zh-CN/
+│   │   └── translation.json             # Simplified Chinese translations
+│   └── en/
+│       └── translation.json             # English translations
+```
+
+### Using Translations in Components
+
+```typescript
+import { useTranslation } from 'react-i18next';
+
+export function MyComponent() {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t('common.appName')}</h1>
+      <p>{t('home.subtitle')}</p>
+      {/* With interpolation */}
+      <p>{t('common.signedInAs', { name: user.name })}</p>
+    </div>
+  );
+}
+```
+
+### Translation Key Organization
+
+Translations are organized by feature in the JSON namespace:
+
+- **common**: Generic UI elements (buttons, labels, navigation)
+- **home**: Home page content and features
+- **auth**: Authentication-related strings (login, OAuth)
+- **mentor**: Mentor profile and browsing related
+- **mentoringLevel**: Mentoring level enum values
+- **paymentType**: Payment method enum values
+- **matches**: Match/mentorship request related
+- **status**: Status labels (pending, accepted, etc.)
+- **errors**: Error messages and error states
+- **pagination**: Pagination controls
+- **language**: Language selector
+
+### Adding New Translations
+
+When adding a new feature with user-facing text:
+
+1. **Create translation keys** in both language files:
+   ```json
+   {
+     "myFeature": {
+       "title": "Feature Title",
+       "description": "Feature description",
+       "button": "Click me"
+     }
+   }
+   ```
+
+2. **Use the keys in components**:
+   ```typescript
+   const { t } = useTranslation();
+   return <h1>{t('myFeature.title')}</h1>;
+   ```
+
+3. **Translation files to update**:
+   - `src/react-app/i18n/locales/zh-CN/translation.json`
+   - `src/react-app/i18n/locales/en/translation.json`
+
+### Language Switcher
+
+The app includes a **LanguageSwitcher** component (`src/react-app/components/LanguageSwitcher.tsx`) in the navbar that allows users to toggle between Chinese and English. User preference is automatically saved to localStorage and persists across sessions.
+
+### Testing with i18n
+
+The test environment is configured to use English translations by default for consistent test behavior. i18n is initialized in `vitest.setup.ts`:
+
+```typescript
+import i18n from './src/react-app/i18n';
+
+// Initialize with English for tests
+i18n.init();
+i18n.changeLanguage('en');
+```
+
+When writing tests, use the actual translated English text:
+
+```typescript
+// ✅ Correct - uses actual English translation
+expect(screen.getByText(/Browse Mentors/i)).toBeInTheDocument();
+
+// ❌ Avoid - hardcoded text that might differ from translation
+expect(screen.getByText(/Search mentors/i)).toBeInTheDocument();
+```
+
+### Performance Considerations
+
+- **Lazy loading**: Translations are bundled with the app (not lazy-loaded per language)
+- **Bundle size**: Translation JSON adds ~15KB gzipped total
+- **Re-renders**: Language changes trigger re-renders only for components using `useTranslation()`
+- **SSR**: Not applicable for this frontend-only app
+
+### Key Statistics
+
+- **Total translation keys**: ~100+ strings
+- **Languages supported**: Chinese (zh-CN) and English (en)
+- **Default UI language**: Simplified Chinese
+- **Coverage**: All user-facing text across all pages and components

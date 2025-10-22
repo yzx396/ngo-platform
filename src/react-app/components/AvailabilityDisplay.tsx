@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 /**
  * AvailabilityDisplay component
  * Read-only display of mentor availability text
@@ -8,8 +10,10 @@ interface AvailabilityDisplayProps {
 }
 
 export function AvailabilityDisplay({ availability }: AvailabilityDisplayProps) {
+  const { t } = useTranslation();
+
   if (!availability) {
-    return <span className="text-muted-foreground">Not specified</span>;
+    return <span className="text-muted-foreground">{t('mentor.notSpecified')}</span>;
   }
 
   return (

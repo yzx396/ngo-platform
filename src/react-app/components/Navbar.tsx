@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { useAuth } from '../context/AuthContext';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 /**
  * Navbar component
@@ -13,15 +15,16 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/mentors/browse', label: 'Browse Mentors' },
-    { href: '/matches', label: 'My Matches' },
-    { href: '/mentor/profile/setup', label: 'My Profile' },
+    { href: '/', label: t('common.home') },
+    { href: '/mentors/browse', label: t('common.browseMentors') },
+    { href: '/matches', label: t('common.myMatches') },
+    { href: '/mentor/profile/setup', label: t('common.myProfile') },
   ];
 
   const handleLogout = () => {
@@ -59,17 +62,18 @@ export function Navbar() {
 
         {/* Auth Section - Hidden on mobile, visible on sm+ */}
         <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <LanguageSwitcher />
           {isAuthenticated && user ? (
             <>
               <span className="text-sm text-muted-foreground">{user.name}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
-                Sign Out
+                {t('common.signOut')}
               </Button>
             </>
           ) : (
             <Link to="/login">
               <Button size="sm">
-                Sign In
+                {t('common.signIn')}
               </Button>
             </Link>
           )}
@@ -117,10 +121,13 @@ export function Navbar() {
               </Link>
             ))}
             <div className="pt-2 border-t space-y-2">
+              <div className="flex items-center justify-between px-2 py-2">
+                <LanguageSwitcher />
+              </div>
               {isAuthenticated && user ? (
                 <>
                   <div className="px-2 py-2 text-sm">
-                    Signed in as {user.name}
+                    {t('common.signedInAs', { name: user.name })}
                   </div>
                   <Button
                     variant="outline"
@@ -128,13 +135,13 @@ export function Navbar() {
                     className="w-full"
                     onClick={handleLogout}
                   >
-                    Sign Out
+                    {t('common.signOut')}
                   </Button>
                 </>
               ) : (
                 <Link to="/login" className="w-full block">
                   <Button size="sm" className="w-full">
-                    Sign In
+                    {t('common.signIn')}
                   </Button>
                 </Link>
               )}

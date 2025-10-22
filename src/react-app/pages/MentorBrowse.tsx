@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
@@ -22,6 +23,7 @@ import type { MentorProfile } from '../../types/mentor';
  */
 export function MentorBrowse() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,9 +100,9 @@ export function MentorBrowse() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">Find Your Mentor</h1>
+        <h1 className="text-4xl font-bold">{t('mentor.findYourMentor')}</h1>
         <p className="text-lg text-muted-foreground">
-          Browse and connect with experienced mentors in your field
+          {t('mentor.browseAndConnect')}
         </p>
       </div>
 
@@ -110,10 +112,10 @@ export function MentorBrowse() {
           <div className="lg:col-span-1">
             <Card className="p-6 sticky top-4 space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="search">Search by Name</Label>
+                <Label htmlFor="search">{t('mentor.searchByName')}</Label>
                 <Input
                   id="search"
-                  placeholder="Nickname..."
+                  placeholder={t('mentor.nicknameHelp')}
                   {...form.register('nick_name')}
                   onChange={handleFilterChange}
                 />
@@ -128,7 +130,7 @@ export function MentorBrowse() {
               </div>
 
               <div className="space-y-3">
-                <Label>Hourly Rate: ${form.watch('hourly_rate_min')} - ${form.watch('hourly_rate_max')}</Label>
+                <Label>{t('mentor.hourlyRate')}: ${form.watch('hourly_rate_min')} - ${form.watch('hourly_rate_max')}</Label>
                 <Slider
                   min={0}
                   max={200}
@@ -144,7 +146,7 @@ export function MentorBrowse() {
               </div>
 
               <Button onClick={handleSearch} className="w-full">
-                Search
+                {t('common.search')}
               </Button>
             </Card>
           </div>
@@ -154,16 +156,16 @@ export function MentorBrowse() {
             {mentors.length === 0 && !loading ? (
               <Empty>
                 <EmptyContent>
-                  <EmptyTitle>No mentors found</EmptyTitle>
-                  <EmptyDescription>Try adjusting your filters or searching for different keywords</EmptyDescription>
+                  <EmptyTitle>{t('mentor.noMentorsFound')}</EmptyTitle>
+                  <EmptyDescription>{t('mentor.adjustFilters')}</EmptyDescription>
                   <Button onClick={() => form.reset()} variant="outline" className="mt-4">
-                    Clear Filters
+                    {t('common.clear')}
                   </Button>
                 </EmptyContent>
               </Empty>
             ) : loading ? (
               <div className="flex justify-center items-center py-12">
-                <p className="text-muted-foreground">Loading...</p>
+                <p className="text-muted-foreground">{t('common.loading')}</p>
               </div>
             ) : (
               <>
@@ -188,10 +190,10 @@ export function MentorBrowse() {
                       }}
                       disabled={currentPage === 1}
                     >
-                      Previous
+                      {t('pagination.previous')}
                     </Button>
                     <span className="flex items-center px-4">
-                      Page {currentPage} of {totalPages}
+                      {t('pagination.pageOf', { current: currentPage, total: totalPages })}
                     </span>
                     <Button
                       variant="outline"
@@ -201,7 +203,7 @@ export function MentorBrowse() {
                       }}
                       disabled={currentPage === totalPages}
                     >
-                      Next
+                      {t('pagination.next')}
                     </Button>
                   </div>
                 )}

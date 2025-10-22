@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MatchStatus } from '../../types/match';
 
 interface StatusBadgeProps {
@@ -10,13 +11,11 @@ interface StatusBadgeProps {
  * Displays match status with color-coded styling for visual clarity
  */
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-  // Status to display text mapping
-  const statusText: Record<MatchStatus, string> = {
-    pending: 'Pending',
-    accepted: 'Accepted',
-    rejected: 'Rejected',
-    active: 'Active',
-    completed: 'Completed',
+  const { t } = useTranslation();
+
+  // Status to display text mapping using translations
+  const getStatusText = (status: MatchStatus): string => {
+    return t(`status.${status}`);
   };
 
   // Status to color mapping - using light backgrounds
@@ -35,7 +34,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
     lg: 'text-lg',
   };
 
-  const displayText = statusText[status];
+  const displayText = getStatusText(status);
 
   return (
     <span

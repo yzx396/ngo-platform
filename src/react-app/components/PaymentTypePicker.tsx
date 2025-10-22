@@ -1,4 +1,5 @@
 import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { PaymentType } from '../../types/mentor';
@@ -17,13 +18,15 @@ export function PaymentTypePicker<T extends FieldValues = Record<string, unknown
   control,
   name = 'payment_types' as Path<T>
 }: PaymentTypePickerProps<T>) {
+  const { t } = useTranslation();
+
   const types = [
-    { value: PaymentType.Venmo, label: 'Venmo' },
-    { value: PaymentType.Paypal, label: 'PayPal' },
-    { value: PaymentType.Zelle, label: 'Zelle' },
-    { value: PaymentType.Alipay, label: 'Alipay' },
-    { value: PaymentType.Wechat, label: 'WeChat' },
-    { value: PaymentType.Crypto, label: 'Crypto' },
+    { value: PaymentType.Venmo, label: t('paymentType.venmo') },
+    { value: PaymentType.Paypal, label: t('paymentType.paypal') },
+    { value: PaymentType.Zelle, label: t('paymentType.zelle') },
+    { value: PaymentType.Alipay, label: t('paymentType.alipay') },
+    { value: PaymentType.Wechat, label: t('paymentType.wechat') },
+    { value: PaymentType.Crypto, label: t('paymentType.crypto') },
   ];
 
   return (
@@ -33,7 +36,7 @@ export function PaymentTypePicker<T extends FieldValues = Record<string, unknown
       render={({ field }) => (
         <fieldset className="space-y-3">
           <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-            Payment Types
+            {t('mentor.paymentTypes')}
           </legend>
 
           <div className="grid grid-cols-2 gap-3">

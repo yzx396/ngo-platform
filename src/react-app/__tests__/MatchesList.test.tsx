@@ -199,8 +199,8 @@ describe('MatchesList', () => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      expect(screen.getByText(/no matches found/i)).toBeInTheDocument();
-      expect(screen.getByText(/you haven't sent any mentorship requests yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/No matches/i)).toBeInTheDocument();
+      expect(screen.getByText(/You don't have any matches yet/i)).toBeInTheDocument();
     });
   });
 

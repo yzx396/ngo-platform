@@ -27,15 +27,21 @@ describe('App', () => {
       render(<App />);
       // Check for Lead Forward branding link (Home)
       expect(screen.getByText('Lead Forward')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Browse Mentors/i })).toBeInTheDocument();
+      // Find the first occurrence of Browse Mentors button in navbar
+      const browseMentorsButtons = screen.getAllByRole('button', { name: /Browse Mentors/i });
+      expect(browseMentorsButtons.length).toBeGreaterThan(0);
       expect(screen.getByRole('button', { name: /My Matches/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /My Profile/i })).toBeInTheDocument();
     });
 
     it('should display main action buttons on home page', () => {
       render(<App />);
-      expect(screen.getByText(/Start Browsing/i)).toBeInTheDocument();
-      expect(screen.getByText(/Set Up Profile/i)).toBeInTheDocument();
+      // Check for Browse Mentors button (which replaces "Start Browsing")
+      const browseMentorsButtons = screen.getAllByRole('button', { name: /Browse Mentors/i });
+      expect(browseMentorsButtons.length).toBeGreaterThan(0);
+      // Check for Become a Mentor button (which replaces "Set Up Profile")
+      const becomeMentorButtons = screen.getAllByRole('button', { name: /Become a Mentor/i });
+      expect(becomeMentorButtons.length).toBeGreaterThan(0);
     });
   });
 
@@ -74,8 +80,11 @@ describe('App', () => {
   describe('Page Content', () => {
     it('should display key features on home page', () => {
       render(<App />);
-      expect(screen.getByText(/User-driven matching/i)).toBeInTheDocument();
-      expect(screen.getByText(/Flexible mentoring levels/i)).toBeInTheDocument();
+      // Check for features section heading
+      expect(screen.getByRole('heading', { name: /Key Features/i })).toBeInTheDocument();
+      // Check that at least one feature is displayed
+      const features = screen.getAllByText(/Connect with experienced professionals/i);
+      expect(features.length).toBeGreaterThan(0);
     });
 
     it('should have auth button in navbar', () => {

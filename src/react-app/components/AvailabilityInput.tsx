@@ -1,4 +1,5 @@
 import { Controller, type Control, type FieldValues, type Path } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 
@@ -18,16 +19,18 @@ export function AvailabilityInput<T extends FieldValues = Record<string, unknown
   name = 'availability' as Path<T>,
   maxLength = 200
 }: AvailabilityInputProps<T>) {
+  const { t } = useTranslation();
+
   return (
     <Controller
       control={control}
       name={name}
       render={({ field }) => (
         <div className="space-y-2">
-          <Label htmlFor={name}>Availability</Label>
+          <Label htmlFor={name}>{t('mentor.availability')}</Label>
           <Textarea
             id={name}
-            placeholder="e.g., Weekdays 9am-5pm EST, Flexible on weekends"
+            placeholder={t('mentor.availabilityPlaceholder')}
             value={field.value || ''}
             onChange={(e) => {
               const value = e.target.value;
@@ -42,10 +45,10 @@ export function AvailabilityInput<T extends FieldValues = Record<string, unknown
           />
           <div className="flex justify-between items-center">
             <p id={`${name}-description`} className="text-sm text-muted-foreground">
-              Examples: "Weekdays 9am-5pm EST", "Flexible, contact me"
+              {t('mentor.availabilityExample')}
             </p>
             <span className="text-xs text-muted-foreground">
-              {(field.value || '').length}/{maxLength} characters
+              {t('mentor.availabilityCharCount', { current: (field.value || '').length })}
             </span>
           </div>
         </div>
