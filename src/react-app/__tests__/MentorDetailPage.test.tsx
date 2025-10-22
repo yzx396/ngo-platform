@@ -5,7 +5,7 @@ import { MentorDetailPage } from '../pages/MentorDetailPage';
 import { AuthProvider } from '../context/AuthContext';
 import * as mentorService from '../services/mentorService';
 import type { MentorProfile } from '../../types/mentor';
-import { MentoringLevel, PaymentType } from '../../types/mentor';
+import { MentoringLevel, PaymentType, ExpertiseDomain, ExpertiseTopic } from '../../types/mentor';
 
 // Mock the mentor service
 vi.mock('../services/mentorService');
@@ -19,8 +19,13 @@ const mockMentor: MentorProfile = {
   hourly_rate: 200,
   payment_types: PaymentType.Venmo | PaymentType.Paypal | PaymentType.Zelle,
   availability: 'Mon/Tue/Thu/Sat: 8pm-10pm PST, flexible',
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z'
+  expertise_domains: ExpertiseDomain.TechnicalDevelopment | ExpertiseDomain.CareerDevelopment,
+  expertise_topics_preset: ExpertiseTopic.CareerTransition | ExpertiseTopic.Leadership,
+  expertise_topics_custom: ['Startup Strategy', 'Product Marketing'],
+  allow_reviews: true,
+  allow_recording: true,
+  created_at: 1704067200,
+  updated_at: 1704067200
 };
 
 describe('MentorDetailPage', () => {
@@ -149,5 +154,53 @@ describe('MentorDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/error/i)).toBeInTheDocument();
     });
+  });
+
+  it('should display expertise domains', async () => {
+    vi.mocked(mentorService.getMentorProfile).mockResolvedValue(mockMentor);
+
+    render(
+      <MemoryRouter initialEntries={['/mentors/1']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/mentors/:id" element={<MentorDetailPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    });
+
+    // Check for expertise domain translations
+    expect(screen.getByText(/Technical Development/i)).toBeInTheDocument();
+    expect(screen.getByText(/Career Development/i)).toBeInTheDocument();
+  });
+
+  it('should display expertise topics (preset and custom)', async () => {
+    vi.mocked(mentorService.getMentorProfile).mockResolvedValue(mockMentor);
+
+    render(
+      <MemoryRouter initialEntries={['/mentors/1']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/mentors/:id" element={<MentorDetailPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    });
+
+    // Check for preset topic translations
+    expect(screen.getByText(/Career Transition/i)).toBeInTheDocument();
+    expect(screen.getByText(/Leadership/i)).toBeInTheDocument();
+
+    // Check for custom topics
+    expect(screen.getByText('Startup Strategy')).toBeInTheDocument();
+    expect(screen.getByText('Product Marketing')).toBeInTheDocument();
   });
 });

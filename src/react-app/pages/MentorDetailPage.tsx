@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { AvailabilityDisplay } from '../components/AvailabilityDisplay';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
-import { getLevelNames, getPaymentTypeNames } from '../../types/mentor';
+import { getLevelNames, getPaymentTypeNames, getDomainNames, getTopicNames } from '../../types/mentor';
 import { getMentorProfile } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
@@ -94,6 +94,8 @@ export function MentorDetailPage() {
 
   const levelNames = getLevelNames(mentor.mentoring_levels);
   const paymentNames = getPaymentTypeNames(mentor.payment_types);
+  const domainNames = getDomainNames(mentor.expertise_domains);
+  const topicNames = getTopicNames(mentor.expertise_topics_preset);
 
   // Get initials for avatar fallback
   const initials = mentor.nick_name
@@ -114,18 +116,55 @@ export function MentorDetailPage() {
         {/* Main Profile Card */}
         <Card>
           <CardHeader className="pb-6">
-            <div className="flex items-start gap-6">
-              <Avatar className="h-24 w-24">
-                <AvatarFallback className="text-2xl font-bold">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">{mentor.nick_name}</h1>
-                <p className="text-lg text-muted-foreground whitespace-pre-wrap">{mentor.bio}</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 flex-shrink-0">
+                  <AvatarFallback className="text-xl font-bold">{initials}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-3xl font-bold">{mentor.nick_name}</h1>
               </div>
+              <p className="text-lg text-muted-foreground whitespace-pre-wrap">{mentor.bio}</p>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Expertise Domains */}
+            {domainNames.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('mentor.expertiseDomains')}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {domainNames.map((domain) => (
+                    <Badge key={domain} variant="secondary" className="text-sm bg-blue-100 text-blue-800">
+                      {t(`expertiseDomain.${domain.charAt(0).toLowerCase() + domain.slice(1)}`)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Expertise Topics */}
+            {(topicNames.length > 0 || (mentor.expertise_topics_custom && mentor.expertise_topics_custom.length > 0)) && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('mentor.expertiseTopics')}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {topicNames.map((topic) => (
+                    <Badge key={topic} variant="outline" className="text-sm">
+                      {t(`expertiseTopic.${topic.charAt(0).toLowerCase() + topic.slice(1)}`)}
+                    </Badge>
+                  ))}
+                  {mentor.expertise_topics_custom && mentor.expertise_topics_custom.map((custom) => (
+                    <Badge key={custom} variant="outline" className="text-sm bg-green-50 border-green-200">
+                      {custom}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Mentoring Levels */}
             {levelNames.length > 0 && (
               <div className="space-y-2">
