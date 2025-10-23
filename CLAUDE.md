@@ -794,3 +794,328 @@ expect(screen.getByText(/Search mentors/i)).toBeInTheDocument();
 - **Languages supported**: Chinese (zh-CN) and English (en)
 - **Default UI language**: Simplified Chinese
 - **Coverage**: All user-facing text across all pages and components
+
+## Common Development Patterns
+
+### Data Type Conversions
+
+**SQLite Boolean Normalization:**
+
+SQLite doesn't have a native boolean type—it stores booleans as INTEGER (0 or 1). When reading from the database, you need to convert these back to JavaScript booleans:
+
+```typescript
+// Problem: Database returns { available: 0 } but TypeScript expects boolean
+// Solution: Normalize after reading from database
+
+function normalizeMentorProfile(profile: unknown): MentorProfile {
+  const dbProfile = profile as Record<string, unknown>;
+
+  return {
+    // ... other fields
+    available: Boolean(dbProfile.available),        // Converts 0/1 to false/true
+    accepting_new_mentees: Boolean(dbProfile.accepting_new_mentees),
+  };
+}
+```
+
+**JSON Field Parsing:**
+
+Some fields (like `expertise_topics_custom`) are stored as JSON strings in SQLite. Always parse and validate:
+
+```typescript
+// In database: expertise_topics_custom = '["topic1", "topic2"]'
+const expertise_topics_custom: string[] = [];
+if (dbProfile.expertise_topics_custom) {
+  try {
+    const parsed = typeof dbProfile.expertise_topics_custom === 'string'
+      ? JSON.parse(dbProfile.expertise_topics_custom as string)
+      : dbProfile.expertise_topics_custom;
+    expertise_topics_custom = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    expertise_topics_custom = [];
+  }
+}
+```
+
+See `src/worker/index.ts:normalizeMentorProfile()` for the full example.
+
+### Bit Flag Helpers
+
+When working with bit flags, use the helper functions instead of manual bitwise operations:
+
+```typescript
+import {
+  hasLevel,
+  addLevel,
+  removeLevel,
+  getLevelNames
+} from '../types/mentor';
+
+// Check if mentor accepts entry-level mentees
+if (hasLevel(mentor.mentoring_levels, MentoringLevel.Entry)) {
+  // ...
+}
+
+// Add a new level to profile
+profile.mentoring_levels = addLevel(
+  profile.mentoring_levels,
+  MentoringLevel.Senior
+);
+
+// Get human-readable names
+const levels = getLevelNames(mentor.mentoring_levels); // ['Entry', 'Senior']
+```
+
+See `src/types/mentor.ts` for all available helpers.
+
+### Error Handling Pattern
+
+The API client automatically extracts error details from responses:
+
+```typescript
+// apiClient.ts handles error transformation
+export async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown
+): Promise<T> {
+  const response = await fetch(path, { /* ... */ });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw {
+      status: response.status,
+      message: error.message || 'Unknown error',
+      code: error.code,
+    };
+  }
+
+  return response.json();
+}
+
+// In components:
+try {
+  const profile = await mentorService.getProfile(userId);
+} catch (error) {
+  if (error.status === 404) {
+    // Handle not found
+  } else if (error.status === 401) {
+    // Handle unauthorized
+  }
+}
+```
+
+### Service Layer Pattern
+
+All API interactions go through service layer for consistency:
+
+```typescript
+// ✅ Good: Use service layer (in mentorService.ts)
+const profile = await mentorService.getProfile(userId);
+
+// ❌ Bad: Direct API calls scattered in components
+const response = await apiClient.get(`/api/v1/mentors/profiles/${userId}`);
+```
+
+Benefits:
+- Centralized error handling
+- Reusable business logic
+- Easy to mock in tests
+- Single source of truth for API endpoints
+
+### Testing Database Queries
+
+When testing worker endpoints that use D1:
+
+```typescript
+// Mock the database binding
+const mockDb = {
+  prepare: vi.fn((sql: string) => ({
+    bind: vi.fn().mockReturnThis(),
+    all: vi.fn(() => ({
+      success: true,
+      results: [/* mock data */]
+    })),
+    first: vi.fn(() => ({ /* mock data */ })),
+    run: vi.fn(() => ({ success: true }),
+  }))
+};
+
+// Pass to Hono context
+const c = {
+  env: {
+    platform_db: mockDb,
+    GOOGLE_CLIENT_ID: 'test-client',
+    GOOGLE_CLIENT_SECRET: 'test-secret',
+    JWT_SECRET: 'test-secret',
+  },
+  req: new Request('http://localhost/api/v1/users'),
+  var: vi.fn(),
+};
+
+// Test the endpoint
+const response = await app.fetch(c.req, c.env);
+```
+
+## Database Schema Quick Reference
+
+### Core Tables
+
+**users**
+```sql
+id TEXT PRIMARY KEY
+email TEXT UNIQUE
+name TEXT
+google_id TEXT
+created_at INTEGER
+updated_at INTEGER
+```
+
+**mentor_profiles**
+```sql
+id TEXT PRIMARY KEY
+user_id TEXT UNIQUE (FOREIGN KEY)
+bio TEXT
+rate REAL
+payment_types INTEGER (bit flags)
+mentoring_levels INTEGER (bit flags)
+availability TEXT (JSON)
+expertise_domain TEXT
+expertise_topics TEXT (JSON array)
+expertise_topics_custom TEXT (JSON array)
+available BOOLEAN
+accepting_new_mentees BOOLEAN
+created_at INTEGER
+updated_at INTEGER
+```
+
+**matches**
+```sql
+id TEXT PRIMARY KEY
+mentee_id TEXT (FOREIGN KEY to users)
+mentor_id TEXT (FOREIGN KEY to users)
+status TEXT (pending|accepted|active|completed)
+requested_at INTEGER
+responded_at INTEGER
+completed_at INTEGER
+notes TEXT
+```
+
+**Query Tips:**
+- Use `WHERE status = 'accepted'` for active mentorships
+- Join users for mentee/mentor names: `SELECT m.*, u.name as mentee_name ...`
+- Check mentor availability: `WHERE available = 1 AND accepting_new_mentees = 1`
+
+## Debugging and Monitoring
+
+### Local Development Logging
+
+Use `console.log()` or `console.error()` in Worker code—output appears in terminal:
+
+```typescript
+app.get('/api/v1/users/:id', async (c) => {
+  const userId = c.req.param('id');
+  console.log('Fetching user:', userId);  // Shows in terminal
+
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?')
+    .bind(userId)
+    .first();
+
+  console.error('Query error:', error);    // Error output
+  return c.json(user);
+});
+```
+
+Run `npm run dev` and check the terminal output.
+
+### Production Logging
+
+Monitor Cloudflare Worker logs:
+
+```bash
+# Stream live logs from your deployed worker
+npx wrangler tail --format json
+
+# Filter for specific error level
+npx wrangler tail --status error
+```
+
+### Testing Database Locally
+
+View your local database using D1 CLI:
+
+```bash
+# List all tables
+npm run db:schema
+
+# Execute raw SQL query
+wrangler d1 execute platform-db-local --local --command "SELECT COUNT(*) FROM mentor_profiles;"
+
+# Export database
+wrangler d1 execute platform-db-local --local --command "SELECT * FROM users;" > users_export.sql
+```
+
+### Frontend Debugging
+
+**React DevTools:**
+- Check AuthContext state in React DevTools
+- Verify localStorage tokens: `localStorage.getItem('authToken')`
+- Check network tab for API requests and responses
+
+**Common Issues:**
+```typescript
+// Issue: Component not re-rendering after token update
+// Solution: Ensure useAuth hook is called correctly
+const { user, login, logout } = useAuth();  // ✅ Correct
+
+// Issue: 401 errors on protected routes
+// Check: Is token stored in localStorage?
+// Check: Is apiClient attaching token to requests?
+console.log(localStorage.getItem('authToken'));
+```
+
+### Performance Monitoring
+
+**Database Query Performance:**
+
+For slow queries, check:
+1. Are you selecting only needed columns? (Not `SELECT *`)
+2. Do relevant columns have indexes?
+3. Are you using bit flag queries efficiently?
+
+```typescript
+// ✅ Good: Select only needed fields
+const results = await db.prepare(`
+  SELECT id, name, rate FROM mentor_profiles WHERE available = 1
+`).all();
+
+// ❌ Avoid: Selecting all fields
+const results = await db.prepare(`
+  SELECT * FROM mentor_profiles
+`).all();
+```
+
+**Bundle Size:**
+
+Check your build output after `npm run build`:
+- Frontend bundle is in `dist/client/`
+- Worker bundle is in `dist/worker/`
+- Translation JSON is ~15KB gzipped (acceptable)
+
+View build analysis:
+```bash
+npm run build
+# Check dist/ directory sizes
+ls -lh dist/client/assets/
+```
+
+## Quick Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `Cannot find module 'react'` | Run `npm install` to ensure all deps installed |
+| `D1 database not found` | Run `npm run db:migrate` to apply migrations |
+| Tests failing with "Cannot find X" | Check that test files import from correct path using `@/` alias |
+| API returning 401 | Check JWT token in localStorage, may be expired (7 day default) |
+| Component showing Chinese text instead of English | Set i18n language via LanguageSwitcher or check localStorage `i18nextLng` |
+| Type errors in TypeScript | Run `npm run build` to check all three tsconfig projects |
