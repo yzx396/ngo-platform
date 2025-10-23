@@ -39,11 +39,15 @@ export function Navbar() {
         {/* Logo/Brand */}
         <Link
           to="/"
-          className="flex items-center gap-2 font-bold text-base sm:text-lg hover:opacity-80 flex-shrink-0"
+          className="flex items-center hover:opacity-80 flex-shrink-0"
           onClick={() => setIsOpen(false)}
+          aria-label="Lead Forward Home"
         >
-          <span className="text-primary">🚀</span>
-          <span className="hidden sm:inline">Lead Forward</span>
+          <img
+            src="/logo.svg"
+            alt="Lead Forward"
+            className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+          />
         </Link>
 
         {/* Navigation Links - Hidden on mobile, visible on sm+ */}
