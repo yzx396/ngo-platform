@@ -18,15 +18,15 @@ describe('App', () => {
 
     it('should render the navbar with brand logo', () => {
       render(<App />);
-      expect(screen.getByText('Lead Forward')).toBeInTheDocument();
+      expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
     });
   });
 
   describe('Navigation', () => {
     it('should have navigation links', () => {
       render(<App />);
-      // Check for Lead Forward branding link (Home)
-      expect(screen.getByText('Lead Forward')).toBeInTheDocument();
+      // Check for Lead Forward branding logo (Home)
+      expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
       // Find the first occurrence of Browse Mentors button in navbar
       const browseMentorsButtons = screen.getAllByRole('button', { name: /Browse Mentors/i });
       expect(browseMentorsButtons.length).toBeGreaterThan(0);
