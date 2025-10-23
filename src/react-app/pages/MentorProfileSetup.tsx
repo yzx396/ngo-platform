@@ -155,8 +155,8 @@ export function MentorProfileSetup() {
   // Show loading state while fetching profile
   if (isLoading) {
     return (
-      <div className="container py-12">
-        <div className="max-w-2xl mx-auto text-center">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center">
           <p className="text-lg text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
@@ -164,23 +164,30 @@ export function MentorProfileSetup() {
   }
 
   return (
-    <div className="container py-12">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold">
-            {existingProfile ? t('mentor.editTitle') : t('mentor.createTitle')}
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            {existingProfile ? t('mentor.editSubtitle') : t('mentor.createSubtitle')}
-          </p>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold">
+          {existingProfile ? t('mentor.editTitle') : t('mentor.createTitle')}
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          {existingProfile ? t('mentor.editSubtitle') : t('mentor.createSubtitle')}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Left Sidebar: Instructions */}
+        <div className="lg:col-span-1">
+          <Card className="p-6 sticky top-4 bg-blue-50 border-blue-200">
+            <p className="text-sm text-gray-700 whitespace-pre-line">
+              {t('mentor.setupInstructions')}
+            </p>
+          </Card>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-sm text-gray-700 whitespace-pre-line">
-          {t('mentor.setupInstructions')}
-        </div>
-
-        <FormProvider {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        {/* Right Column: Form */}
+        <div className="lg:col-span-3">
+          <FormProvider {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
             <Card className="p-8 space-y-8">
               {/* Section 1: Basic Information */}
               <div className="space-y-6">
@@ -337,16 +344,17 @@ export function MentorProfileSetup() {
               </div>
             </Card>
 
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
-                {isSubmitting
-                  ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
-                  : t('common.save')}
-              </Button>
-            </div>
-          </form>
-        </FormProvider>
+              {/* Submit Button */}
+              <div className="flex justify-end">
+                <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
+                  {isSubmitting
+                    ? (existingProfile ? t('common.save') + '...' : t('common.save') + '...')
+                    : t('common.save')}
+                </Button>
+              </div>
+            </form>
+          </FormProvider>
+        </div>
       </div>
     </div>
   );
