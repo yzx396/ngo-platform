@@ -101,7 +101,7 @@ export function ExpertiseTopicPicker<T extends FieldValues = Record<string, unkn
                   {field.value.map((tag: string) => (
                     <div
                       key={tag}
-                      className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm"
                     >
                       <span>{tag}</span>
                       <button
@@ -109,7 +109,7 @@ export function ExpertiseTopicPicker<T extends FieldValues = Record<string, unkn
                         onClick={() => {
                           field.onChange(field.value.filter((t: string) => t !== tag));
                         }}
-                        className="text-blue-600 hover:text-blue-900 font-bold"
+                        className="text-blue-500 hover:text-blue-700 font-bold"
                         aria-label={`Remove tag ${tag}`}
                       >
                         ×
