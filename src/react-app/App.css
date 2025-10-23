@@ -66,15 +66,15 @@ button:not([class*="inline-flex"]) {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #4f7cdb;
+  background-color: #7ba5f0;
   color: white;
   cursor: pointer;
   transition: border-color 0.25s, background-color 0.25s;
 }
 
 button:not([class*="inline-flex"]):hover {
-  background-color: #3d63ba;
-  border-color: #4f7cdb;
+  background-color: #6b9bed;
+  border-color: #7ba5f0;
 }
 
 button:not([class*="inline-flex"]):focus,

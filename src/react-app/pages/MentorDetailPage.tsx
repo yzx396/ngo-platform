@@ -136,7 +136,7 @@ export function MentorDetailPage() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {domainNames.map((domain) => (
-                    <Badge key={domain} variant="secondary" className="text-sm bg-blue-100 text-blue-800">
+                    <Badge key={domain} variant="secondary" className="text-sm bg-blue-100 text-blue-600">
                       {t(`expertiseDomain.${domain.charAt(0).toLowerCase() + domain.slice(1)}`)}
                     </Badge>
                   ))}
