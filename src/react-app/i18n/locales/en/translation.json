@@ -249,5 +249,21 @@
     "blogFeatured": "Get your blog featured",
     "mentorshipComplete": "Complete a mentorship",
     "pointsUpdate": "Your points have been updated"
+  },
+  "posts": {
+    "title": "Community Feed",
+    "subtitle": "See what the community is sharing",
+    "noPosts": "No posts yet",
+    "loadMore": "Load More",
+    "previous": "Previous",
+    "next": "Next",
+    "likes": "{{count}} likes",
+    "comments": "{{count}} comments",
+    "pageInfo": "Showing {{start}}-{{end}} of {{total}}"
+  },
+  "postType": {
+    "announcement": "Announcement",
+    "discussion": "Discussion",
+    "general": "General"
   }
 }

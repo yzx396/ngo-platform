@@ -13,7 +13,7 @@ describe('App', () => {
       render(<App />);
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { name: /Welcome to Lead Forward Platform/i })
+          screen.getByRole('heading', { name: /Community Feed/i })
         ).toBeInTheDocument();
       }, { timeout: 3000 });
     });
@@ -85,13 +85,10 @@ describe('App', () => {
   describe('Page Content', () => {
     it('should display community features on home page', async () => {
       render(<App />);
-      // Wait for HomePage to load and check for Get Started section heading
+      // Wait for FeedPage to load and check for Community Feed heading
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Get Started/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Community Feed/i })).toBeInTheDocument();
       }, { timeout: 3000 });
-      // Check for community feature cards
-      expect(screen.getByRole('heading', { name: /Join Our Community/i })).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: /Take Challenges/i })).toBeInTheDocument();
     });
 
     it('should have auth button in navbar', () => {

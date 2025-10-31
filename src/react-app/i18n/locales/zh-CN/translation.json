@@ -249,5 +249,21 @@
     "blogFeatured": "获得你的博客被精选",
     "mentorshipComplete": "完成一次导师指导",
     "pointsUpdate": "你的积分已更新"
+  },
+  "posts": {
+    "title": "社区动态",
+    "subtitle": "看看社区成员在分享什么",
+    "noPosts": "暂无帖子",
+    "loadMore": "加载更多",
+    "previous": "上一页",
+    "next": "下一页",
+    "likes": "{{count}} 个赞",
+    "comments": "{{count}} 条评论",
+    "pageInfo": "显示 {{start}}-{{end}} of {{total}}"
+  },
+  "postType": {
+    "announcement": "公告",
+    "discussion": "讨论",
+    "general": "一般"
   }
 }

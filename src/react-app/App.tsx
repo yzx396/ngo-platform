@@ -16,7 +16,7 @@ import { AuthProvider } from './context/AuthContext';
 // This reduces the initial bundle size significantly
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage').then(m => ({ default: m.OAuthCallbackPage })));
-const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
+const FeedPage = lazy(() => import('./pages/FeedPage').then(m => ({ default: m.FeedPage })));
 const MentorBrowse = lazy(() => import('./pages/MentorBrowse').then(m => ({ default: m.MentorBrowse })));
 const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m => ({ default: m.MentorDetailPage })));
 const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(m => ({ default: m.MentorProfileSetup })));
@@ -72,8 +72,8 @@ function AppContent() {
         {!isAuthPage && (
           <Layout>
             <Routes>
-              {/* Home Page - Public but shows different content based on auth state */}
-              <Route path="/" element={<HomePage />} />
+              {/* Feed Page - Main page showing community posts */}
+              <Route path="/" element={<FeedPage />} />
 
               {/* Public mentor browsing */}
               <Route path="/mentors/browse" element={<MentorBrowse />} />

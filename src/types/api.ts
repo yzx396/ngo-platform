@@ -2,6 +2,7 @@ import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
 import { UserPointsWithRank } from './points';
+import { Post, PostType } from './post';
 
 // User API
 export interface CreateUserRequest {
@@ -109,3 +110,19 @@ export interface UserPointsResponse {
   points: number;
   rank?: number; // User's rank in leaderboard
 }
+
+// Posts API
+export interface GetPostsRequest {
+  limit?: number; // Default: 20
+  offset?: number; // Default: 0
+  type?: PostType; // Optional: filter by post type
+}
+
+export interface GetPostsResponse {
+  posts: Post[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export type GetPostByIdResponse = Post;

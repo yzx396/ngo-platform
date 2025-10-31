@@ -12,10 +12,12 @@ import type {
   AssignRoleRequest,
   GetUserRoleResponse,
   GetUserPointsResponse,
-  UpdateUserPointsRequest
+  UpdateUserPointsRequest,
+  GetPostsResponse
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
+import type { Post } from "../types/post";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -1471,6 +1473,123 @@ app.get("/api/v1/auth/me", async (c) => {
  */
 app.post("/api/v1/auth/logout", (c) => {
   return c.json({ success: true, message: "Logged out successfully" });
+});
+
+// ============================================================================
+// Posts API (/api/v1/posts)
+// ============================================================================
+
+/**
+ * GET /api/v1/posts - List posts with pagination
+ * Public endpoint - no authentication required
+ * Supports filtering by post type
+ */
+app.get("/api/v1/posts", async (c) => {
+  try {
+    const limitParam = c.req.query("limit");
+    const offsetParam = c.req.query("offset");
+    const typeParam = c.req.query("type");
+
+    // Validation: Parse and validate limit and offset
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 20; // Default 20, max 100
+    const offset = offsetParam ? Math.max(parseInt(offsetParam, 10), 0) : 0; // Default 0
+
+    // Build query - filter by type if provided
+    let query = "SELECT * FROM posts";
+    const bindings: unknown[] = [];
+
+    if (typeParam) {
+      // Validate post type
+      if (!["announcement", "discussion", "general"].includes(typeParam)) {
+        return c.json({ error: "Invalid post type" }, 400);
+      }
+      query += " WHERE post_type = ?";
+      bindings.push(typeParam);
+    }
+
+    // Count total posts (matching filter if applied)
+    const countQuery = typeParam
+      ? "SELECT COUNT(*) as count FROM posts WHERE post_type = ?"
+      : "SELECT COUNT(*) as count FROM posts";
+    const countResult = await c.env.platform_db
+      .prepare(countQuery)
+      .bind(...bindings)
+      .first<{ count: number }>();
+    const total = countResult?.count || 0;
+
+    // Fetch posts - ordered by created_at DESC (newest first)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    bindings.push(limit, offset);
+
+    const results = await c.env.platform_db
+      .prepare(query)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+
+    // Normalize posts and attach author info
+    const postsWithAuthors = await Promise.all(
+      results.results.map(async (post) => {
+        // Fetch author name
+        const author = await c.env.platform_db
+          .prepare("SELECT name FROM users WHERE id = ?")
+          .bind(post.user_id)
+          .first<{ name: string }>();
+
+        return {
+          ...post,
+          author_name: author?.name || "Unknown User",
+        };
+      })
+    );
+
+    const response: GetPostsResponse = {
+      posts: postsWithAuthors as unknown as Post[],
+      total,
+      limit,
+      offset,
+    };
+
+    return c.json<GetPostsResponse>(response);
+  } catch (err) {
+    console.error("Error fetching posts:", err);
+    return c.json({ error: "Failed to fetch posts" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/posts/:id - Get single post by ID
+ * Public endpoint - no authentication required
+ */
+app.get("/api/v1/posts/:id", async (c) => {
+  try {
+    const postId = c.req.param("id");
+
+    // Fetch post
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Fetch author name
+    const author = await c.env.platform_db
+      .prepare("SELECT name FROM users WHERE id = ?")
+      .bind(post.user_id)
+      .first<{ name: string }>();
+
+    const postWithAuthor = {
+      ...post,
+      author_name: author?.name || "Unknown User",
+    };
+
+    return c.json<Post>(postWithAuthor as unknown as Post);
+  } catch (err) {
+    console.error("Error fetching post:", err);
+    return c.json({ error: "Failed to fetch post" }, 500);
+  }
 });
 
 // ============================================================================
