@@ -2,7 +2,7 @@ import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
 import { UserPointsWithRank } from './points';
-import { Post, PostType } from './post';
+import { Post, PostType, PostCommentWithAuthor } from './post';
 
 // User API
 export interface CreateUserRequest {
@@ -149,3 +149,27 @@ export interface LikePostResponse {
 }
 
 export type UnlikePostResponse = LikePostResponse;
+
+// Post Comments API
+export interface CreateCommentRequest {
+  content: string; // Comment content (required, max 500 characters)
+  parent_comment_id?: string; // Optional: for replying to another comment
+}
+
+export interface GetCommentsRequest {
+  limit?: number; // Default: 20
+  offset?: number; // Default: 0
+}
+
+export interface GetCommentsResponse {
+  comments: PostCommentWithAuthor[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export type CreateCommentResponse = PostCommentWithAuthor;
+
+export interface DeleteCommentResponse {
+  success: boolean;
+}

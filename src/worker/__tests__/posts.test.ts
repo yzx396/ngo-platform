@@ -32,6 +32,7 @@ function createMockDb() {
   const mockPosts = new Map<string, Record<string, unknown>>();
   const mockRoles = new Map<string, Record<string, unknown>>();
   const mockLikes = new Map<string, Record<string, unknown>>();
+  const mockComments = new Map<string, Record<string, unknown>>();
 
   return {
     prepare: vi.fn((query: string) => ({
@@ -69,6 +70,51 @@ function createMockDb() {
             const like = mockLikes.get(likeKey);
             return { results: like ? [like] : [] };
           }
+          // SELECT post_comments by post_id (with pagination/sorting and JOINs)
+          if (query.includes('SELECT') && query.includes('post_comments') && (query.includes('WHERE post_id = ?') || query.includes('WHERE pc.post_id = ?')) && !query.includes('COUNT')) {
+            const postId = params[0];
+            let comments = Array.from(mockComments.values()).filter(c => c.post_id === postId);
+
+            // Handle JOIN with users table
+            if (query.includes('JOIN users')) {
+              comments = comments.map(c => {
+                const user = mockUsers.get(c.user_id as string);
+                return { ...c, author_name: user?.name, author_email: user?.email };
+              });
+            }
+
+            // Sort by created_at
+            comments = comments.sort((a, b) => (a.created_at as number) - (b.created_at as number));
+
+            // Handle LIMIT and OFFSET
+            if (query.includes('LIMIT')) {
+              const limitMatch = query.match(/LIMIT\s+\?\s+OFFSET\s+\?/);
+              if (limitMatch && params.length >= 2) {
+                const limit = params[params.length - 2];
+                const offset = params[params.length - 1];
+                comments = comments.slice(offset as number, (offset as number) + (limit as number));
+              }
+            }
+
+            return { results: comments };
+          }
+          // SELECT COUNT for comments
+          if (query.includes('SELECT COUNT') && query.includes('post_comments')) {
+            const postId = params[0];
+            const count = Array.from(mockComments.values()).filter(c => c.post_id === postId).length;
+            return { results: [{ count }] };
+          }
+          // SELECT specific post_comment
+          if (query.includes('SELECT') && query.includes('post_comments') && query.includes('WHERE id = ?')) {
+            const commentId = params[0];
+            const comment = mockComments.get(commentId);
+            const result = comment ? { ...comment } : null;
+            if (result && query.includes('JOIN users')) {
+              const user = mockUsers.get(comment?.user_id as string);
+              return { results: [{ ...result, author_name: user?.name, author_email: user?.email }] };
+            }
+            return { results: comment ? [comment] : [] };
+          }
           return { results: [] };
         }),
         first: vi.fn(async () => {
@@ -93,6 +139,24 @@ function createMockDb() {
             const userId = params[1];
             const likeKey = `${postId}:${userId}`;
             return mockLikes.get(likeKey) || null;
+          }
+          // SELECT COUNT for comments
+          if (query.includes('SELECT COUNT') && query.includes('post_comments')) {
+            const postId = params[0];
+            const count = Array.from(mockComments.values()).filter(c => c.post_id === postId).length;
+            return { count };
+          }
+          // SELECT specific post_comment (with or without JOIN)
+          if (query.includes('SELECT') && query.includes('post_comments') && (query.includes('WHERE id = ?') || query.includes('WHERE pc.id = ?'))) {
+            const commentId = params[0];
+            const comment = mockComments.get(commentId);
+            if (!comment) return null;
+
+            if (query.includes('JOIN users')) {
+              const user = mockUsers.get(comment.user_id as string);
+              return { ...comment, author_name: user?.name, author_email: user?.email };
+            }
+            return comment;
           }
           return null;
         }),
@@ -173,6 +237,18 @@ function createMockDb() {
           if (query.includes('DELETE FROM posts')) {
             const id = params[0];
             mockPosts.delete(id);
+            return { success: true, meta: { changes: 1 } };
+          }
+          // INSERT post_comments
+          if (query.includes('INSERT INTO post_comments')) {
+            const [id, post_id, user_id, content, parent_comment_id, created_at, updated_at] = params;
+            mockComments.set(id, { id, post_id, user_id, content, parent_comment_id: parent_comment_id || null, created_at, updated_at });
+            return { success: true, meta: { changes: 1 } };
+          }
+          // DELETE post_comments
+          if (query.includes('DELETE FROM post_comments')) {
+            const id = params[0];
+            mockComments.delete(id);
             return { success: true, meta: { changes: 1 } };
           }
           return { success: true, meta: { changes: 0 } };
@@ -1233,6 +1309,429 @@ describe('Posts System', () => {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${likeToken}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: POST /api/v1/posts/:id/comments - Create Comment
+  // ============================================================================
+
+  describe('POST /api/v1/posts/:id/comments', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let testPost: Record<string, unknown>;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      // Create a post to comment on
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Test post to comment on',
+          post_type: 'general',
+        }),
+      });
+      const res = await app.fetch(req, mockEnv);
+      testPost = await res.json();
+    });
+
+    it('should create a comment successfully', async () => {
+      const commenter = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      const token = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Great post!',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data).toMatchObject({
+        id: expect.any(String),
+        post_id: testPost.id,
+        user_id: commenter.id,
+        content: 'Great post!',
+        created_at: expect.any(Number),
+        updated_at: expect.any(Number),
+      });
+    });
+
+    it('should update comments_count on post when comment is created', async () => {
+      const commenter = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      const token = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'First comment',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+      expect(res.status).toBe(201);
+
+      // Verify the comment was created
+      const commentData = await res.json();
+      expect(commentData.id).toBeDefined();
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: 'Unauthorized comment',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 400 when content is empty', async () => {
+      const commenter = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      const token = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: '',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('required');
+    });
+
+    it('should return 400 when content exceeds max length', async () => {
+      const commenter = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      const token = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'x'.repeat(501),
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('500 characters');
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const commenter = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      const token = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id/comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Comment on nonexistent post',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: GET /api/v1/posts/:id/comments - Get Comments
+  // ============================================================================
+
+  describe('GET /api/v1/posts/:id/comments', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let testPost: Record<string, unknown>;
+    const commentIds: string[] = [];
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      // Create a post
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Test post with comments',
+          post_type: 'general',
+        }),
+      });
+      const res = await app.fetch(req, mockEnv);
+      testPost = await res.json();
+
+      // Create multiple comments
+      for (let i = 0; i < 3; i++) {
+        const commenter = await createTestUser(mockEnv, `commenter${i}@example.com`, `Commenter ${i}`);
+        const commentToken = await createTestToken(commenter.id as string, commenter.email as string, commenter.name as string);
+        const commentReq = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${commentToken}`,
+          },
+          body: JSON.stringify({
+            content: `Comment ${i}`,
+          }),
+        });
+        const commentRes = await app.fetch(commentReq, mockEnv);
+        const commentData = await commentRes.json();
+        commentIds.push(commentData.id);
+      }
+    });
+
+    it('should get all comments for a post', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(Array.isArray(data.comments)).toBe(true);
+      expect(data.comments.length).toBe(3);
+      expect(data.total).toBe(3);
+    });
+
+    it('should return comments sorted by created_at (oldest first)', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      // Check that comments are in order
+      for (let i = 0; i < data.comments.length - 1; i++) {
+        expect(data.comments[i].created_at).toBeLessThanOrEqual(data.comments[i + 1].created_at);
+      }
+    });
+
+    it('should return empty list for post with no comments', async () => {
+      // Create a new post with no comments
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const createReq = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Post with no comments',
+          post_type: 'general',
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const emptyPost = await createRes.json();
+
+      const req = new Request(`http://localhost/api/v1/posts/${emptyPost.id}/comments`, {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.comments.length).toBe(0);
+      expect(data.total).toBe(0);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id/comments', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: DELETE /api/v1/comments/:id - Delete Comment
+  // ============================================================================
+
+  describe('DELETE /api/v1/comments/:id', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let commenterUser: Record<string, unknown>;
+    let adminUser: Record<string, unknown>;
+    let testPost: Record<string, unknown>;
+    let testComment: Record<string, unknown>;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      commenterUser = await createTestUser(mockEnv, 'commenter@example.com', 'Commenter');
+      adminUser = await createTestUser(mockEnv, 'admin@example.com', 'Admin User');
+
+      // Assign admin role
+      const roleId = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await mockEnv.platform_db
+        .prepare('INSERT INTO user_roles')
+        .bind(roleId, adminUser.id, 'admin', now)
+        .run();
+
+      // Create a post
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Test post',
+          post_type: 'general',
+        }),
+      });
+      const res = await app.fetch(req, mockEnv);
+      testPost = await res.json();
+
+      // Create a comment
+      const commentToken = await createTestToken(commenterUser.id as string, commenterUser.email as string, commenterUser.name as string);
+      const commentReq = new Request(`http://localhost/api/v1/posts/${testPost.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${commentToken}`,
+        },
+        body: JSON.stringify({
+          content: 'Test comment',
+        }),
+      });
+      const commentRes = await app.fetch(commentReq, mockEnv);
+      testComment = await commentRes.json();
+    });
+
+    it('should delete a comment when user is the author', async () => {
+      const token = await createTestToken(commenterUser.id as string, commenterUser.email as string, commenterUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/comments/${testComment.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    it('should delete a comment when user is admin', async () => {
+      const token = await createTestToken(adminUser.id as string, adminUser.email as string, adminUser.name as string, 'admin');
+
+      const req = new Request(`http://localhost/api/v1/comments/${testComment.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    it('should return 403 when non-author non-admin tries to delete', async () => {
+      const otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/comments/${testComment.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/comments/${testComment.id}`, {
+        method: 'DELETE',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when comment does not exist', async () => {
+      const token = await createTestToken(commenterUser.id as string, commenterUser.email as string, commenterUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/comments/nonexistent-comment-id', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
         },
       });
 

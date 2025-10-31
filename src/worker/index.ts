@@ -18,7 +18,7 @@ import type {
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import type { Post } from "../types/post";
-import { normalizePost } from "../types/post";
+import { normalizePost, normalizePostCommentWithAuthor } from "../types/post";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -2020,6 +2020,228 @@ app.delete("/api/v1/posts/:id/like", requireAuth, async (c) => {
   } catch (err) {
     console.error("Error unliking post:", err);
     return c.json({ error: "Failed to unlike post" }, 500);
+  }
+});
+
+// ============================================================================
+// Posts Comments API (/api/v1/posts/:id/comments, /api/v1/comments/:id)
+// ============================================================================
+
+/**
+ * POST /api/v1/posts/:id/comments - Create a comment on a post
+ * Authenticated endpoint
+ * Creates a new comment and increments comments_count
+ * Returns 400 if content is empty or exceeds max length
+ * Returns 404 if post not found
+ */
+app.post("/api/v1/posts/:id/comments", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const userId = authPayload.userId;
+    const body = await c.req.json<{ content: string; parent_comment_id?: string }>();
+
+    // Validate content
+    if (!body.content || body.content.trim().length === 0) {
+      return c.json({ error: "Comment content is required" }, 400);
+    }
+
+    const MAX_COMMENT_LENGTH = 500;
+    if (body.content.length > MAX_COMMENT_LENGTH) {
+      return c.json(
+        { error: `Comment content must be ${MAX_COMMENT_LENGTH} characters or less` },
+        400
+      );
+    }
+
+    // Check if post exists
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // If parent_comment_id is provided, validate it exists
+    if (body.parent_comment_id) {
+      const parentComment = await c.env.platform_db
+        .prepare("SELECT id FROM post_comments WHERE id = ?")
+        .bind(body.parent_comment_id)
+        .first<{ id: string }>();
+
+      if (!parentComment) {
+        return c.json({ error: "Parent comment not found" }, 404);
+      }
+    }
+
+    // Create the comment
+    const commentId = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    const insertResult = await c.env.platform_db
+      .prepare(
+        "INSERT INTO post_comments (id, post_id, user_id, content, parent_comment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(
+        commentId,
+        postId,
+        userId,
+        body.content,
+        body.parent_comment_id || null,
+        now,
+        now
+      )
+      .run();
+
+    if (!insertResult.success) {
+      throw new Error("Failed to insert comment");
+    }
+
+    // Increment comments_count in posts table
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE posts SET comments_count = comments_count + 1, updated_at = ? WHERE id = ?")
+      .bind(now, postId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update comments count");
+    }
+
+    // Fetch the created comment with author info
+    const comment = await c.env.platform_db
+      .prepare("SELECT pc.*, u.name as author_name, u.email as author_email FROM post_comments pc JOIN users u ON pc.user_id = u.id WHERE pc.id = ?")
+      .bind(commentId)
+      .first<Record<string, unknown>>();
+
+    return c.json(normalizePostCommentWithAuthor(comment, comment?.author_name as string, comment?.author_email as string), 201);
+  } catch (err) {
+    console.error("Error creating comment:", err);
+    return c.json({ error: "Failed to create comment" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/posts/:id/comments - Get all comments for a post
+ * Public endpoint
+ * Returns paginated comments sorted by created_at (oldest first)
+ * Returns 404 if post not found
+ */
+app.get("/api/v1/posts/:id/comments", async (c) => {
+  try {
+    const postId = c.req.param("id");
+    const limit = Math.min(Number(c.req.query("limit")) || 20, 100); // Max 100, default 20
+    const offset = Math.max(Number(c.req.query("offset")) || 0, 0);
+
+    // Check if post exists
+    const post = await c.env.platform_db
+      .prepare("SELECT id FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<{ id: string }>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Get total count of comments
+    const countResult = await c.env.platform_db
+      .prepare("SELECT COUNT(*) as count FROM post_comments WHERE post_id = ?")
+      .bind(postId)
+      .first<{ count: number }>();
+
+    const total = countResult?.count || 0;
+
+    // Fetch comments with author info, sorted by created_at (oldest first)
+    const comments = await c.env.platform_db
+      .prepare(
+        "SELECT pc.*, u.name as author_name, u.email as author_email FROM post_comments pc JOIN users u ON pc.user_id = u.id WHERE pc.post_id = ? ORDER BY pc.created_at ASC LIMIT ? OFFSET ?"
+      )
+      .bind(postId, limit, offset)
+      .all<Record<string, unknown>>();
+
+    const normalizedComments = (comments.results || []).map((comment) =>
+      normalizePostCommentWithAuthor(comment, comment.author_name as string, comment.author_email as string)
+    );
+
+    return c.json({
+      comments: normalizedComments,
+      total,
+      limit,
+      offset,
+    });
+  } catch (err) {
+    console.error("Error fetching comments:", err);
+    return c.json({ error: "Failed to fetch comments" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/comments/:id - Delete a comment
+ * Authenticated endpoint
+ * Author or admin can delete a comment
+ * Decrements comments_count on parent post
+ * Returns 403 if user is not author or admin
+ * Returns 404 if comment not found
+ */
+app.delete("/api/v1/comments/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const commentId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the comment
+    const comment = await c.env.platform_db
+      .prepare("SELECT * FROM post_comments WHERE id = ?")
+      .bind(commentId)
+      .first<Record<string, unknown>>();
+
+    if (!comment) {
+      return c.json({ error: "Comment not found" }, 404);
+    }
+
+    // Check authorization (author or admin)
+    const isAuthor = comment.user_id === userId;
+    const userRole = authPayload.role || "member";
+    const isAdmin = userRole === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      return c.json({ error: "Not authorized to delete this comment" }, 403);
+    }
+
+    // Delete the comment
+    const deleteResult = await c.env.platform_db
+      .prepare("DELETE FROM post_comments WHERE id = ?")
+      .bind(commentId)
+      .run();
+
+    if (!deleteResult.success) {
+      throw new Error("Failed to delete comment");
+    }
+
+    // Decrement comments_count in posts table
+    const now = Math.floor(Date.now() / 1000);
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE posts SET comments_count = MAX(0, comments_count - 1), updated_at = ? WHERE id = ?")
+      .bind(now, comment.post_id)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update comments count");
+    }
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    return c.json({ error: "Failed to delete comment" }, 500);
   }
 });
 

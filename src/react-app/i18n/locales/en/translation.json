@@ -284,7 +284,17 @@
     "like": "Like",
     "unlike": "Unlike",
     "likeError": "Failed to like post. Please try again.",
-    "unlikeError": "Failed to unlike post. Please try again."
+    "unlikeError": "Failed to unlike post. Please try again.",
+    "comment": "Comment",
+    "addComment": "Add a comment...",
+    "submitComment": "Submit",
+    "deleteComment": "Delete Comment",
+    "deleteCommentConfirm": "Delete this comment?",
+    "noComments": "No comments yet",
+    "commentError": "Failed to create comment. Please try again.",
+    "deleteCommentError": "Failed to delete comment. Please try again.",
+    "loadCommentsError": "Failed to load comments",
+    "charLimitExceeded": "Character limit exceeded"
   },
   "postType": {
     "announcement": "Announcement",

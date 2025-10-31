@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from './apiClient';
-import type { GetPostsResponse, CreatePostRequest, UpdatePostRequest, CreatePostResponse, UpdatePostResponse } from '../../types/api';
-import type { Post, PostType } from '../../types/post';
+import type { GetPostsResponse, CreatePostRequest, UpdatePostRequest, CreatePostResponse, UpdatePostResponse, GetCommentsResponse, CreateCommentRequest, CreateCommentResponse } from '../../types/api';
+import type { Post, PostType, PostCommentWithAuthor } from '../../types/post';
 
 /**
  * Posts Service
@@ -127,4 +127,59 @@ export async function unlikePost(postId: string): Promise<Post> {
     { method: 'DELETE' }
   );
   return response.post;
+}
+
+// ============================================================================
+// Post Comments API
+// ============================================================================
+
+/**
+ * Get all comments for a post with pagination
+ * @param postId - The ID of the post to get comments for
+ * @param limit - Number of comments to fetch (default: 20)
+ * @param offset - Number of comments to skip (default: 0)
+ * @returns Comments response with pagination info and comments array
+ */
+export async function getComments(
+  postId: string,
+  limit: number = 20,
+  offset: number = 0
+): Promise<GetCommentsResponse> {
+  const params = new URLSearchParams();
+  params.append('limit', String(limit));
+  params.append('offset', String(offset));
+
+  const url = `/api/v1/posts/${postId}/comments?${params.toString()}`;
+  return apiGet<GetCommentsResponse>(url);
+}
+
+/**
+ * Create a new comment on a post
+ * @param postId - The ID of the post to comment on
+ * @param content - The comment content (required, max 500 characters)
+ * @param parentCommentId - Optional parent comment ID for replies
+ * @returns The created comment with author info
+ */
+export async function createComment(
+  postId: string,
+  content: string,
+  parentCommentId?: string
+): Promise<PostCommentWithAuthor> {
+  const body: CreateCommentRequest = {
+    content,
+  };
+  if (parentCommentId) {
+    body.parent_comment_id = parentCommentId;
+  }
+
+  return apiPost<CreateCommentResponse>(`/api/v1/posts/${postId}/comments`, body);
+}
+
+/**
+ * Delete a comment
+ * @param commentId - The ID of the comment to delete
+ * @returns Success response
+ */
+export async function deleteComment(commentId: string): Promise<void> {
+  return apiDelete(`/api/v1/comments/${commentId}`);
 }

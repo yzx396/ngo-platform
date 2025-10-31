@@ -284,7 +284,17 @@
     "like": "点赞",
     "unlike": "取消赞",
     "likeError": "点赞失败，请重试。",
-    "unlikeError": "取消赞失败，请重试。"
+    "unlikeError": "取消赞失败，请重试。",
+    "comment": "评论",
+    "addComment": "添加评论...",
+    "submitComment": "提交",
+    "deleteComment": "删除评论",
+    "deleteCommentConfirm": "确定要删除此评论吗？",
+    "noComments": "暂无评论",
+    "commentError": "创建评论失败，请重试。",
+    "deleteCommentError": "删除评论失败，请重试。",
+    "loadCommentsError": "加载评论失败",
+    "charLimitExceeded": "字数超过限制"
   },
   "postType": {
     "announcement": "公告",

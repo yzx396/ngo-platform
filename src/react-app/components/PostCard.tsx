@@ -4,10 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit2, Trash2, Heart } from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, Heart, MessageSquare } from 'lucide-react';
 import { getPostTypeName, formatPostTime } from '../../types/post';
 import { likePost, unlikePost } from '../services/postService';
 import { handleApiError } from '../services/apiClient';
+import { PostComments } from './PostComments';
+import { CommentForm } from './CommentForm';
 import type { Post, PostType } from '../../types/post';
 
 interface PostCardProps {
@@ -44,6 +46,8 @@ export function PostCard({
   const [isLiking, setIsLiking] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [userHasLiked, setUserHasLiked] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(post.comments_count);
+  const [showComments, setShowComments] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -207,21 +211,33 @@ export function PostCard({
         {/* Engagement buttons */}
         <div className="flex items-center gap-2 mb-2">
           {isAuthenticated ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLikeClick}
-              disabled={isLiking}
-              className="h-8 px-2 text-xs"
-              title={userHasLiked ? t('posts.unlike', 'Unlike') : t('posts.like', 'Like')}
-            >
-              <Heart
-                className={`h-4 w-4 mr-1 ${
-                  userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
-                }`}
-              />
-              {t('posts.like', 'Like')}
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLikeClick}
+                disabled={isLiking}
+                className="h-8 px-2 text-xs"
+                title={userHasLiked ? t('posts.unlike', 'Unlike') : t('posts.like', 'Like')}
+              >
+                <Heart
+                  className={`h-4 w-4 mr-1 ${
+                    userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                  }`}
+                />
+                {t('posts.like', 'Like')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowComments(!showComments)}
+                className="h-8 px-2 text-xs"
+                title={t('posts.comment', 'Comment')}
+              >
+                <MessageSquare className="h-4 w-4 mr-1 text-muted-foreground" />
+                {t('posts.comment', 'Comment')}
+              </Button>
+            </>
           ) : null}
         </div>
 
@@ -230,9 +246,12 @@ export function PostCard({
           <span>
             {t('posts.likes', { defaultValue: '{{count}} likes', count: likesCount })}
           </span>
-          <span>
-            {t('posts.comments', { defaultValue: '{{count}} comments', count: post.comments_count })}
-          </span>
+          <button
+            onClick={() => setShowComments(!showComments)}
+            className="hover:text-foreground cursor-pointer"
+          >
+            {t('posts.comments', { defaultValue: '{{count}} comments', count: commentsCount })}
+          </button>
           {onViewDetails && (
             <button
               onClick={onViewDetails}
@@ -243,6 +262,25 @@ export function PostCard({
           )}
         </div>
       </div>
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="px-6 py-4 border-t space-y-4 bg-white">
+          {isAuthenticated && (
+            <CommentForm
+              postId={post.id}
+              onCommentCreated={() => setCommentsCount((c) => c + 1)}
+              placeholder={t('posts.addComment', 'Add a comment...')}
+            />
+          )}
+          {commentsCount > 0 && (
+            <PostComments
+              postId={post.id}
+              onCommentDeleted={() => setCommentsCount((c) => Math.max(0, c - 1))}
+            />
+          )}
+        </div>
+      )}
     </Card>
   );
 }

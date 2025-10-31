@@ -61,6 +61,29 @@ export interface PostWithLikeStatus extends Post {
 }
 
 /**
+ * PostComment - Record of a user commenting on a post
+ * Stored in post_comments table with support for nested replies
+ */
+export interface PostComment {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  parent_comment_id?: string | null; // For nested replies (optional)
+  created_at: number; // Unix timestamp
+  updated_at: number; // Unix timestamp
+}
+
+/**
+ * PostCommentWithAuthor - Comment with author information (for display)
+ * Extends PostComment with user details fetched from database join
+ */
+export interface PostCommentWithAuthor extends PostComment {
+  author_name?: string;
+  author_email?: string;
+}
+
+/**
  * Normalize post from database
  * Ensures all fields are properly typed and handles edge cases
  * @param dbPost - Raw data from database
@@ -141,6 +164,45 @@ export function normalizePostLike(dbLike: unknown): PostLike {
     post_id: String(data.post_id || ''),
     user_id: String(data.user_id || ''),
     created_at: Number(data.created_at || 0),
+  };
+}
+
+/**
+ * Normalize PostComment from database
+ * Ensures all fields are properly typed and handles edge cases
+ * @param dbComment - Raw data from database
+ * @returns Properly typed PostComment object
+ */
+export function normalizePostComment(dbComment: unknown): PostComment {
+  const data = dbComment as Record<string, unknown>;
+
+  return {
+    id: String(data.id || ''),
+    post_id: String(data.post_id || ''),
+    user_id: String(data.user_id || ''),
+    content: String(data.content || ''),
+    parent_comment_id: data.parent_comment_id ? String(data.parent_comment_id) : null,
+    created_at: Number(data.created_at || 0),
+    updated_at: Number(data.updated_at || 0),
+  };
+}
+
+/**
+ * Normalize PostComment with author information
+ * @param dbComment - Raw data from database
+ * @param authorName - Optional author name from join
+ * @param authorEmail - Optional author email from join
+ * @returns Properly typed PostCommentWithAuthor object
+ */
+export function normalizePostCommentWithAuthor(
+  dbComment: unknown,
+  authorName?: string,
+  authorEmail?: string
+): PostCommentWithAuthor {
+  return {
+    ...normalizePostComment(dbComment),
+    author_name: authorName,
+    author_email: authorEmail,
   };
 }
 
