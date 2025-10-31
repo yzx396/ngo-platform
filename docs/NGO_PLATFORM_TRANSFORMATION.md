@@ -112,33 +112,33 @@
 
 **Value**: Users can see a feed of community posts (even if seeded by admins initially).
 
-- [ ] **Database**: Create migration for `posts` table
+- [x] **Database**: Create migration for `posts` table
   - Columns: `id`, `user_id`, `content`, `post_type`, `likes_count`, `comments_count`, `created_at`, `updated_at`
   - Add index on `created_at` for sorting
   - Run migration locally and verify schema
-- [ ] **Types**: Create `src/types/post.ts`
+- [x] **Types**: Create `src/types/post.ts`
   - Define `Post` interface
   - Define `PostType` enum (announcement, discussion, general)
   - Update `src/types/api.ts` with `GetPostsResponse`
-- [ ] **Backend**: Implement read-only posts API
+- [x] **Backend**: Implement read-only posts API
   - `GET /api/v1/posts` - List posts (public, paginated)
   - `GET /api/v1/posts/:id` - Get single post (public)
   - Write tests for GET endpoints
-- [ ] **Frontend**: Create post viewing components
+- [x] **Frontend**: Create post viewing components
   - Create `PostCard` component (read-only, no like/comment buttons yet)
   - Create `FeedPage` with post list and pagination
   - Create `postService.ts` with fetch methods
   - Write tests for components
-- [ ] **Frontend**: Update routing
+- [x] **Frontend**: Update routing
   - Update `App.tsx` to set `/` to FeedPage
   - Update Sidebar "Feed" link to navigate to `/`
-- [ ] **i18n**: Add translations for feed page
+- [x] **i18n**: Add translations for feed page
   - Update `zh-CN/translation.json` and `en/translation.json`
-- [ ] **Testing**: End-to-end test
+- [x] **Testing**: End-to-end test
   - Seed database with sample posts
   - Users can view feed
   - Pagination works
-- [ ] **Deploy**: Feed page is live ✅
+- [x] **Deploy**: Feed page is live ✅
 
 ### Slice 1.2: Create Posts ✅ Deployable
 
@@ -764,7 +764,7 @@ Track your progress by phase and slice. Mark slices as complete when deployed an
 - ✅ Slice 0.4: Documentation Update
 
 ### Phase 1: Feed & Posts (5 slices)
-- ⬜ Slice 1.1: View Posts Feed
+- ✅ Slice 1.1: View Posts Feed
 - ⬜ Slice 1.2: Create Posts
 - ⬜ Slice 1.3: Like Posts
 - ⬜ Slice 1.4: Comment on Posts
@@ -802,7 +802,7 @@ Track your progress by phase and slice. Mark slices as complete when deployed an
 - ⬜ Slice 6.5: Security & Quality Assurance
 - ⬜ Slice 6.6: Phased Deployment
 
-**Total Slices: 31** | **Completed: 4** | **Progress: ~13%**
+**Total Slices: 31** | **Completed: 5** | **Progress: ~16%**
 
 ---
 

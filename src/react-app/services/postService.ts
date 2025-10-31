@@ -1,5 +1,5 @@
-import { apiGet } from './apiClient';
-import type { GetPostsResponse } from '../../types/api';
+import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
+import type { GetPostsResponse, CreatePostRequest, UpdatePostRequest, CreatePostResponse, UpdatePostResponse } from '../../types/api';
 import type { Post, PostType } from '../../types/post';
 
 /**
@@ -47,4 +47,58 @@ export async function getPostById(postId: string): Promise<Post> {
 export async function getAllPosts(type?: PostType): Promise<Post[]> {
   const response = await getPosts(1000, 0, type); // Fetch up to 1000 posts
   return response.posts;
+}
+
+/**
+ * Create a new post
+ * @param content - The post content (required, max 2000 characters)
+ * @param postType - Optional post type (general, discussion, announcement)
+ * @returns The created post
+ */
+export async function createPost(
+  content: string,
+  postType?: PostType
+): Promise<Post> {
+  const body: CreatePostRequest = {
+    content,
+  };
+  if (postType) {
+    body.post_type = postType;
+  }
+
+  return apiPost<CreatePostResponse>('/api/v1/posts', body);
+}
+
+/**
+ * Update an existing post
+ * @param postId - The ID of the post to update
+ * @param content - Optional new content
+ * @param postType - Optional new post type
+ * @returns The updated post
+ */
+export async function updatePost(
+  postId: string,
+  content?: string,
+  postType?: PostType
+): Promise<Post> {
+  const body: UpdatePostRequest = {};
+  if (content !== undefined) {
+    body.content = content;
+  }
+  if (postType !== undefined) {
+    body.post_type = postType;
+  }
+
+  return apiPut<UpdatePostResponse>(
+    `/api/v1/posts/${postId}`,
+    body
+  );
+}
+
+/**
+ * Delete a post
+ * @param postId - The ID of the post to delete
+ */
+export async function deletePost(postId: string): Promise<void> {
+  return apiDelete(`/api/v1/posts/${postId}`);
 }

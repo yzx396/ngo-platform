@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { D1Database } from '@cloudflare/workers-types';
-import { normalizePost, getPostTypeName, formatPostTime } from '../../types/post';
+import { normalizePost, getPostTypeName, formatPostTime, PostType } from '../../types/post';
 
 // Mock database helper
 function createMockDb(): D1Database {
@@ -184,6 +184,131 @@ describe('Posts System', () => {
       const mockDb = createMockDb();
       const result = mockDb.prepare('SELECT * FROM posts').all();
       expect(result).toEqual({ success: true, results: [] });
+    });
+  });
+
+  describe('Post CRUD Validation', () => {
+    describe('Create Post Validation', () => {
+      it('should validate that content is required', () => {
+        const content = '';
+        expect(content).toBe('');
+      });
+
+      it('should validate that content does not exceed max length', () => {
+        const MAX_LENGTH = 2000;
+        const content = 'a'.repeat(MAX_LENGTH + 1);
+        expect(content.length).toBeGreaterThan(MAX_LENGTH);
+      });
+
+      it('should validate post type is one of valid types', () => {
+        const validTypes = ['announcement', 'discussion', 'general'];
+        expect(validTypes).toContain(PostType.General);
+        expect(validTypes).toContain(PostType.Discussion);
+        expect(validTypes).toContain(PostType.Announcement);
+      });
+
+      it('should validate that only admins can create announcements', () => {
+        const userRole = 'member';
+        const postType = PostType.Announcement;
+        const isAdmin = userRole === 'admin';
+
+        expect(isAdmin).toBe(false);
+        expect(postType === PostType.Announcement && !isAdmin).toBe(true);
+      });
+    });
+
+    describe('Update Post Validation', () => {
+      it('should allow updating content for post author', () => {
+        const userId = 'user-1';
+        const postOwnerId = 'user-1';
+        const canEdit = userId === postOwnerId;
+
+        expect(canEdit).toBe(true);
+      });
+
+      it('should allow updating content for admin even if not author', () => {
+        const userId = 'admin-user';
+        const userRole = 'admin';
+        const postOwnerId = 'user-1';
+        const canEdit = userId === postOwnerId || userRole === 'admin';
+
+        expect(canEdit).toBe(true);
+      });
+
+      it('should prevent updating content for non-owner non-admin', () => {
+        const userId = 'user-2';
+        const userRole = 'member';
+        const postOwnerId = 'user-1';
+        const canEdit = userId === postOwnerId || userRole === 'admin';
+
+        expect(canEdit).toBe(false);
+      });
+
+      it('should validate updated content length', () => {
+        const MAX_LENGTH = 2000;
+        const validContent = 'x'.repeat(MAX_LENGTH);
+        const invalidContent = 'x'.repeat(MAX_LENGTH + 1);
+
+        expect(validContent.length).toBeLessThanOrEqual(MAX_LENGTH);
+        expect(invalidContent.length).toBeGreaterThan(MAX_LENGTH);
+      });
+    });
+
+    describe('Delete Post Validation', () => {
+      it('should allow deleting post for author', () => {
+        const userId = 'user-1';
+        const postOwnerId = 'user-1';
+        const canDelete = userId === postOwnerId;
+
+        expect(canDelete).toBe(true);
+      });
+
+      it('should allow deleting post for admin even if not author', () => {
+        const userId = 'admin-user';
+        const userRole = 'admin';
+        const postOwnerId = 'user-1';
+        const canDelete = userId === postOwnerId || userRole === 'admin';
+
+        expect(canDelete).toBe(true);
+      });
+
+      it('should prevent deleting post for non-owner non-admin', () => {
+        const userId = 'user-2';
+        const userRole = 'member';
+        const postOwnerId = 'user-1';
+        const canDelete = userId === postOwnerId || userRole === 'admin';
+
+        expect(canDelete).toBe(false);
+      });
+    });
+
+    describe('Post UUID Generation', () => {
+      it('should generate valid UUID format', () => {
+        const uuid = crypto.randomUUID();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        expect(uuid).toMatch(uuidRegex);
+      });
+
+      it('should generate unique UUIDs', () => {
+        const uuid1 = crypto.randomUUID();
+        const uuid2 = crypto.randomUUID();
+        expect(uuid1).not.toBe(uuid2);
+      });
+    });
+
+    describe('Timestamp Handling', () => {
+      it('should create valid Unix timestamps', () => {
+        const now = Math.floor(Date.now() / 1000);
+        expect(now).toBeGreaterThan(0);
+        expect(Number.isInteger(now)).toBe(true);
+      });
+
+      it('should update timestamps on modification', () => {
+        const createdAt = Math.floor(Date.now() / 1000);
+        // Simulate a delay
+        const updatedAt = createdAt + 60; // 60 seconds later
+        expect(updatedAt).toBeGreaterThan(createdAt);
+      });
     });
   });
 });

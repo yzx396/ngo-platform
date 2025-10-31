@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FeedPage } from '../pages/FeedPage';
 import * as postService from '../services/postService';
 import type { Post } from '../../types/post';
+import { AuthProvider } from '../context/AuthContext';
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -80,6 +81,15 @@ const mockPosts: (Post & { author_name?: string })[] = [
   },
 ];
 
+// Helper function to render FeedPage with AuthProvider
+function renderFeedPage() {
+  return render(
+    <AuthProvider>
+      <FeedPage />
+    </AuthProvider>
+  );
+}
+
 describe('FeedPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,7 +104,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('Community Feed')).toBeInTheDocument();
@@ -109,7 +119,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('First post')).toBeInTheDocument();
@@ -122,7 +132,7 @@ describe('FeedPage Component', () => {
         () => new Promise(() => {}) // Never resolves
       );
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -135,7 +145,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('No posts yet')).toBeInTheDocument();
@@ -147,7 +157,7 @@ describe('FeedPage Component', () => {
         new Error('Failed to fetch posts')
       );
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         // Check if try again button is displayed (which shows error state)
@@ -165,7 +175,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         const nextButton = screen.queryByText('Next');
@@ -181,7 +191,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('Next')).toBeInTheDocument();
@@ -196,7 +206,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         const prevButton = screen.getByText('Previous') as HTMLButtonElement;
@@ -230,7 +240,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         // First render should show pagination
@@ -269,7 +279,7 @@ describe('FeedPage Component', () => {
           offset: 20,
         });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('First post')).toBeInTheDocument();
@@ -294,7 +304,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText(/Showing 1-20 of 50/)).toBeInTheDocument();
@@ -311,7 +321,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0);
@@ -333,7 +343,7 @@ describe('FeedPage Component', () => {
           offset: 20,
         });
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0);
@@ -355,7 +365,7 @@ describe('FeedPage Component', () => {
         new Error('Network error')
       );
 
-      render(<FeedPage />);
+      renderFeedPage();
 
       await waitFor(() => {
         const retryButton = screen.getByText('Try Again');

@@ -1592,6 +1592,282 @@ app.get("/api/v1/posts/:id", async (c) => {
   }
 });
 
+/**
+ * POST /api/v1/posts - Create a new post
+ * Authenticated endpoint - requires valid JWT token
+ * Auto-publishes posts immediately (except announcements which require admin)
+ */
+app.post("/api/v1/posts", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = authPayload.userId;
+
+    // Fetch user's role to check admin privileges
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(userId)
+      .first<{ role: string }>();
+    const userRole = roleRecord ? roleRecord.role : "member";
+
+    // Parse request body
+    const body = await c.req.json<Record<string, unknown>>();
+    const content = String(body.content || "").trim();
+    const post_type = String(body.post_type || "general");
+
+    // Validation: Check content is not empty and within length limits
+    if (!content) {
+      return c.json({ error: "Post content is required" }, 400);
+    }
+    if (content.length > 2000) {
+      return c.json({ error: "Post content must not exceed 2000 characters" }, 400);
+    }
+
+    // Validation: Check post type is valid
+    if (!["announcement", "discussion", "general"].includes(post_type)) {
+      return c.json({ error: "Invalid post type" }, 400);
+    }
+
+    // Authorization: Only admins can create announcements
+    if (post_type === "announcement" && userRole !== "admin") {
+      return c.json(
+        { error: "Only administrators can create announcements" },
+        403
+      );
+    }
+
+    // Generate post ID and timestamps
+    const postId = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+
+    // Insert post into database
+    const result = await c.env.platform_db
+      .prepare(
+        "INSERT INTO posts (id, user_id, content, post_type, likes_count, comments_count, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0, ?, ?)"
+      )
+      .bind(postId, userId, content, post_type, now, now)
+      .run();
+
+    if (!result.success) {
+      throw new Error("Failed to insert post");
+    }
+
+    // Fetch and return the created post
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Failed to retrieve created post" }, 500);
+    }
+
+    // Fetch author name
+    const author = await c.env.platform_db
+      .prepare("SELECT name FROM users WHERE id = ?")
+      .bind(userId)
+      .first<{ name: string }>();
+
+    const postWithAuthor = {
+      ...post,
+      author_name: author?.name || "Unknown User",
+    };
+
+    return c.json<Post>(postWithAuthor as unknown as Post, 201);
+  } catch (err) {
+    console.error("Error creating post:", err);
+    return c.json({ error: "Failed to create post" }, 500);
+  }
+});
+
+/**
+ * PUT /api/v1/posts/:id - Update a post
+ * Authenticated endpoint - author only (or admin)
+ * Can update content and/or post type
+ */
+app.put("/api/v1/posts/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch user's role to check admin privileges
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(userId)
+      .first<{ role: string }>();
+    const userRole = roleRecord ? roleRecord.role : "member";
+
+    // Parse request body
+    const body = await c.req.json<Record<string, unknown>>();
+    const content = body.content ? String(body.content).trim() : null;
+    const post_type = body.post_type ? String(body.post_type) : null;
+
+    // Fetch the post to check ownership
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Authorization: Check if user is author or admin
+    if (post.user_id !== userId && userRole !== "admin") {
+      return c.json({ error: "Unauthorized to update this post" }, 403);
+    }
+
+    // Validation: If content is provided, check constraints
+    if (content !== null) {
+      if (!content) {
+        return c.json({ error: "Post content cannot be empty" }, 400);
+      }
+      if (content.length > 2000) {
+        return c.json(
+          { error: "Post content must not exceed 2000 characters" },
+          400
+        );
+      }
+    }
+
+    // Validation: If post_type is provided, check it's valid
+    if (post_type !== null) {
+      if (!["announcement", "discussion", "general"].includes(post_type)) {
+        return c.json({ error: "Invalid post type" }, 400);
+      }
+      // Authorization: Only admins can change to/from announcements
+      if (
+        (post_type === "announcement" || post.post_type === "announcement") &&
+        userRole !== "admin"
+      ) {
+        return c.json(
+          { error: "Only administrators can modify announcements" },
+          403
+        );
+      }
+    }
+
+    // Build update query dynamically
+    const updates: string[] = [];
+    const bindings: unknown[] = [];
+
+    if (content !== null) {
+      updates.push("content = ?");
+      bindings.push(content);
+    }
+    if (post_type !== null) {
+      updates.push("post_type = ?");
+      bindings.push(post_type);
+    }
+
+    // Always update the updated_at timestamp
+    updates.push("updated_at = ?");
+    bindings.push(Math.floor(Date.now() / 1000));
+
+    // Add post ID to bindings for WHERE clause
+    bindings.push(postId);
+
+    // Execute update
+    const updateQuery = `UPDATE posts SET ${updates.join(", ")} WHERE id = ?`;
+    const result = await c.env.platform_db
+      .prepare(updateQuery)
+      .bind(...bindings)
+      .run();
+
+    if (!result.success) {
+      throw new Error("Failed to update post");
+    }
+
+    // Fetch and return updated post
+    const updatedPost = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!updatedPost) {
+      return c.json({ error: "Failed to retrieve updated post" }, 500);
+    }
+
+    // Fetch author name
+    const author = await c.env.platform_db
+      .prepare("SELECT name FROM users WHERE id = ?")
+      .bind(updatedPost.user_id)
+      .first<{ name: string }>();
+
+    const postWithAuthor = {
+      ...updatedPost,
+      author_name: author?.name || "Unknown User",
+    };
+
+    return c.json<Post>(postWithAuthor as unknown as Post);
+  } catch (err) {
+    console.error("Error updating post:", err);
+    return c.json({ error: "Failed to update post" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/posts/:id - Delete a post
+ * Authenticated endpoint - author only (or admin)
+ * Hard deletes the post from the database
+ */
+app.delete("/api/v1/posts/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch user's role to check admin privileges
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(userId)
+      .first<{ role: string }>();
+    const userRole = roleRecord ? roleRecord.role : "member";
+
+    // Fetch the post to check ownership
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Authorization: Check if user is author or admin
+    if (post.user_id !== userId && userRole !== "admin") {
+      return c.json({ error: "Unauthorized to delete this post" }, 403);
+    }
+
+    // Delete the post
+    const result = await c.env.platform_db
+      .prepare("DELETE FROM posts WHERE id = ?")
+      .bind(postId)
+      .run();
+
+    if (!result.success) {
+      throw new Error("Failed to delete post");
+    }
+
+    return c.json({ success: true, message: "Post deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting post:", err);
+    return c.json({ error: "Failed to delete post" }, 500);
+  }
+});
+
 // ============================================================================
 // Legacy Route (kept for backward compatibility)
 // ============================================================================

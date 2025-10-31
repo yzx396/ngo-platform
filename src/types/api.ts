@@ -126,3 +126,16 @@ export interface GetPostsResponse {
 }
 
 export type GetPostByIdResponse = Post;
+
+export interface CreatePostRequest {
+  content: string;
+  post_type?: PostType; // Optional, defaults to 'general'
+}
+
+export interface UpdatePostRequest {
+  content?: string;
+  post_type?: PostType;
+}
+
+export type CreatePostResponse = Post;
+export type UpdatePostResponse = Post;
