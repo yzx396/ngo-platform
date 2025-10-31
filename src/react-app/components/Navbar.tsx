@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { useAuth } from '../context/AuthContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { UserRoleBadge } from './UserRoleBadge';
 
 /**
  * Navbar component
@@ -69,7 +70,10 @@ export function Navbar() {
           <LanguageSwitcher />
           {isAuthenticated && user ? (
             <>
-              <span className="text-sm text-muted-foreground">{user.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{user.name}</span>
+                {user.role && <UserRoleBadge role={user.role} />}
+              </div>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 {t('common.signOut')}
               </Button>
@@ -130,8 +134,11 @@ export function Navbar() {
               </div>
               {isAuthenticated && user ? (
                 <>
-                  <div className="px-2 py-2 text-sm">
-                    {t('common.signedInAs', { name: user.name })}
+                  <div className="px-2 py-2 space-y-2">
+                    <div className="text-sm">
+                      {t('common.signedInAs', { name: user.name })}
+                    </div>
+                    {user.role && <UserRoleBadge role={user.role} />}
                   </div>
                   <Button
                     variant="outline"

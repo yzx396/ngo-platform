@@ -1,5 +1,6 @@
 import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
+import { UserRole } from './role';
 
 // User API
 export interface CreateUserRequest {
@@ -10,6 +11,17 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
+}
+
+// Role API
+export interface AssignRoleRequest {
+  userId: string;
+  role: UserRole;
+}
+
+export interface GetUserRoleResponse {
+  userId: string;
+  role: UserRole;
 }
 
 // Mentor Profile API

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { AuthPayload } from '../../types/user';
+import { normalizeUserRole } from '../../types/role';
 
 /**
  * Creates a JWT token for authentication
@@ -36,11 +37,12 @@ export async function verifyToken(
 
   try {
     const verified = await jwtVerify(token, secretKey);
-    const { userId, email, name, iat, exp } = verified.payload;
+    const { userId, email, name, role, iat, exp } = verified.payload;
     return {
       userId: userId as string,
       email: email as string,
       name: name as string,
+      role: role ? normalizeUserRole(role) : undefined,
       iat: iat ? Math.floor(iat) : undefined,
       exp: exp ? Math.floor(exp) : undefined,
     };

@@ -199,5 +199,10 @@
     "fundraising": "Fundraising",
     "volunteerManagement": "Volunteer Management",
     "strategicPlanning": "Strategic Planning"
+  },
+  "roles": {
+    "admin": "Admin",
+    "member": "Member",
+    "roleLabel": "Role"
   }
 }

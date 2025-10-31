@@ -200,5 +200,10 @@
     "fundraising": "融资与募款",
     "volunteerManagement": "志愿者管理",
     "strategicPlanning": "战略规划"
+  },
+  "roles": {
+    "admin": "管理员",
+    "member": "成员",
+    "roleLabel": "角色"
   }
 }

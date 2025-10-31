@@ -8,11 +8,14 @@ import type {
   SearchMentorsResponse,
   CreateMatchRequest,
   RespondToMatchRequest,
-  GetMatchesResponse
+  GetMatchesResponse,
+  AssignRoleRequest,
+  GetUserRoleResponse
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import { authMiddleware, requireAuth } from "./auth/middleware";
+import { requireAdmin } from "./auth/roleMiddleware";
 import {
   getGoogleLoginUrl,
   exchangeGoogleCode,
@@ -22,6 +25,7 @@ import {
 } from "./auth/google";
 import { createToken } from "./auth/jwt";
 import { AuthPayload } from "../types/user";
+import { UserRole, DEFAULT_ROLE, normalizeUserRole } from "../types/role";
 
 /**
  * Environment variables and bindings for the Worker
@@ -251,6 +255,107 @@ app.put("/api/v1/users/:id", async (c) => {
     return c.json(updated);
   } catch {
     return c.json({ error: "Invalid request body" }, 400);
+  }
+});
+
+// ============================================================================
+// Role Management API (/api/v1/roles)
+// ============================================================================
+
+/**
+ * POST /api/v1/roles - Assign role to user (admin only)
+ */
+app.post("/api/v1/roles", requireAuth, requireAdmin, async (c) => {
+  try {
+    const body = await c.req.json<AssignRoleRequest>();
+
+    // Validation: Required fields
+    if (!body.userId || !body.role) {
+      return c.json({ error: "userId and role are required" }, 400);
+    }
+
+    // Validation: Valid role value
+    if (body.role !== UserRole.Admin && body.role !== UserRole.Member) {
+      return c.json({ error: "Invalid role value" }, 400);
+    }
+
+    // Check if user exists
+    const user = await c.env.platform_db
+      .prepare("SELECT id FROM users WHERE id = ?")
+      .bind(body.userId)
+      .first();
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const id = generateId();
+    const timestamp = getTimestamp();
+
+    // Upsert into user_roles table
+    // Try to insert, but if user_id exists, update instead
+    const existing = await c.env.platform_db
+      .prepare("SELECT id FROM user_roles WHERE user_id = ?")
+      .bind(body.userId)
+      .first();
+
+    if (existing) {
+      // Update existing role
+      await c.env.platform_db
+        .prepare("UPDATE user_roles SET role = ? WHERE user_id = ?")
+        .bind(body.role, body.userId)
+        .run();
+    } else {
+      // Insert new role record
+      await c.env.platform_db
+        .prepare("INSERT INTO user_roles (id, user_id, role, created_at) VALUES (?, ?, ?, ?)")
+        .bind(id, body.userId, body.role, timestamp)
+        .run();
+    }
+
+    return c.json({
+      userId: body.userId,
+      role: body.role,
+      message: "Role assigned successfully",
+    });
+  } catch (err) {
+    console.error("Error assigning role:", err);
+    return c.json({ error: "Failed to assign role" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/users/:id/role - Get user's role
+ */
+app.get("/api/v1/users/:id/role", async (c) => {
+  try {
+    const userId = c.req.param("id");
+
+    // Check if user exists
+    const user = await c.env.platform_db
+      .prepare("SELECT id FROM users WHERE id = ?")
+      .bind(userId)
+      .first();
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Get user's role (default to member if not found)
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(userId)
+      .first<{ role: string }>();
+
+    const role = roleRecord ? normalizeUserRole(roleRecord.role) : DEFAULT_ROLE;
+
+    return c.json({
+      userId,
+      role,
+    } as GetUserRoleResponse);
+  } catch (err) {
+    console.error("Error fetching user role:", err);
+    return c.json({ error: "Failed to fetch user role" }, 500);
   }
 });
 
@@ -1126,8 +1231,17 @@ app.get("/api/v1/auth/google/callback", async (c) => {
     // Find or create user
     const user = await findOrCreateUserFromGoogle(googleProfile, c.env.platform_db);
 
-    // Create JWT token
+    // Fetch user's role
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(user.id)
+      .first<{ role: string }>();
+
+    const userRole = roleRecord ? normalizeUserRole(roleRecord.role) : DEFAULT_ROLE;
+
+    // Create JWT token with role
     const authPayload = createAuthPayload(user);
+    authPayload.role = userRole;
     const token = await createToken(authPayload, jwtSecret);
 
     // Return token and user info
@@ -1137,6 +1251,7 @@ app.get("/api/v1/auth/google/callback", async (c) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: userRole,
       },
     });
   } catch (err) {
@@ -1178,6 +1293,15 @@ app.get("/api/v1/auth/me", async (c) => {
     if (!user) {
       return c.json({ error: "User not found" }, 404);
     }
+
+    // Fetch user's role
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(authPayload.userId)
+      .first<{ role: string }>();
+
+    const userRole = roleRecord ? normalizeUserRole(roleRecord.role) : DEFAULT_ROLE;
+    user.role = userRole;
 
     return c.json(user);
   } catch {
