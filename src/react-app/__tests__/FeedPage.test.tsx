@@ -293,7 +293,7 @@ describe('FeedPage Component', () => {
       });
 
       // Verify getPosts was called with correct offset
-      expect(vi.mocked(postService.getPosts)).toHaveBeenLastCalledWith(20, 20);
+      expect(vi.mocked(postService.getPosts)).toHaveBeenLastCalledWith(20, 20, undefined);
     });
 
     it('should display pagination info', async () => {
@@ -324,7 +324,7 @@ describe('FeedPage Component', () => {
       renderFeedPage();
 
       await waitFor(() => {
-        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0);
+        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0, undefined);
       });
     });
 
@@ -346,7 +346,7 @@ describe('FeedPage Component', () => {
       renderFeedPage();
 
       await waitFor(() => {
-        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0);
+        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0, undefined);
       });
 
       // Click next to trigger offset change
@@ -354,7 +354,7 @@ describe('FeedPage Component', () => {
       fireEvent.click(nextButton);
 
       await waitFor(() => {
-        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 20);
+        expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 20, undefined);
       });
     });
   });

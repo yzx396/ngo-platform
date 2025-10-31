@@ -243,22 +243,24 @@
 
 **Value**: Admins can create special announcement posts; posts can be filtered by type.
 
-- [ ] **Backend**: Add post type filtering
+- [x] **Backend**: Add post type filtering
   - Update `GET /api/v1/posts` to support `?type=` query param
   - Restrict `post_type=announcement` to admins only
-  - Write tests for type filtering and permissions
-- [ ] **Frontend**: Add post type features
+  - Write tests for type filtering and permissions (6 new tests added)
+- [x] **Frontend**: Add post type features
   - Update `CreatePostForm` with type selector (admins only)
   - Add announcement badge to `PostCard`
   - Add filter dropdown to `FeedPage` (All, Announcements, Discussions)
   - Write tests for filtering
-- [ ] **i18n**: Add translations for post types
-- [ ] **Testing**: End-to-end test
+- [x] **i18n**: Add translations for post types
+  - Added filter translations to both English and Chinese
+- [x] **Testing**: End-to-end test
   - Admin creates announcement
   - Announcement shows special badge
   - Filter by post type works
   - Non-admins cannot create announcements
-- [ ] **Deploy**: Post types and announcements work ✅
+  - All 545 tests passing
+- [x] **Deploy**: Post types and announcements work ✅
 
 ---
 
@@ -786,7 +788,7 @@ Track your progress by phase and slice. Mark slices as complete when deployed an
 - ✅ Slice 1.2: Create Posts
 - ✅ Slice 1.3: Like Posts
 - ✅ Slice 1.4: Comment on Posts
-- ⬜ Slice 1.5: Post Types & Admin Announcements
+- ✅ Slice 1.5: Post Types & Admin Announcements
 
 ### Phase 2: Challenges (4 slices)
 - ⬜ Slice 2.1: View Challenges
@@ -820,7 +822,7 @@ Track your progress by phase and slice. Mark slices as complete when deployed an
 - ⬜ Slice 6.5: Security & Quality Assurance
 - ⬜ Slice 6.6: Phased Deployment
 
-**Total Slices: 31** | **Completed: 7** | **Progress: ~23%**
+**Total Slices: 31** | **Completed: 9** | **Progress: ~29%**
 
 ---
 

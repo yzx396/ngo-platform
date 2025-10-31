@@ -115,6 +115,39 @@ function createMockDb() {
             }
             return { results: comment ? [comment] : [] };
           }
+          // SELECT COUNT(*) FROM posts (with optional WHERE post_type = ?)
+          if (query.includes('SELECT COUNT') && query.includes('FROM posts')) {
+            let posts = Array.from(mockPosts.values());
+            // Check if filtering by post_type
+            if (query.includes('WHERE post_type = ?')) {
+              const postType = params[0];
+              posts = posts.filter(p => p.post_type === postType);
+            }
+            return { results: [{ count: posts.length }] };
+          }
+          // SELECT * FROM posts (with optional WHERE post_type = ? and LIMIT/OFFSET)
+          if (query.includes('SELECT *') && query.includes('FROM posts') && !query.includes('COUNT')) {
+            let posts = Array.from(mockPosts.values());
+            let paramIndex = 0;
+
+            // Check if filtering by post_type
+            if (query.includes('WHERE post_type = ?')) {
+              const postType = params[paramIndex++];
+              posts = posts.filter(p => p.post_type === postType);
+            }
+
+            // Sort by created_at DESC (newest first)
+            posts = posts.sort((a, b) => (b.created_at as number) - (a.created_at as number));
+
+            // Handle LIMIT and OFFSET
+            if (query.includes('LIMIT ? OFFSET ?')) {
+              const limit = params[paramIndex];
+              const offset = params[paramIndex + 1];
+              posts = posts.slice(offset as number, (offset as number) + (limit as number));
+            }
+
+            return { results: posts };
+          }
           return { results: [] };
         }),
         first: vi.fn(async () => {
@@ -139,6 +172,16 @@ function createMockDb() {
             const userId = params[1];
             const likeKey = `${postId}:${userId}`;
             return mockLikes.get(likeKey) || null;
+          }
+          // SELECT COUNT(*) FROM posts (with optional WHERE post_type = ?)
+          if (query.includes('SELECT COUNT') && query.includes('FROM posts')) {
+            let posts = Array.from(mockPosts.values());
+            // Check if filtering by post_type
+            if (query.includes('WHERE post_type = ?')) {
+              const postType = params[0];
+              posts = posts.filter(p => p.post_type === postType);
+            }
+            return { count: posts.length };
           }
           // SELECT COUNT for comments
           if (query.includes('SELECT COUNT') && query.includes('post_comments')) {
@@ -1738,6 +1781,165 @@ describe('Posts System', () => {
       const res = await app.fetch(req, mockEnv);
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: GET /api/v1/posts - List Posts with Type Filtering
+  // ============================================================================
+
+  describe('GET /api/v1/posts - Type Filtering', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let adminUser: Record<string, unknown>;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+
+      // Create users
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      adminUser = await createTestUser(mockEnv, 'admin@example.com', 'Admin User');
+
+      // Assign admin role
+      const roleId = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await mockEnv.platform_db
+        .prepare('INSERT INTO user_roles')
+        .bind(roleId, adminUser.id, 'admin', now)
+        .run();
+
+      // Create posts of different types
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const adminToken = await createTestToken(adminUser.id as string, adminUser.email as string, adminUser.name as string);
+
+      // General post
+      let req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'This is a general post',
+          post_type: 'general',
+        }),
+      });
+      let res = await app.fetch(req, mockEnv);
+      await res.json<Record<string, unknown>>();
+
+      // Discussion post
+      req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'This is a discussion post',
+          post_type: 'discussion',
+        }),
+      });
+      res = await app.fetch(req, mockEnv);
+      await res.json<Record<string, unknown>>();
+
+      // Announcement post (admin only)
+      req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          content: 'This is an announcement',
+          post_type: 'announcement',
+        }),
+      });
+      res = await app.fetch(req, mockEnv);
+      await res.json<Record<string, unknown>>();
+    });
+
+    it('should filter posts by announcement type', async () => {
+      const req = new Request('http://localhost/api/v1/posts?type=announcement', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json<{ posts: Array<Record<string, unknown>>; total: number }>();
+      expect(data.posts).toHaveLength(1);
+      expect(data.posts[0].post_type).toBe('announcement');
+      expect(data.total).toBe(1);
+    });
+
+    it('should filter posts by discussion type', async () => {
+      const req = new Request('http://localhost/api/v1/posts?type=discussion', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json<{ posts: Array<Record<string, unknown>>; total: number }>();
+      expect(data.posts).toHaveLength(1);
+      expect(data.posts[0].post_type).toBe('discussion');
+      expect(data.total).toBe(1);
+    });
+
+    it('should filter posts by general type', async () => {
+      const req = new Request('http://localhost/api/v1/posts?type=general', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json<{ posts: Array<Record<string, unknown>>; total: number }>();
+      expect(data.posts).toHaveLength(1);
+      expect(data.posts[0].post_type).toBe('general');
+      expect(data.total).toBe(1);
+    });
+
+    it('should return 400 for invalid post type filter', async () => {
+      const req = new Request('http://localhost/api/v1/posts?type=invalid_type', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json<{ error: string }>();
+      expect(data.error).toContain('Invalid post type');
+    });
+
+    it('should return all posts when no type filter provided', async () => {
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json<{ posts: Array<Record<string, unknown>>; total: number }>();
+      // Should include all three posts: general, discussion, announcement
+      expect(data.posts.length).toBeGreaterThanOrEqual(3);
+      expect(data.total).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should respect pagination with type filter', async () => {
+      const req = new Request('http://localhost/api/v1/posts?type=general&limit=1&offset=0', {
+        method: 'GET',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json<{ posts: Array<Record<string, unknown>>; total: number }>();
+      expect(data.posts).toHaveLength(1);
+      expect(data.posts[0].post_type).toBe('general');
     });
   });
 });

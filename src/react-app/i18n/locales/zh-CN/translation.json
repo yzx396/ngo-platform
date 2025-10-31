@@ -294,7 +294,12 @@
     "commentError": "创建评论失败，请重试。",
     "deleteCommentError": "删除评论失败，请重试。",
     "loadCommentsError": "加载评论失败",
-    "charLimitExceeded": "字数超过限制"
+    "charLimitExceeded": "字数超过限制",
+    "filterLabel": "按类型筛选",
+    "filterAll": "所有帖子",
+    "filterAnnouncements": "公告",
+    "filterDiscussions": "讨论",
+    "filterGeneral": "一般"
   },
   "postType": {
     "announcement": "公告",

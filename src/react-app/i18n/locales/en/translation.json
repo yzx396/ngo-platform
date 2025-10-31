@@ -294,7 +294,12 @@
     "commentError": "Failed to create comment. Please try again.",
     "deleteCommentError": "Failed to delete comment. Please try again.",
     "loadCommentsError": "Failed to load comments",
-    "charLimitExceeded": "Character limit exceeded"
+    "charLimitExceeded": "Character limit exceeded",
+    "filterLabel": "Filter by type",
+    "filterAll": "All Posts",
+    "filterAnnouncements": "Announcements",
+    "filterDiscussions": "Discussions",
+    "filterGeneral": "General"
   },
   "postType": {
     "announcement": "Announcement",

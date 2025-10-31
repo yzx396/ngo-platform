@@ -6,7 +6,7 @@ import { CreatePostForm } from '../components/CreatePostForm';
 import { EditPostDialog } from '../components/EditPostDialog';
 import { Button } from '../components/ui/button';
 import { getPosts, deletePost } from '../services/postService';
-import type { Post } from '../../types/post';
+import type { Post, PostType } from '../../types/post';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
 
@@ -15,7 +15,7 @@ const POSTS_PER_PAGE = 20;
 /**
  * FeedPage Component
  * Displays a paginated feed of community posts
- * Users can view posts, create posts (authenticated), and pagination controls
+ * Users can view posts, create posts (authenticated), and filter by post type
  */
 export function FeedPage() {
   const { t } = useTranslation();
@@ -28,14 +28,16 @@ export function FeedPage() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
 
-  // Fetch posts when offset changes
+  // Fetch posts when offset or filter changes
   useEffect(() => {
     const loadPosts = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await getPosts(POSTS_PER_PAGE, offset);
+        const postType = selectedType === 'all' ? undefined : selectedType;
+        const response = await getPosts(POSTS_PER_PAGE, offset, postType);
         setPosts(response.posts);
         setTotal(response.total);
       } catch (err) {
@@ -49,7 +51,7 @@ export function FeedPage() {
     };
 
     loadPosts();
-  }, [offset]);
+  }, [offset, selectedType]);
 
   // Calculate pagination info
   const hasNextPage = offset + POSTS_PER_PAGE < total;
@@ -70,6 +72,12 @@ export function FeedPage() {
     setOffset(0); // Reset to first page
     setShowCreateForm(false); // Close the form after successful creation
     // The useEffect will automatically refetch when offset changes
+  };
+
+  // Handle filter type change - reset to first page
+  const handleFilterChange = (newType: PostType | 'all') => {
+    setSelectedType(newType);
+    setOffset(0); // Reset to first page when filter changes
   };
 
   // Handle edit button click
@@ -113,8 +121,45 @@ export function FeedPage() {
   // Render error state
   if (error && posts.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+
+        {/* Filter Dropdown and Create Post Button */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Filter Section */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
+              {t('posts.filterLabel', 'Filter by type')}
+            </label>
+            <select
+              id="post-type-filter"
+              value={selectedType}
+              onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
+              className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">{t('posts.filterAll', 'All Posts')}</option>
+              <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
+              <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
+              <option value="general">{t('posts.filterGeneral', 'General')}</option>
+            </select>
+          </div>
+
+          {/* Create Post Button */}
+          {user && !showCreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
+              {t('posts.createButton', '📝 Create Post')}
+            </Button>
+          )}
+        </div>
+
+        {/* Create Post Form (if visible) */}
+        {showCreateForm && (
+          <CreatePostForm
+            onPostCreated={handlePostCreated}
+            onCancel={() => setShowCreateForm(false)}
+          />
+        )}
+
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
           <p className="text-destructive">{error}</p>
           <Button onClick={() => setOffset(0)}>
@@ -137,21 +182,40 @@ export function FeedPage() {
           </p>
         </div>
 
-        {/* Create Post Button and Form (authenticated users only) */}
-        {user && (
-          <>
-            {!showCreateForm && (
-              <Button onClick={() => setShowCreateForm(true)}>
-                {t('posts.createButton', '📝 Create Post')}
-              </Button>
-            )}
-            {showCreateForm && (
-              <CreatePostForm
-                onPostCreated={handlePostCreated}
-                onCancel={() => setShowCreateForm(false)}
-              />
-            )}
-          </>
+        {/* Filter Dropdown and Create Post Button */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Filter Section */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
+              {t('posts.filterLabel', 'Filter by type')}
+            </label>
+            <select
+              id="post-type-filter"
+              value={selectedType}
+              onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
+              className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">{t('posts.filterAll', 'All Posts')}</option>
+              <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
+              <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
+              <option value="general">{t('posts.filterGeneral', 'General')}</option>
+            </select>
+          </div>
+
+          {/* Create Post Button */}
+          {user && !showCreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
+              {t('posts.createButton', '📝 Create Post')}
+            </Button>
+          )}
+        </div>
+
+        {/* Create Post Form (if visible) */}
+        {showCreateForm && (
+          <CreatePostForm
+            onPostCreated={handlePostCreated}
+            onCancel={() => setShowCreateForm(false)}
+          />
         )}
 
         {/* Empty state message */}
@@ -173,21 +237,40 @@ export function FeedPage() {
         </p>
       </div>
 
-      {/* Create Post Button and Form (authenticated users only) */}
-      {user && (
-        <>
-          {!showCreateForm && (
-            <Button onClick={() => setShowCreateForm(true)}>
-              {t('posts.createButton', '📝 Create Post')}
-            </Button>
-          )}
-          {showCreateForm && (
-            <CreatePostForm
-              onPostCreated={handlePostCreated}
-              onCancel={() => setShowCreateForm(false)}
-            />
-          )}
-        </>
+      {/* Filter Dropdown and Create Post Button */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        {/* Filter Section */}
+        <div className="flex items-center gap-2">
+          <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
+            {t('posts.filterLabel', 'Filter by type')}
+          </label>
+          <select
+            id="post-type-filter"
+            value={selectedType}
+            onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
+            className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="all">{t('posts.filterAll', 'All Posts')}</option>
+            <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
+            <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
+            <option value="general">{t('posts.filterGeneral', 'General')}</option>
+          </select>
+        </div>
+
+        {/* Create Post Button */}
+        {user && !showCreateForm && (
+          <Button onClick={() => setShowCreateForm(true)}>
+            {t('posts.createButton', '📝 Create Post')}
+          </Button>
+        )}
+      </div>
+
+      {/* Create Post Form (if visible) */}
+      {showCreateForm && (
+        <CreatePostForm
+          onPostCreated={handlePostCreated}
+          onCancel={() => setShowCreateForm(false)}
+        />
       )}
 
       {/* Posts Grid */}
