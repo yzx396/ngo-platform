@@ -280,7 +280,11 @@
     "validationRequired": "Post content is required",
     "validationTooShort": "Post must be at least 1 character",
     "validationTooLong": "Post must not exceed 2000 characters",
-    "announcementAdminOnly": "Only administrators can create announcements"
+    "announcementAdminOnly": "Only administrators can create announcements",
+    "like": "Like",
+    "unlike": "Unlike",
+    "likeError": "Failed to like post. Please try again.",
+    "unlikeError": "Failed to unlike post. Please try again."
   },
   "postType": {
     "announcement": "Announcement",

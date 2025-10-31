@@ -18,6 +18,7 @@ import type {
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import type { Post } from "../types/post";
+import { normalizePost } from "../types/post";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -1865,6 +1866,160 @@ app.delete("/api/v1/posts/:id", requireAuth, async (c) => {
   } catch (err) {
     console.error("Error deleting post:", err);
     return c.json({ error: "Failed to delete post" }, 500);
+  }
+});
+
+// ============================================================================
+// Posts Engagement API (/api/v1/posts/:id/like)
+// ============================================================================
+
+/**
+ * POST /api/v1/posts/:id/like - Like a post
+ * Authenticated endpoint
+ * Creates a like record and increments likes_count
+ * Returns 409 if user already liked the post
+ */
+app.post("/api/v1/posts/:id/like", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the post
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Check if user already liked this post
+    const existingLike = await c.env.platform_db
+      .prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first<{ id: string }>();
+
+    if (existingLike) {
+      return c.json({ error: "Post already liked by this user" }, 409);
+    }
+
+    // Create the like record
+    const likeId = crypto.randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+
+    const likeResult = await c.env.platform_db
+      .prepare(
+        "INSERT INTO post_likes (id, post_id, user_id, created_at) VALUES (?, ?, ?, ?)"
+      )
+      .bind(likeId, postId, userId, now)
+      .run();
+
+    if (!likeResult.success) {
+      throw new Error("Failed to create like");
+    }
+
+    // Increment likes_count in posts table
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE posts SET likes_count = likes_count + 1, updated_at = ? WHERE id = ?")
+      .bind(now, postId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update likes count");
+    }
+
+    // Fetch updated post
+    const updatedPost = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    return c.json({
+      post: normalizePost(updatedPost),
+      user_has_liked: true,
+    });
+  } catch (err) {
+    console.error("Error liking post:", err);
+    return c.json({ error: "Failed to like post" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/posts/:id/like - Unlike a post
+ * Authenticated endpoint
+ * Removes the like record and decrements likes_count
+ * Returns 404 if user hasn't liked the post
+ */
+app.delete("/api/v1/posts/:id/like", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const postId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the post
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Check if user has liked this post
+    const existingLike = await c.env.platform_db
+      .prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .first<{ id: string }>();
+
+    if (!existingLike) {
+      return c.json({ error: "Post not liked by this user" }, 404);
+    }
+
+    // Delete the like record
+    const deleteResult = await c.env.platform_db
+      .prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?")
+      .bind(postId, userId)
+      .run();
+
+    if (!deleteResult.success) {
+      throw new Error("Failed to delete like");
+    }
+
+    // Decrement likes_count in posts table
+    const now = Math.floor(Date.now() / 1000);
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE posts SET likes_count = MAX(0, likes_count - 1), updated_at = ? WHERE id = ?")
+      .bind(now, postId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update likes count");
+    }
+
+    // Fetch updated post
+    const updatedPost = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    return c.json({
+      post: normalizePost(updatedPost),
+      user_has_liked: false,
+    });
+  } catch (err) {
+    console.error("Error unliking post:", err);
+    return c.json({ error: "Failed to unlike post" }, 500);
   }
 });
 

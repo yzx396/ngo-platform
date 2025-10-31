@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, Heart } from 'lucide-react';
 import { getPostTypeName, formatPostTime } from '../../types/post';
+import { likePost, unlikePost } from '../services/postService';
+import { handleApiError } from '../services/apiClient';
 import type { Post, PostType } from '../../types/post';
 
 interface PostCardProps {
@@ -13,6 +15,7 @@ interface PostCardProps {
   onViewDetails?: () => void;
   onEdit?: (post: Post) => void;
   onDelete?: (postId: string) => void;
+  onLikesChange?: (postId: string, newLikesCount: number) => void;
 }
 
 /**
@@ -23,7 +26,8 @@ interface PostCardProps {
  * Features:
  * - Dropdown menu for author and admins to edit/delete
  * - Post type badge with color coding
- * - Engagement counts (likes and comments placeholders for future slices)
+ * - Like functionality with optimistic UI updates
+ * - Engagement counts (likes and comments)
  * - Responsive design
  */
 export function PostCard({
@@ -31,11 +35,15 @@ export function PostCard({
   onViewDetails,
   onEdit,
   onDelete,
+  onLikesChange,
 }: PostCardProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [likesCount, setLikesCount] = useState(post.likes_count);
+  const [userHasLiked, setUserHasLiked] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -44,6 +52,7 @@ export function PostCard({
 
   // Check if user can edit/delete this post
   const canEdit = user && (user.id === post.user_id || user.role === 'admin');
+  const isAuthenticated = Boolean(user);
 
   // Get badge color based on post type
   const getBadgeVariant = (postType: string) => {
@@ -86,6 +95,45 @@ export function PostCard({
       }
     }
   };
+
+  const handleLikeClick = useCallback(async () => {
+    if (!isAuthenticated || isLiking) return;
+
+    // Optimistic UI update
+    const previousLikeState = userHasLiked;
+    const previousCount = likesCount;
+    const newCount = userHasLiked ? likesCount - 1 : likesCount + 1;
+
+    setUserHasLiked(!userHasLiked);
+    setLikesCount(newCount);
+
+    try {
+      setIsLiking(true);
+
+      if (userHasLiked) {
+        // Unlike the post
+        await unlikePost(post.id);
+      } else {
+        // Like the post
+        await likePost(post.id);
+      }
+
+      // Notify parent component of likes change
+      onLikesChange?.(post.id, newCount);
+    } catch {
+      // Revert optimistic update on error
+      setUserHasLiked(previousLikeState);
+      setLikesCount(previousCount);
+
+      const errorMsg = userHasLiked
+        ? t('posts.unlikeError', 'Failed to unlike post. Please try again.')
+        : t('posts.likeError', 'Failed to like post. Please try again.');
+
+      handleApiError(new Error(errorMsg));
+    } finally {
+      setIsLiking(false);
+    }
+  }, [isAuthenticated, isLiking, userHasLiked, likesCount, post.id, onLikesChange, t]);
 
   return (
     <Card className="flex flex-col h-full hover:shadow-md transition-shadow">
@@ -154,22 +202,46 @@ export function PostCard({
         </p>
       </CardContent>
 
-      {/* Footer: Engagement Counts */}
-      <div className="px-6 py-3 border-t bg-muted/50 text-xs text-muted-foreground flex gap-4">
-        <span>
-          {t('posts.likes', { defaultValue: '{{count}} likes', count: post.likes_count })}
-        </span>
-        <span>
-          {t('posts.comments', { defaultValue: '{{count}} comments', count: post.comments_count })}
-        </span>
-        {onViewDetails && (
-          <button
-            onClick={onViewDetails}
-            className="text-primary hover:underline ml-auto"
-          >
-            {t('common.view', 'View')}
-          </button>
-        )}
+      {/* Footer: Engagement Actions and Counts */}
+      <div className="px-6 py-3 border-t bg-muted/50">
+        {/* Engagement buttons */}
+        <div className="flex items-center gap-2 mb-2">
+          {isAuthenticated ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLikeClick}
+              disabled={isLiking}
+              className="h-8 px-2 text-xs"
+              title={userHasLiked ? t('posts.unlike', 'Unlike') : t('posts.like', 'Like')}
+            >
+              <Heart
+                className={`h-4 w-4 mr-1 ${
+                  userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                }`}
+              />
+              {t('posts.like', 'Like')}
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Engagement counts */}
+        <div className="text-xs text-muted-foreground flex gap-4">
+          <span>
+            {t('posts.likes', { defaultValue: '{{count}} likes', count: likesCount })}
+          </span>
+          <span>
+            {t('posts.comments', { defaultValue: '{{count}} comments', count: post.comments_count })}
+          </span>
+          {onViewDetails && (
+            <button
+              onClick={onViewDetails}
+              className="text-primary hover:underline ml-auto"
+            >
+              {t('common.view', 'View')}
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   );

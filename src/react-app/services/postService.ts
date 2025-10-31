@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, apiFetch } from './apiClient';
 import type { GetPostsResponse, CreatePostRequest, UpdatePostRequest, CreatePostResponse, UpdatePostResponse } from '../../types/api';
 import type { Post, PostType } from '../../types/post';
 
@@ -101,4 +101,30 @@ export async function updatePost(
  */
 export async function deletePost(postId: string): Promise<void> {
   return apiDelete(`/api/v1/posts/${postId}`);
+}
+
+/**
+ * Like a post
+ * @param postId - The ID of the post to like
+ * @returns Updated post with like status
+ */
+export async function likePost(postId: string): Promise<Post> {
+  const response = await apiPost<{ post: Post; user_has_liked: boolean }>(
+    `/api/v1/posts/${postId}/like`,
+    {}
+  );
+  return response.post;
+}
+
+/**
+ * Unlike a post
+ * @param postId - The ID of the post to unlike
+ * @returns Updated post with like status
+ */
+export async function unlikePost(postId: string): Promise<Post> {
+  const response = await apiFetch<{ post: Post; user_has_liked: boolean }>(
+    `/api/v1/posts/${postId}/like`,
+    { method: 'DELETE' }
+  );
+  return response.post;
 }

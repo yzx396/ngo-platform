@@ -40,6 +40,27 @@ export interface PostWithAuthor extends Post {
 }
 
 /**
+ * PostLike - Record of a user liking a post
+ * Stored in post_likes table with unique constraint on (post_id, user_id)
+ */
+export interface PostLike {
+  id: string;
+  post_id: string;
+  user_id: string;
+  created_at: number; // Unix timestamp
+}
+
+/**
+ * PostWithLikeStatus - Post with user's like status
+ * Used when returning post data to frontend with whether current user liked it
+ */
+export interface PostWithLikeStatus extends Post {
+  author_name?: string;
+  author_email?: string;
+  user_has_liked?: boolean; // Whether current user has liked this post
+}
+
+/**
  * Normalize post from database
  * Ensures all fields are properly typed and handles edge cases
  * @param dbPost - Raw data from database
@@ -104,6 +125,23 @@ export function getPostTypeName(postType: PostType): string {
     default:
       return 'Unknown';
   }
+}
+
+/**
+ * Normalize PostLike from database
+ * Ensures all fields are properly typed and handles edge cases
+ * @param dbLike - Raw data from database
+ * @returns Properly typed PostLike object
+ */
+export function normalizePostLike(dbLike: unknown): PostLike {
+  const data = dbLike as Record<string, unknown>;
+
+  return {
+    id: String(data.id || ''),
+    post_id: String(data.post_id || ''),
+    user_id: String(data.user_id || ''),
+    created_at: Number(data.created_at || 0),
+  };
 }
 
 /**

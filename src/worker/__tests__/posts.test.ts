@@ -31,6 +31,7 @@ function createMockDb() {
   const mockUsers = new Map<string, Record<string, unknown>>();
   const mockPosts = new Map<string, Record<string, unknown>>();
   const mockRoles = new Map<string, Record<string, unknown>>();
+  const mockLikes = new Map<string, Record<string, unknown>>();
 
   return {
     prepare: vi.fn((query: string) => ({
@@ -54,6 +55,20 @@ function createMockDb() {
             const role = mockRoles.get(userId);
             return { results: role ? [role] : [] };
           }
+          // SELECT post_likes
+          if (query.includes('SELECT') && query.includes('post_likes') && query.includes('WHERE post_id = ?')) {
+            const postId = params[0];
+            const likes = Array.from(mockLikes.values()).filter(like => like.post_id === postId);
+            return { results: likes };
+          }
+          // SELECT specific post_like
+          if (query.includes('SELECT') && query.includes('post_likes') && query.includes('WHERE post_id = ?') && query.includes('AND user_id = ?')) {
+            const postId = params[0];
+            const userId = params[1];
+            const likeKey = `${postId}:${userId}`;
+            const like = mockLikes.get(likeKey);
+            return { results: like ? [like] : [] };
+          }
           return { results: [] };
         }),
         first: vi.fn(async () => {
@@ -71,6 +86,13 @@ function createMockDb() {
           if (query.includes('SELECT') && query.includes('user_roles') && query.includes('WHERE user_id = ?')) {
             const userId = params[0];
             return mockRoles.get(userId) || null;
+          }
+          // SELECT specific post_like
+          if (query.includes('SELECT') && query.includes('post_likes') && query.includes('WHERE post_id = ?') && query.includes('AND user_id = ?')) {
+            const postId = params[0];
+            const userId = params[1];
+            const likeKey = `${postId}:${userId}`;
+            return mockLikes.get(likeKey) || null;
           }
           return null;
         }),
@@ -96,17 +118,53 @@ function createMockDb() {
             mockRoles.set(user_id, { id, user_id, role, created_at });
             return { success: true, meta: { changes: 1 } };
           }
-          // UPDATE posts
+          // UPDATE posts (for likes_count and comments_count)
           if (query.includes('UPDATE posts')) {
             const id = params[params.length - 1];
             const existing = mockPosts.get(id);
             if (existing) {
               const updated = { ...existing };
-              let paramIndex = 0;
-              if (query.includes('content =')) updated.content = params[paramIndex++];
-              if (query.includes('post_type =')) updated.post_type = params[paramIndex++];
+              // Handle special cases for increment/decrement expressions
+              if (query.includes('likes_count = likes_count + 1')) {
+                updated.likes_count = (updated.likes_count as number || 0) + 1;
+              } else if (query.includes('likes_count = MAX(0, likes_count - 1)')) {
+                updated.likes_count = Math.max(0, (updated.likes_count as number || 0) - 1);
+              } else {
+                // Handle regular parameterized updates
+                let paramIndex = 0;
+                if (query.includes('content =')) updated.content = params[paramIndex++];
+                if (query.includes('post_type =')) updated.post_type = params[paramIndex++];
+                if (query.includes('likes_count =') && !query.includes('likes_count = likes_count')) {
+                  updated.likes_count = params[paramIndex++];
+                }
+                if (query.includes('comments_count =')) updated.comments_count = params[paramIndex++];
+              }
               updated.updated_at = params[params.length - 2];
               mockPosts.set(id, updated);
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          }
+          // INSERT post_likes
+          if (query.includes('INSERT INTO post_likes')) {
+            const [id, post_id, user_id, created_at] = params;
+            const likeKey = `${post_id}:${user_id}`;
+            // Check for duplicate
+            if (mockLikes.has(likeKey)) {
+              return { success: false, meta: { changes: 0 } };
+            }
+            mockLikes.set(likeKey, { id, post_id, user_id, created_at });
+            // Note: Post likes_count is updated by separate UPDATE statement
+            return { success: true, meta: { changes: 1 } };
+          }
+          // DELETE post_likes
+          if (query.includes('DELETE FROM post_likes')) {
+            const post_id = params[0];
+            const user_id = params[1];
+            const likeKey = `${post_id}:${user_id}`;
+            if (mockLikes.has(likeKey)) {
+              mockLikes.delete(likeKey);
+              // Note: Post likes_count is updated by separate UPDATE statement
               return { success: true, meta: { changes: 1 } };
             }
             return { success: true, meta: { changes: 0 } };
@@ -954,6 +1012,227 @@ describe('Posts System', () => {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: POST /api/v1/posts/:id/like - Like Post
+  // ============================================================================
+
+  describe('POST /api/v1/posts/:id/like', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let testPost: Record<string, unknown>;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+
+      // Create a post to like
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Test post to like',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+      testPost = await res.json();
+    });
+
+    it('should like a post successfully', async () => {
+      const otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toMatchObject({
+        post: expect.objectContaining({
+          id: testPost.id,
+          likes_count: 1,
+        }),
+        user_has_liked: true,
+      });
+    });
+
+    it('should return 409 when user tries to like the same post twice', async () => {
+      const otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      // First like
+      const req1 = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res1 = await app.fetch(req1, mockEnv);
+      expect(res1.status).toBe(200);
+
+      // Second like (duplicate)
+      const req2 = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res2 = await app.fetch(req2, mockEnv);
+      expect(res2.status).toBe(409);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'POST',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id/like', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: DELETE /api/v1/posts/:id/like - Unlike Post
+  // ============================================================================
+
+  describe('DELETE /api/v1/posts/:id/like', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let testPost: Record<string, unknown>;
+    let otherUser: Record<string, unknown>;
+    let likeToken: string;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+
+      // Create a post to like
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Test post to like',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+      testPost = await res.json();
+
+      // Like the post
+      likeToken = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+      const likeReq = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${likeToken}`,
+        },
+      });
+
+      await app.fetch(likeReq, mockEnv);
+    });
+
+    it('should unlike a post successfully', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${likeToken}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data).toMatchObject({
+        post: expect.objectContaining({
+          id: testPost.id,
+          likes_count: 0,
+        }),
+        user_has_liked: false,
+      });
+    });
+
+    it('should return 404 when user has not liked the post', async () => {
+      const newUser = await createTestUser(mockEnv, 'newuser@example.com', 'New User');
+      const token = await createTestToken(newUser.id as string, newUser.email as string, newUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${testPost.id}/like`, {
+        method: 'DELETE',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id/like', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${likeToken}`,
         },
       });
 

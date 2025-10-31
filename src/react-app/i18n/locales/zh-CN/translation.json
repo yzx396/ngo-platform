@@ -280,7 +280,11 @@
     "validationRequired": "帖子内容为必填项",
     "validationTooShort": "帖子至少需要 1 个字符",
     "validationTooLong": "帖子不能超过 2000 个字符",
-    "announcementAdminOnly": "只有管理员可以创建公告"
+    "announcementAdminOnly": "只有管理员可以创建公告",
+    "like": "点赞",
+    "unlike": "取消赞",
+    "likeError": "点赞失败，请重试。",
+    "unlikeError": "取消赞失败，请重试。"
   },
   "postType": {
     "announcement": "公告",

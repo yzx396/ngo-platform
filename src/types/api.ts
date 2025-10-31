@@ -139,3 +139,13 @@ export interface UpdatePostRequest {
 
 export type CreatePostResponse = Post;
 export type UpdatePostResponse = Post;
+
+// Post Likes API
+export type LikePostRequest = Record<string, never>; // No request body needed
+
+export interface LikePostResponse {
+  post: Post;
+  user_has_liked: boolean; // Whether current user has liked the post
+}
+
+export type UnlikePostResponse = LikePostResponse;
