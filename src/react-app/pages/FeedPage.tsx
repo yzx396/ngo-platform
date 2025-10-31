@@ -27,6 +27,7 @@ export function FeedPage() {
   const [total, setTotal] = useState(0);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Fetch posts when offset changes
   useEffect(() => {
@@ -64,9 +65,10 @@ export function FeedPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle post creation - reset to first page to show new post
+  // Handle post creation - reset to first page to show new post and close form
   const handlePostCreated = () => {
     setOffset(0); // Reset to first page
+    setShowCreateForm(false); // Close the form after successful creation
     // The useEffect will automatically refetch when offset changes
   };
 
@@ -135,8 +137,22 @@ export function FeedPage() {
           </p>
         </div>
 
-        {/* Create Post Form (authenticated users only) */}
-        {user && <CreatePostForm onPostCreated={handlePostCreated} />}
+        {/* Create Post Button and Form (authenticated users only) */}
+        {user && (
+          <>
+            {!showCreateForm && (
+              <Button onClick={() => setShowCreateForm(true)}>
+                {t('posts.createButton', '📝 Create Post')}
+              </Button>
+            )}
+            {showCreateForm && (
+              <CreatePostForm
+                onPostCreated={handlePostCreated}
+                onCancel={() => setShowCreateForm(false)}
+              />
+            )}
+          </>
+        )}
 
         {/* Empty state message */}
         <div className="flex items-center justify-center min-h-[400px]">
@@ -157,8 +173,22 @@ export function FeedPage() {
         </p>
       </div>
 
-      {/* Create Post Form (authenticated users only) */}
-      {user && <CreatePostForm onPostCreated={handlePostCreated} />}
+      {/* Create Post Button and Form (authenticated users only) */}
+      {user && (
+        <>
+          {!showCreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
+              {t('posts.createButton', '📝 Create Post')}
+            </Button>
+          )}
+          {showCreateForm && (
+            <CreatePostForm
+              onPostCreated={handlePostCreated}
+              onCancel={() => setShowCreateForm(false)}
+            />
+          )}
+        </>
+      )}
 
       {/* Posts Grid */}
       <div className="space-y-4">

@@ -1,17 +1,143 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { D1Database } from '@cloudflare/workers-types';
 import { normalizePost, getPostTypeName, formatPostTime, PostType } from '../../types/post';
+import app from '../index';
+import { createToken } from '../auth/jwt';
+import type { AuthPayload } from '../../types/user';
 
-// Mock database helper
-function createMockDb(): D1Database {
+const JWT_SECRET = 'test-jwt-secret';
+
+/**
+ * Test environment interface
+ */
+interface TestEnv {
+  platform_db: D1Database;
+  JWT_SECRET: string;
+}
+
+/**
+ * Create a JWT token for testing
+ */
+async function createTestToken(userId: string, email: string, name: string, role?: string): Promise<string> {
+  const payload: AuthPayload & { role?: string } = { userId, email, name, role };
+  return createToken(payload as AuthPayload, JWT_SECRET);
+}
+
+// ============================================================================
+// Mock Database and Environment Setup
+// ============================================================================
+
+function createMockDb() {
+  const mockUsers = new Map<string, Record<string, unknown>>();
+  const mockPosts = new Map<string, Record<string, unknown>>();
+  const mockRoles = new Map<string, Record<string, unknown>>();
+
   return {
-    prepare: vi.fn(() => ({
-      bind: vi.fn().mockReturnThis(),
-      all: vi.fn(() => ({ success: true, results: [] })),
-      first: vi.fn(() => null),
-      run: vi.fn(() => ({ success: true })),
+    prepare: vi.fn((query: string) => ({
+      bind: vi.fn((...params: unknown[]) => ({
+        all: vi.fn(async () => {
+          // SELECT posts
+          if (query.includes('SELECT') && query.includes('posts') && query.includes('WHERE id = ?')) {
+            const postId = params[0];
+            const post = mockPosts.get(postId);
+            return { results: post ? [post] : [] };
+          }
+          // SELECT users
+          if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
+            const userId = params[0];
+            const user = mockUsers.get(userId);
+            return { results: user ? [user] : [] };
+          }
+          // SELECT roles
+          if (query.includes('SELECT') && query.includes('user_roles') && query.includes('WHERE user_id = ?')) {
+            const userId = params[0];
+            const role = mockRoles.get(userId);
+            return { results: role ? [role] : [] };
+          }
+          return { results: [] };
+        }),
+        first: vi.fn(async () => {
+          // SELECT posts
+          if (query.includes('SELECT') && query.includes('posts') && query.includes('WHERE id = ?')) {
+            const postId = params[0];
+            return mockPosts.get(postId) || null;
+          }
+          // SELECT users
+          if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
+            const userId = params[0];
+            return mockUsers.get(userId) || null;
+          }
+          // SELECT roles
+          if (query.includes('SELECT') && query.includes('user_roles') && query.includes('WHERE user_id = ?')) {
+            const userId = params[0];
+            return mockRoles.get(userId) || null;
+          }
+          return null;
+        }),
+        run: vi.fn(async () => {
+          // INSERT users
+          if (query.includes('INSERT INTO users')) {
+            const [id, email, name, created_at, updated_at] = params;
+            mockUsers.set(id, { id, email, name, created_at, updated_at });
+            return { success: true, meta: { changes: 1 } };
+          }
+          // INSERT posts
+          if (query.includes('INSERT INTO posts')) {
+            // The INSERT query has VALUES (?, ?, ?, ?, 0, 0, ?, ?)
+            // So we get 6 params: id, user_id, content, post_type, created_at, updated_at
+            const [id, user_id, content, post_type, created_at, updated_at] = params;
+            const post = { id, user_id, content, post_type, likes_count: 0, comments_count: 0, created_at, updated_at };
+            mockPosts.set(id, post);
+            return { success: true, meta: { changes: 1 } };
+          }
+          // INSERT roles
+          if (query.includes('INSERT INTO user_roles')) {
+            const [id, user_id, role, created_at] = params;
+            mockRoles.set(user_id, { id, user_id, role, created_at });
+            return { success: true, meta: { changes: 1 } };
+          }
+          // UPDATE posts
+          if (query.includes('UPDATE posts')) {
+            const id = params[params.length - 1];
+            const existing = mockPosts.get(id);
+            if (existing) {
+              const updated = { ...existing };
+              let paramIndex = 0;
+              if (query.includes('content =')) updated.content = params[paramIndex++];
+              if (query.includes('post_type =')) updated.post_type = params[paramIndex++];
+              updated.updated_at = params[params.length - 2];
+              mockPosts.set(id, updated);
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          }
+          // DELETE posts
+          if (query.includes('DELETE FROM posts')) {
+            const id = params[0];
+            mockPosts.delete(id);
+            return { success: true, meta: { changes: 1 } };
+          }
+          return { success: true, meta: { changes: 0 } };
+        }),
+      })),
     })),
   } as unknown as D1Database;
+}
+
+/**
+ * Create a test user in the mock database
+ */
+async function createTestUser(env: TestEnv, email: string, name: string): Promise<Record<string, unknown>> {
+  const userId = crypto.randomUUID();
+  const now = Math.floor(Date.now() / 1000);
+
+  const user = { id: userId, email, name, created_at: now, updated_at: now };
+
+  // Simulate user creation in database
+  const db = env.platform_db;
+  await db.prepare('INSERT INTO users').bind(userId, email, name, now, now).run();
+
+  return user;
 }
 
 describe('Posts System', () => {
@@ -179,12 +305,6 @@ describe('Posts System', () => {
       expect(mockDb).toBeDefined();
       expect(mockDb.prepare).toBeDefined();
     });
-
-    it('should handle mock queries', () => {
-      const mockDb = createMockDb();
-      const result = mockDb.prepare('SELECT * FROM posts').all();
-      expect(result).toEqual({ success: true, results: [] });
-    });
   });
 
   describe('Post CRUD Validation', () => {
@@ -309,6 +429,537 @@ describe('Posts System', () => {
         const updatedAt = createdAt + 60; // 60 seconds later
         expect(updatedAt).toBeGreaterThan(createdAt);
       });
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: POST /api/v1/posts - Create Post
+  // ============================================================================
+
+  describe('POST /api/v1/posts', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+    });
+
+    it('should create a post with valid content', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Hello world! This is my first post.',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data).toMatchObject({
+        id: expect.any(String),
+        user_id: testUser.id,
+        content: 'Hello world! This is my first post.',
+        post_type: 'general',
+        likes_count: 0,
+        comments_count: 0,
+        created_at: expect.any(Number),
+        updated_at: expect.any(Number),
+      });
+    });
+
+    it('should create a discussion post', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'What are your thoughts on this topic?',
+          post_type: 'discussion',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.post_type).toBe('discussion');
+    });
+
+    it('should default to general post type if not specified', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Post without type specification',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.post_type).toBe('general');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: 'Unauthorized post',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 400 when content is empty', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: '',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('required');
+    });
+
+    it('should return 400 when content exceeds max length', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'x'.repeat(2001),
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('2000 characters');
+    });
+
+    it('should return 400 when post type is invalid', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Valid content',
+          post_type: 'invalid_type',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('post type');
+    });
+
+    it('should return 403 when non-admin tries to create announcement', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string, 'member');
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'This is an announcement',
+          post_type: 'announcement',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(403);
+      const data = await res.json();
+      expect(data.error).toContain('admin');
+    });
+
+    it('should allow admin to create announcement', async () => {
+      // Create admin user
+      const adminUser = await createTestUser(mockEnv, 'admin@example.com', 'Admin User');
+      // Store admin role in mock database
+      const roleId = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await mockEnv.platform_db
+        .prepare('INSERT INTO user_roles')
+        .bind(roleId, adminUser.id, 'admin', now)
+        .run();
+
+      const token = await createTestToken(adminUser.id as string, adminUser.email as string, adminUser.name as string, 'admin');
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Official announcement from admin',
+          post_type: 'announcement',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.post_type).toBe('announcement');
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: PUT /api/v1/posts/:id - Update Post
+  // ============================================================================
+
+  describe('PUT /api/v1/posts/:id', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let otherUser: Record<string, unknown>;
+    let adminUser: Record<string, unknown>;
+    let createdPostId: string;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+
+      // Create test users
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      adminUser = await createTestUser(mockEnv, 'admin@example.com', 'Admin User');
+
+      // Store admin role
+      const roleId = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await mockEnv.platform_db
+        .prepare('INSERT INTO user_roles')
+        .bind(roleId, adminUser.id, 'admin', now)
+        .run();
+
+      // Create a test post
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const createReq = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Original content',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(createReq, mockEnv);
+      const data = await res.json();
+      createdPostId = data.id;
+    });
+
+    it('should update own post as author', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Updated content by author',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.content).toBe('Updated content by author');
+    });
+
+    it('should update post type as author', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          post_type: 'discussion',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.post_type).toBe('discussion');
+    });
+
+    it('should return 403 when non-author tries to update', async () => {
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Trying to update someone else post',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should allow admin to update any post', async () => {
+      const token = await createTestToken(adminUser.id as string, adminUser.email as string, adminUser.name as string, 'admin');
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Updated by admin',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.content).toBe('Updated by admin');
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: 'Unauthorized update',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Trying to update nonexistent post',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should return 400 when content exceeds max length', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'x'.repeat(2001),
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ============================================================================
+  // API Endpoint Tests: DELETE /api/v1/posts/:id - Delete Post
+  // ============================================================================
+
+  describe('DELETE /api/v1/posts/:id', () => {
+    let mockEnv: TestEnv;
+    let testUser: Record<string, unknown>;
+    let otherUser: Record<string, unknown>;
+    let adminUser: Record<string, unknown>;
+    let createdPostId: string;
+
+    beforeEach(async () => {
+      mockEnv = {
+        platform_db: createMockDb(),
+        JWT_SECRET,
+      };
+
+      // Create test users
+      testUser = await createTestUser(mockEnv, 'user@example.com', 'Test User');
+      otherUser = await createTestUser(mockEnv, 'other@example.com', 'Other User');
+      adminUser = await createTestUser(mockEnv, 'admin@example.com', 'Admin User');
+
+      // Store admin role
+      const roleId = crypto.randomUUID();
+      const now = Math.floor(Date.now() / 1000);
+      await mockEnv.platform_db
+        .prepare('INSERT INTO user_roles')
+        .bind(roleId, adminUser.id, 'admin', now)
+        .run();
+
+      // Create a test post
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+      const createReq = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: 'Post to be deleted',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(createReq, mockEnv);
+      const data = await res.json();
+      createdPostId = data.id;
+    });
+
+    it('should delete own post as author', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should return 403 when non-author tries to delete', async () => {
+      const token = await createTestToken(otherUser.id as string, otherUser.email as string, otherUser.name as string);
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should allow admin to delete any post', async () => {
+      const token = await createTestToken(adminUser.id as string, adminUser.email as string, adminUser.name as string, 'admin');
+
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should return 401 when not authenticated', async () => {
+      const req = new Request(`http://localhost/api/v1/posts/${createdPostId}`, {
+        method: 'DELETE',
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should return 404 when post does not exist', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts/nonexistent-post-id', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(404);
     });
   });
 });

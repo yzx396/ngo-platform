@@ -144,27 +144,27 @@
 
 **Value**: Authenticated users can create and publish posts.
 
-- [ ] **Types**: Add creation types to `src/types/api.ts`
+- [x] **Types**: Add creation types to `src/types/api.ts`
   - Define `CreatePostRequest`, `UpdatePostRequest`
-- [ ] **Backend**: Implement post creation API
+- [x] **Backend**: Implement post creation API
   - `POST /api/v1/posts` - Create post (authenticated, auto-publish)
   - `PUT /api/v1/posts/:id` - Update post (author only)
   - `DELETE /api/v1/posts/:id` - Delete post (author or admin)
-  - Write tests for create/update/delete endpoints
-- [ ] **Frontend**: Create post creation UI
+  - Write tests for create/update/delete endpoints (52 API endpoint tests added)
+- [x] **Frontend**: Create post creation UI
   - Create `CreatePostForm` component (textarea + submit)
   - Add "Create Post" button to FeedPage (authenticated users only)
   - Add create/edit/delete methods to `postService.ts`
   - Update `PostCard` to show edit/delete buttons for author
   - Write tests for form and actions
-- [ ] **i18n**: Add translations for post creation
+- [x] **i18n**: Add translations for post creation
   - Add labels for form, buttons, success/error messages
-- [ ] **Testing**: End-to-end test
+- [x] **Testing**: End-to-end test
   - User creates post → Post appears in feed
   - User edits own post
   - User deletes own post
   - Admin can delete any post
-- [ ] **Deploy**: Post creation is live ✅
+- [x] **Deploy**: Post creation is live ✅
 
 ### Slice 1.3: Like Posts ✅ Deployable
 

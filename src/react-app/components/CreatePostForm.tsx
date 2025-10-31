@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void; // Callback when post is successfully created
+  onCancel?: () => void; // Callback when user clicks cancel button
 }
 
 const MAX_CONTENT_LENGTH = 2000;
@@ -23,7 +24,7 @@ const MAX_CONTENT_LENGTH = 2000;
  * - Form validation and error handling
  * - Loading state during submission
  */
-export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
+export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [content, setContent] = useState('');
@@ -163,6 +164,7 @@ export function CreatePostForm({ onPostCreated }: CreatePostFormProps) {
                 setContent('');
                 setPostType(PostType.General);
                 setError(null);
+                onCancel?.();
               }}
             >
               {t('common.cancel')}

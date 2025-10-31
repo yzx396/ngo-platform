@@ -192,4 +192,21 @@ describe('CreatePostForm Component', () => {
 
     expect(textarea.value).toBe('');
   });
+
+  it('should call onCancel callback when cancel button is clicked', () => {
+    const onCancel = vi.fn();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <CreatePostForm onCancel={onCancel} />
+      </I18nextProvider>
+    );
+
+    const textarea = screen.getByRole('textbox', { name: /post content/i });
+    fireEvent.change(textarea, { target: { value: 'Test post' } });
+
+    const cancelButton = screen.getByRole('button', { name: /cancel/i });
+    fireEvent.click(cancelButton);
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
 });
