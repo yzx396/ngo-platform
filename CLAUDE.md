@@ -1192,6 +1192,299 @@ Example from challenge completion:
 await awardPointsForAction(userId, challenge.points_reward, 'challenge_completion');
 ```
 
+---
+
+## Role-Based Access Control System
+
+### Overview
+
+The Role-Based Access Control (RBAC) system provides a simple two-tier permission model for the platform:
+- **Admin**: Full administrative access to manage users, content, and platform settings
+- **Member**: Regular user with basic access to community features (default role)
+
+This system enables feature-gating and allows administrators to manage user permissions without code changes.
+
+### Database Schema
+
+**user_roles table** (created in migration 0007):
+```sql
+id TEXT PRIMARY KEY
+user_id TEXT UNIQUE (FOREIGN KEY to users)
+role TEXT (admin|member) -- CHECK constraint ensures valid values
+created_at INTEGER
+```
+
+**Indexes:**
+- `idx_user_roles_user_id`: Fast lookup by user
+- `idx_user_roles_role`: Efficient role-based queries
+
+**Design Notes:**
+- One role per user (UNIQUE constraint on user_id)
+- Role is required and defaults to 'member'
+- Created timestamp for audit trail
+
+### Type Definitions
+
+Located in `src/types/role.ts`:
+
+```typescript
+enum UserRole {
+  Admin = 'admin',
+  Member = 'member',
+}
+
+interface UserRoleRecord {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  created_at: number;
+}
+
+function isAdmin(role: UserRole | undefined): boolean
+function getRoleName(role: UserRole): string
+function normalizeUserRole(dbRole: unknown): UserRole
+```
+
+### Backend API & Middleware
+
+**API Endpoints:**
+
+**POST /api/v1/roles** (Admin Only)
+- Assign a role to a user
+- Requires: Authentication + Admin role
+- Request body: `{ user_id: string, role: UserRole }`
+- Returns: Updated `UserRoleRecord`
+
+**GET /api/v1/users/:id/role** (Public)
+- Get user's role by user ID
+- Response: `{ role: UserRole }`
+
+**Middleware:**
+
+`src/worker/auth/middleware.ts` provides role-based access control:
+
+```typescript
+// Check if user is authenticated
+export const requireAuth = (c, next) => { ... }
+
+// Check if user has admin role (requires auth + role verification)
+export const requireAdmin = (c, next) => { ... }
+```
+
+**Usage in Routes:**
+
+```typescript
+// Admin-only route
+app.post("/api/v1/roles", requireAuth, requireAdmin, async (c) => {
+  // Admin-only endpoint code
+});
+
+// Public route that checks role internally
+app.get("/api/v1/users/:id/role", async (c) => {
+  // Fetch role from database
+});
+```
+
+### Frontend Components
+
+**UserRoleBadge** (`src/react-app/components/UserRoleBadge.tsx`)
+- Displays user's role as a colored badge
+- Props: `role: UserRole | undefined`, `className?: string`
+- Variants:
+  - Admin: Default badge color (prominent)
+  - Member: Secondary badge color (subtle)
+- Translatable: Uses i18n for role display names
+
+**Usage Example:**
+
+```typescript
+import { UserRoleBadge } from './UserRoleBadge';
+import { UserRole } from '../types/role';
+
+export function UserProfile({ user }) {
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <UserRoleBadge role={user.role} />
+    </div>
+  );
+}
+```
+
+### Integration with Authentication
+
+Roles are checked at multiple points:
+
+1. **JWT Token**: Role is included in JWT payload after login
+2. **Middleware**: `requireAdmin` middleware validates role on each request
+3. **UI Protection**: Frontend components conditionally render based on user's role
+
+**First Admin Bootstrap:**
+
+See "Bootstrapping First Admin User" section in Authentication System for instructions on creating the first admin user (requires direct database access).
+
+### Testing
+
+**Backend Tests:**
+- Verify role assignment works (admin only)
+- Test role retrieval for users
+- Test middleware blocks unauthorized requests
+- Test role changes are persisted
+
+**Frontend Tests:**
+- UserRoleBadge renders correct role
+- Admin features hidden from member users
+- Protected routes redirect unauthorized users
+
+### Internationalization
+
+Role names are translated in both English and Chinese:
+```json
+{
+  "roles": {
+    "admin": "Admin",
+    "member": "Member"
+  }
+}
+```
+
+---
+
+## Navigation Layout & Sidebar
+
+### Overview
+
+The platform uses a modern two-column layout with:
+- **Sidebar**: Fixed or collapsible navigation menu (desktop: fixed, mobile: hidden)
+- **Main Content**: Scrollable content area with responsive padding
+- **Navbar**: Top navigation bar with branding and user controls
+
+This layout provides clear information hierarchy and improves user navigation across multiple community features.
+
+### Architecture
+
+**Layout Component** (`src/react-app/components/Layout.tsx`)
+- Two-column flex layout: `sidebar + main-content`
+- Height: `calc(100vh - 56px)` (full screen minus navbar height)
+- Main content: Scrollable with responsive padding
+- Responsive: Sidebar collapses on mobile (hidden with `hidden md:flex`)
+
+```typescript
+<div className="flex h-[calc(100vh-56px)]">
+  <Sidebar />  {/* Fixed width 256px */}
+  <main className="flex-1 overflow-y-auto">
+    {children}
+  </main>
+</div>
+```
+
+**Sidebar Component** (`src/react-app/components/Sidebar.tsx`)
+- Fixed width: 256px (w-64)
+- Three navigation sections with dividers
+- Authentication-aware: Shows/hides items based on user status
+- Responsive: Hidden on mobile (`hidden md:flex`)
+- Accessibility: Uses semantic nav elements and ARIA attributes
+
+### Navigation Sections
+
+The sidebar organizes navigation into three distinct sections:
+
+#### 1. Feed Section (Always Visible)
+Public-facing community content:
+- **Feed** (/) - Community posts and updates
+- **Challenges** (/challenges) - Browse active challenges
+- **Blogs** (/blogs) - Read community blog posts
+
+#### 2. Member Area (Authenticated Only)
+User-specific functionality (conditionally rendered):
+- **My Profile** (/mentor/profile/setup) - Create/edit mentor profile
+- **My Mentorships** (/matches) - View and manage mentorships
+- **My Challenges** (/my-challenges) - Submit and track challenge progress
+- **My Blogs** (/my-blogs) - Manage published blogs
+
+#### 3. Links Section (Always Visible)
+Miscellaneous public links:
+- **Leaderboard** (/leaderboard) - View user rankings by points
+- **Browse Mentors** (/mentors/browse) - Search mentor profiles
+
+### Responsive Design
+
+**Desktop (md breakpoint and above):**
+- Sidebar visible and fixed
+- Content fills remaining horizontal space
+- Two-column layout maintained
+
+**Mobile (below md breakpoint):**
+- Sidebar hidden (`hidden md:flex`)
+- Full-width content area
+- Future: Hamburger menu toggle for mobile navigation (in navbar)
+
+### Integration with App.tsx
+
+The Layout component wraps all non-authentication routes:
+
+```typescript
+function AppContent() {
+  const isAuthPage = /* check if login page */;
+
+  return (
+    <>
+      {!isAuthPage && <Navbar />}
+      <Suspense fallback={<LoadingFallback />}>
+        {!isAuthPage && (
+          <Layout>
+            <Routes>
+              {/* All routes here get sidebar + main layout */}
+            </Routes>
+          </Layout>
+        )}
+      </Suspense>
+    </>
+  );
+}
+```
+
+### Implementation Details
+
+**NavSection Component** (internal):
+- Reusable component for rendering section with title + links
+- Filters links based on `requiresAuth` prop
+- Applies active state styling based on current pathname
+- Accessible: Uses proper semantic elements and ARIA attributes
+
+**Link Styling:**
+- Active link: Default button variant (highlighted)
+- Inactive link: Ghost button variant (subtle)
+- Icon + label with text truncation for long names
+- Smooth transitions and hover states
+
+### Internationalization
+
+All navigation labels are translatable:
+```json
+{
+  "navigation": {
+    "feed": "Feed",
+    "challenges": "Challenges",
+    "blogs": "Blogs",
+    "myProfile": "My Profile",
+    "myMatches": "My Mentorships",
+    "myChallenges": "My Challenges",
+    "myBlogs": "My Blogs",
+    "leaderboard": "Leaderboard",
+    "memberArea": "Member Area"
+  }
+}
+```
+
+### Future Enhancements
+
+- **Mobile Hamburger Menu**: Toggle sidebar on mobile using hamburger button in navbar
+- **Collapsible Sections**: Allow users to collapse/expand section groups
+- **User Preferences**: Remember user's sidebar state in localStorage
+- **Admin Panel**: Add admin-only navigation section for management features
+- **Breadcrumbs**: Add breadcrumb navigation in main content area
+
 ## Debugging and Monitoring
 
 ### Local Development Logging

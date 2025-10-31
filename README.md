@@ -4,7 +4,7 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/your-org/lead-forward-platform)
 
-Lead Forward Platform is a full-stack web application designed to facilitate mentor-mentee matching within NGO communities. The platform enables mentees to browse mentor profiles, send match requests, and manage their mentorship relationships—all while running on Cloudflare's global edge network for fast, reliable performance.
+Lead Forward Platform is a comprehensive NGO community platform that connects members through mentorship, challenges, and shared learning. Beyond mentor-mentee matching, the platform features a modern community feed, gamified points system, admin-curated challenges, and member-created blogs. Built on Cloudflare's edge network, it provides fast, reliable performance for global NGO communities.
 
 ![Tech Stack](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/fc7b4b62-442b-4769-641b-ad4422d74300/public)
 
@@ -12,14 +12,28 @@ Lead Forward Platform is a full-stack web application designed to facilitate men
 
 ## ✨ Features
 
+### Community Features
+- **📰 Community Feed** - Shared posts and updates from community members
+- **🎯 Challenges** - Member challenges with points rewards (admin-curated)
+- **📝 Blogs** - Members can publish and share blog posts with the community
+- **🏆 Leaderboard** - Gamified points system showing top community contributors
+- **💬 Engagement** - Like, comment, and interact with community content
+
+### Mentorship Features
 - **🔐 Google OAuth Authentication** - Secure, password-free sign-in
 - **👤 Mentor Profiles** - Create rich profiles with expertise, availability, and rates
 - **🔍 Public Mentor Browsing** - Search and discover mentors by level, payment type, and availability
 - **🤝 User-Driven Matching** - Mentees initiate match requests; mentors accept or decline
 - **📊 Match Management** - Track match lifecycle: pending → accepted → active → completed
 - **💳 Flexible Payments** - Support for Venmo, PayPal, Zelle, Alipay, WeChat Pay, and Crypto
-- **📅 Availability Tracking** - Customizable availability preferences
-- **🎯 Mentoring Levels** - Entry, Senior, Staff, and Management level support
+
+### Platform Features
+- **👥 Role-Based Access Control** - Admin and Member roles for permission management
+- **⭐ Points & Gamification** - Earn points for activities, visible on leaderboard
+- **🎨 Modern Navigation** - Intuitive sidebar with Feed, Member Area, and Links sections
+- **📱 Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
+- **🌍 Internationalization** - Support for Simplified Chinese (default) and English
+- **♿ Accessibility** - WCAG 2.1 compliant with semantic HTML and ARIA labels
 
 ---
 
@@ -191,24 +205,47 @@ npm run cf-typegen
 ngo-platform/
 ├── src/
 │   ├── react-app/           # Frontend React application
-│   │   ├── components/      # UI components (Navbar, MentorCard, etc.)
+│   │   ├── components/      # UI components
+│   │   │   ├── Layout.tsx            # Two-column layout wrapper
+│   │   │   ├── Sidebar.tsx           # Navigation sidebar
+│   │   │   ├── Navbar.tsx            # Top navigation bar
+│   │   │   ├── UserRoleBadge.tsx     # User role display
+│   │   │   ├── UserPointsBadge.tsx   # User points display
+│   │   │   ├── MentorCard.tsx        # Mentor profile card
+│   │   │   ├── ProtectedRoute.tsx    # Auth route wrapper
+│   │   │   └── ...other components/
 │   │   ├── context/         # React context (AuthContext)
-│   │   ├── pages/           # Route pages (Login, MentorBrowse, etc.)
-│   │   ├── services/        # API client and service layer
+│   │   ├── pages/           # Route pages (Login, HomePage, MentorBrowse, etc.)
+│   │   ├── services/        # API client and service layer (mentorService, pointsService, etc.)
+│   │   ├── i18n/            # Internationalization (Chinese and English)
 │   │   └── __tests__/       # React component tests
 │   ├── worker/              # Backend Hono API (Cloudflare Worker)
 │   │   ├── auth/            # Authentication (JWT, Google OAuth, middleware)
-│   │   ├── index.ts         # Main API routes
+│   │   ├── index.ts         # Main API routes (roles, points, mentors, matches, etc.)
 │   │   └── __tests__/       # API route tests
-│   └── types/               # Shared TypeScript types (user, mentor, match)
+│   └── types/               # Shared TypeScript types
+│       ├── user.ts          # User types
+│       ├── role.ts          # Role system types
+│       ├── points.ts        # Points system types
+│       ├── mentor.ts        # Mentor profile types
+│       ├── match.ts         # Match/mentorship types
+│       └── api.ts           # API request/response types
 ├── migrations/              # D1 database migrations (SQLite)
+│   ├── 0001-0006/          # Original mentor-mentee migrations
+│   ├── 0007_create_user_roles_table.sql        # Role system
+│   └── 0008_create_user_points_table.sql       # Points system
+├── docs/                    # Documentation
+│   ├── ARCHITECTURE.md      # System architecture and design
+│   ├── NGO_PLATFORM_TRANSFORMATION.md # Vertical slice transformation plan
+│   └── ...other docs/
 ├── dist/                    # Build output (generated)
 │   ├── client/              # Frontend bundle (served as static assets)
 │   └── worker/              # Worker bundle
 ├── wrangler.json            # Cloudflare Workers configuration
 ├── vite.config.ts           # Vite build configuration
 ├── vitest.config.ts         # Vitest test configuration
-└── CLAUDE.md                # Detailed developer documentation
+├── CLAUDE.md                # Detailed developer documentation
+└── README.md                # This file
 ```
 
 ---
@@ -231,14 +268,21 @@ All API endpoints follow versioned RESTful conventions:
 ```
 /api/v1/auth/*              # Authentication (login, callback, logout)
 /api/v1/users               # User management
+/api/v1/users/:id/points    # Points system
+/api/v1/users/:id/role      # Role management
+/api/v1/roles               # Role assignment (admin only)
 /api/v1/mentors/profiles/*  # Mentor profile CRUD
 /api/v1/mentors/search      # Public mentor search
 /api/v1/matches/*           # Match requests and lifecycle
+/api/v1/posts/*             # Feed posts (coming soon)
+/api/v1/challenges/*        # Challenges system (coming soon)
+/api/v1/blogs/*             # Blog management (coming soon)
+/api/v1/leaderboard         # Leaderboard rankings (coming soon)
 ```
 
 **Type Safety**: Shared TypeScript types (`src/types/`) ensure consistency between frontend and backend.
 
-For detailed architecture documentation, database schema, and development patterns, see **[CLAUDE.md](./CLAUDE.md)**.
+For detailed architecture documentation, database schema, development patterns, and the transformation plan, see **[CLAUDE.md](./CLAUDE.md)** and **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)**.
 
 ---
 
