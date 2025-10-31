@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from '../App';
 
 describe('App', () => {
@@ -9,11 +9,13 @@ describe('App', () => {
       expect(document.body).toBeTruthy();
     });
 
-    it('should render the home page with main heading', () => {
+    it('should render the home page with main heading', async () => {
       render(<App />);
-      expect(
-        screen.getByRole('heading', { name: /Welcome to Lead Forward Platform/i })
-      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(
+          screen.getByRole('heading', { name: /Welcome to Lead Forward Platform/i })
+        ).toBeInTheDocument();
+      }, { timeout: 3000 });
     });
 
     it('should render the navbar with brand logo', () => {
@@ -34,14 +36,17 @@ describe('App', () => {
       expect(screen.getByRole('button', { name: /My Profile/i })).toBeInTheDocument();
     });
 
-    it('should display main action buttons on home page', () => {
+    it('should display main action buttons on home page', async () => {
       render(<App />);
-      // Check for Browse Mentors button (which replaces "Start Browsing")
-      const browseMentorsButtons = screen.getAllByRole('button', { name: /Browse Mentors/i });
-      expect(browseMentorsButtons.length).toBeGreaterThan(0);
-      // Check for Become a Mentor button (which replaces "Set Up Profile")
-      const becomeMentorButtons = screen.getAllByRole('button', { name: /Become a Mentor/i });
-      expect(becomeMentorButtons.length).toBeGreaterThan(0);
+      // Wait for HomePage to load
+      await waitFor(() => {
+        // Check for Browse Mentors link (appears in navbar and sidebar)
+        const browseMentorsLinks = screen.getAllByRole('link', { name: /Browse Mentors/i });
+        expect(browseMentorsLinks.length).toBeGreaterThan(0);
+        // Check for Feed link in sidebar
+        const feedLinks = screen.getAllByRole('link', { name: /Feed/i });
+        expect(feedLinks.length).toBeGreaterThan(0);
+      }, { timeout: 3000 });
     });
   });
 
@@ -78,13 +83,15 @@ describe('App', () => {
   });
 
   describe('Page Content', () => {
-    it('should display key features on home page', () => {
+    it('should display community features on home page', async () => {
       render(<App />);
-      // Check for features section heading
-      expect(screen.getByRole('heading', { name: /Key Features/i })).toBeInTheDocument();
-      // Check that at least one feature is displayed
-      const features = screen.getAllByText(/Connect with experienced professionals/i);
-      expect(features.length).toBeGreaterThan(0);
+      // Wait for HomePage to load and check for Get Started section heading
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /Get Started/i })).toBeInTheDocument();
+      }, { timeout: 3000 });
+      // Check for community feature cards
+      expect(screen.getByRole('heading', { name: /Join Our Community/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Take Challenges/i })).toBeInTheDocument();
     });
 
     it('should have auth button in navbar', () => {

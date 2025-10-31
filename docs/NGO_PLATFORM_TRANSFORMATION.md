@@ -16,61 +16,61 @@
 
 **Value**: Admins can assign roles; users can see their role; role-based access control is enabled.
 
-- [ ] **Database**: Create migration for `user_roles` table
+- [x] **Database**: Create migration for `user_roles` table
   - Columns: `id`, `user_id`, `role` (enum: admin, member), `created_at`
   - Add index on `user_id`
   - Run migration locally and verify schema
-- [ ] **Types**: Create `src/types/role.ts`
+- [x] **Types**: Create `src/types/role.ts`
   - Define `UserRole` enum (Admin, Member)
   - Define `UserRoleRecord` interface
   - Update `src/types/user.ts` to include role
-- [ ] **Backend**: Implement role management API
+- [x] **Backend**: Implement role management API
   - `POST /api/v1/roles` - Assign role (admin only)
   - `GET /api/v1/users/:id/role` - Get user role
   - Add role-based middleware for admin-only routes
   - Write tests for role APIs
-- [ ] **Frontend**: Display user role
+- [x] **Frontend**: Display user role
   - Show role badge in user profile/navbar
   - Add role indicator in admin areas
   - Update i18n translations for role labels
-- [ ] **Testing**: End-to-end test
+- [x] **Testing**: End-to-end test
   - Admin assigns role to user
   - User sees role in UI
   - Role-based access control works
-- [ ] **Deploy**: Role system is live and functional ✅
+- [x] **Deploy**: Role system is live and functional ✅
 
 ### Slice 0.2: Points System ✅ Deployable
 
 **Value**: Users can see their points; points can be awarded; points display in UI.
 
-- [ ] **Database**: Create migration for `user_points` table
+- [x] **Database**: Create migration for `user_points` table
   - Columns: `id`, `user_id`, `points`, `rank`, `updated_at`
   - Add index on `user_id`
   - Run migration locally and verify schema
-- [ ] **Types**: Create `src/types/points.ts`
+- [x] **Types**: Create `src/types/points.ts`
   - Define `UserPoints` interface
   - Define point calculation helpers
   - Update `src/types/user.ts` to include points
-- [ ] **Backend**: Implement points API
+- [x] **Backend**: Implement points API
   - `GET /api/v1/users/:id/points` - Get user points
   - `PATCH /api/v1/users/:id/points` - Update points (internal use)
   - Write tests for points APIs
-- [ ] **Frontend**: Display points in UI
+- [x] **Frontend**: Display points in UI
   - Create `UserPointsBadge` component
   - Show points in navbar for authenticated users
   - Add points display to user profile
   - Update i18n translations for points labels
-- [ ] **Testing**: End-to-end test
+- [x] **Testing**: End-to-end test
   - Points can be awarded via API
   - Points display correctly in UI
   - Points update in real-time
-- [ ] **Deploy**: Points system is live ✅
+- [x] **Deploy**: Points system is live ✅
 
 ### Slice 0.3: New Navigation Layout ✅ Deployable
 
 **Value**: Users see new sidebar navigation; platform has modern community layout.
 
-- [ ] **Frontend**: Create new layout components
+- [x] **Frontend**: Create new layout components
   - Create `src/react-app/components/Sidebar.tsx`
     - Feed section (always visible, placeholder links)
     - Member Area section (authenticated only, placeholder links)
@@ -79,20 +79,20 @@
     - Two-column layout: sidebar + main content
     - Responsive design (collapse sidebar on mobile)
   - Write tests for Sidebar and Layout components
-- [ ] **Frontend**: Integrate new layout
+- [x] **Frontend**: Integrate new layout
   - Update `src/react-app/App.tsx` to use Layout component
   - Update HomePage to show community welcome message
   - Remove mentor-specific cards from homepage temporarily
   - Update Navbar with new branding
-- [ ] **i18n**: Add translations
+- [x] **i18n**: Add translations
   - Update `zh-CN/translation.json` with navigation labels
   - Update `en/translation.json` with navigation labels
   - Test language switching
-- [ ] **Testing**: End-to-end test
+- [x] **Testing**: End-to-end test
   - Navigation renders correctly
   - Sidebar collapses on mobile
   - Authenticated vs public view works
-- [ ] **Deploy**: New navigation is live ✅
+- [x] **Deploy**: New navigation is live ✅
 
 ### Slice 0.4: Documentation Update ✅ Deployable
 
@@ -758,9 +758,9 @@
 Track your progress by phase and slice. Mark slices as complete when deployed and verified.
 
 ### Phase 0: Foundation (4 slices)
-- ⬜ Slice 0.1: User Roles System
-- ⬜ Slice 0.2: Points System
-- ⬜ Slice 0.3: New Navigation Layout
+- ✅ Slice 0.1: User Roles System
+- ✅ Slice 0.2: Points System
+- ✅ Slice 0.3: New Navigation Layout
 - ⬜ Slice 0.4: Documentation Update
 
 ### Phase 1: Feed & Posts (5 slices)
@@ -802,7 +802,7 @@ Track your progress by phase and slice. Mark slices as complete when deployed an
 - ⬜ Slice 6.5: Security & Quality Assurance
 - ⬜ Slice 6.6: Phased Deployment
 
-**Total Slices: 31** | **Completed: 0** | **Progress: 0%**
+**Total Slices: 31** | **Completed: 3** | **Progress: ~10%**
 
 ---
 
