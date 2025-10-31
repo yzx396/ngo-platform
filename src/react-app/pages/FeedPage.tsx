@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { PostCard } from '../components/PostCard';
+import { CreatePostForm } from '../components/CreatePostForm';
+import { EditPostDialog } from '../components/EditPostDialog';
 import { Button } from '../components/ui/button';
-import { getPosts } from '../services/postService';
+import { getPosts, deletePost } from '../services/postService';
 import type { Post } from '../../types/post';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
@@ -12,15 +15,18 @@ const POSTS_PER_PAGE = 20;
 /**
  * FeedPage Component
  * Displays a paginated feed of community posts
- * Users can view posts and pagination controls
+ * Users can view posts, create posts (authenticated), and pagination controls
  */
 export function FeedPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<(Post & { author_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Fetch posts when offset changes
   useEffect(() => {
@@ -58,6 +64,38 @@ export function FeedPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Handle post creation - reset to first page to show new post
+  const handlePostCreated = () => {
+    setOffset(0); // Reset to first page
+    // The useEffect will automatically refetch when offset changes
+  };
+
+  // Handle edit button click
+  const handleEditPost = (post: Post) => {
+    setEditingPost(post);
+    setEditDialogOpen(true);
+  };
+
+  // Handle delete button click
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deletePost(postId);
+      toast.success(t('posts.deleteSuccess'));
+      // Remove the post from the list
+      setPosts(posts.filter((p) => p.id !== postId));
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t('posts.deleteError');
+      toast.error(message);
+      console.error('Error deleting post:', err);
+    }
+  };
+
+  // Handle post update from edit dialog
+  const handlePostUpdated = () => {
+    setEditDialogOpen(false);
+    setOffset(0); // Reset to first page to show latest posts
+  };
+
   // Render loading state
   if (loading && posts.length === 0) {
     return (
@@ -88,8 +126,19 @@ export function FeedPage() {
   // Render empty state
   if (posts.length === 0) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+          <p className="text-muted-foreground">
+            {t('posts.subtitle', 'See what the community is sharing')}
+          </p>
+        </div>
+
+        {/* Create Post Form (authenticated users only) */}
+        {user && <CreatePostForm onPostCreated={handlePostCreated} />}
+
+        {/* Empty state message */}
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">{t('posts.noPosts', 'No posts yet')}</p>
         </div>
@@ -108,6 +157,9 @@ export function FeedPage() {
         </p>
       </div>
 
+      {/* Create Post Form (authenticated users only) */}
+      {user && <CreatePostForm onPostCreated={handlePostCreated} />}
+
       {/* Posts Grid */}
       <div className="space-y-4">
         {posts.map((post) => (
@@ -117,9 +169,19 @@ export function FeedPage() {
             onViewDetails={() => {
               // TODO: Navigate to post detail page in future slices
             }}
+            onEdit={handleEditPost}
+            onDelete={handleDeletePost}
           />
         ))}
       </div>
+
+      {/* Edit Post Dialog */}
+      <EditPostDialog
+        post={editingPost}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onPostUpdated={handlePostUpdated}
+      />
 
       {/* Pagination Controls */}
       {total > POSTS_PER_PAGE && (
