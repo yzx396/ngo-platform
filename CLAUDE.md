@@ -671,6 +671,47 @@ wrangler secret put JWT_SECRET
 
 Run tests: `npm run test:watch -- --project=worker` or `npm run test:watch -- --project=react`
 
+### Bootstrapping First Admin User
+
+When setting up the platform, there's a chicken-and-egg problem: the `POST /api/v1/roles` endpoint requires admin privileges to assign roles, but there's no admin yet. Use direct SQL commands to create the first admin.
+
+**Prerequisites:**
+- User account must exist (created via Google OAuth login)
+- Know the user's ID from the database
+
+**Steps:**
+
+1. **Identify your user ID**:
+   ```bash
+   # Local database
+   wrangler d1 execute platform-db-local --local --command "SELECT id, email, name FROM users;"
+
+   # Production database
+   wrangler d1 execute platform-db --command "SELECT id, email, name FROM users;"
+   ```
+
+2. **Insert admin role** into `user_roles` table (replace `YOUR_USER_ID_HERE`):
+   ```bash
+   # Local database
+   wrangler d1 execute platform-db-local --local --command "INSERT INTO user_roles (id, user_id, role, created_at) VALUES ('admin-role-1', 'YOUR_USER_ID_HERE', 'admin', strftime('%s', 'now'));"
+
+   # Production database
+   wrangler d1 execute platform-db --command "INSERT INTO user_roles (id, user_id, role, created_at) VALUES ('admin-role-1', 'YOUR_USER_ID_HERE', 'admin', strftime('%s', 'now'));"
+   ```
+
+3. **Verify the role was assigned**:
+   ```bash
+   # Local
+   wrangler d1 execute platform-db-local --local --command "SELECT * FROM user_roles WHERE user_id = 'YOUR_USER_ID_HERE';"
+
+   # Production
+   wrangler d1 execute platform-db --command "SELECT * FROM user_roles WHERE user_id = 'YOUR_USER_ID_HERE';"
+   ```
+
+4. **Refresh authentication** - Log out and log back in so the JWT token gets updated with the admin role
+
+After the first admin is created, they can use the `POST /api/v1/roles` API endpoint to promote other users without needing direct database access.
+
 ## Internationalization (i18n)
 
 The platform supports multiple languages with **Simplified Chinese (zh-CN) as the default** and **English as fallback**. The implementation uses `react-i18next` for flexible, type-safe translations.
