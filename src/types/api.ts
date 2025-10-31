@@ -1,6 +1,7 @@
 import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
+import { UserPointsWithRank } from './points';
 
 // User API
 export interface CreateUserRequest {
@@ -94,4 +95,17 @@ export interface GetMatchesRequest {
 
 export interface GetMatchesResponse {
   matches: Match[];
+}
+
+// Points API
+export type GetUserPointsResponse = UserPointsWithRank;
+
+export interface UpdateUserPointsRequest {
+  points: number; // Points to set (internal use only, admin)
+}
+
+export interface UserPointsResponse {
+  userId: string;
+  points: number;
+  rank?: number; // User's rank in leaderboard
 }

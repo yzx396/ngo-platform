@@ -25,42 +25,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    if (storedToken) {
-      setToken(storedToken);
-      // Optionally fetch user info
-      fetchUser(storedToken);
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
+    const abortController = new AbortController();
+    let isMounted = true;
 
-  /**
-   * Fetches current user from backend
-   */
-  const fetchUser = async (authToken: string) => {
-    try {
-      const response = await fetch('/api/v1/auth/me', {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
+    const loadToken = async () => {
+      const storedToken = localStorage.getItem('auth_token');
+      if (storedToken) {
+        setToken(storedToken);
+        // Optionally fetch user info
+        try {
+          const response = await fetch('/api/v1/auth/me', {
+            headers: {
+              Authorization: `Bearer ${storedToken}`,
+            },
+            signal: abortController.signal,
+          });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch user');
+          if (!response.ok) {
+            throw new Error('Failed to fetch user');
+          }
+
+          const userData = await response.json();
+          if (isMounted) {
+            setUser(userData);
+          }
+        } catch (error) {
+          if (isMounted && error instanceof Error && error.name !== 'AbortError') {
+            console.error('Failed to fetch user:', error);
+            // Clear invalid token
+            localStorage.removeItem('auth_token');
+            setToken(null);
+          }
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+        }
+      } else {
+        setIsLoading(false);
       }
+    };
 
-      const userData = await response.json();
-      setUser(userData);
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-      // Clear invalid token
-      localStorage.removeItem('auth_token');
-      setToken(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    loadToken();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, []);
 
   /**
    * Login with token and user data

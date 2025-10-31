@@ -1042,10 +1042,155 @@ completed_at INTEGER
 notes TEXT
 ```
 
+**user_roles**
+```sql
+id TEXT PRIMARY KEY
+user_id TEXT UNIQUE (FOREIGN KEY)
+role TEXT (admin|member)
+created_at INTEGER
+```
+
+**user_points**
+```sql
+id TEXT PRIMARY KEY
+user_id TEXT UNIQUE (FOREIGN KEY)
+points INTEGER (default 0)
+updated_at INTEGER
+```
+
 **Query Tips:**
 - Use `WHERE status = 'accepted'` for active mentorships
 - Join users for mentee/mentor names: `SELECT m.*, u.name as mentee_name ...`
 - Check mentor availability: `WHERE available = 1 AND accepting_new_mentees = 1`
+- Calculate rank: `SELECT RANK() OVER (ORDER BY points DESC) as rank FROM user_points`
+- Initialize points on first access: `INSERT OR IGNORE INTO user_points (id, user_id, points, updated_at) VALUES (...)`
+
+---
+
+## Points System
+
+### Overview
+
+The Points System enables gamification by tracking user points and calculating leaderboard rankings. Points are awarded for various activities (completing challenges, publishing blogs, etc.) and displayed throughout the platform.
+
+**Key Design Decisions:**
+- **No Rank Column**: Rank is calculated on-the-fly using SQL window functions, avoiding expensive updates when points change
+- **Auto-initialization**: Points records are created automatically on first access (GET endpoint)
+- **Consistent Timestamps**: Uses Unix timestamps (seconds) for consistency with existing schema
+- **Type Safety**: Shared types between frontend and backend in `src/types/points.ts`
+
+### Database Schema
+
+**user_points table:**
+- `id` (TEXT PRIMARY KEY): Unique identifier
+- `user_id` (TEXT UNIQUE FOREIGN KEY): Reference to users table
+- `points` (INTEGER DEFAULT 0): Current point balance
+- `updated_at` (INTEGER): Last update timestamp (Unix seconds)
+
+**Indexes:**
+- `idx_user_points_user_id`: Fast lookups by user
+- `idx_user_points_points DESC`: Efficient leaderboard sorting
+
+### API Endpoints
+
+**GET /api/v1/users/:id/points** (Public)
+- Returns user points with calculated rank
+- Auto-creates points record (with 0 points) if doesn't exist
+- Response includes rank calculated on-the-fly
+```typescript
+{
+  id: string;
+  user_id: string;
+  points: number;
+  updated_at: number;
+  rank?: number; // Calculated position in leaderboard
+}
+```
+
+**PATCH /api/v1/users/:id/points** (Admin Only)
+- Updates user's total points
+- Requires authentication and admin role
+- Request body: `{ points: number }`
+- Returns updated points with recalculated rank
+
+### Frontend Components
+
+**UserPointsBadge** (`src/react-app/components/UserPointsBadge.tsx`)
+- Displays points with icon and optional rank
+- Props: `points`, `rank`, `showRank`, `variant` (sm|md|lg), `showBadge`
+- Color-coded based on points amount:
+  - Gray (< 100 points)
+  - Orange (100-499 points)
+  - Blue (500-999 points)
+  - Yellow (1000+ points)
+- Responsive design and accessible ARIA labels
+
+**Points Service** (`src/react-app/services/pointsService.ts`)
+- `getUserPoints(userId)`: Fetch user points with rank
+- `updateUserPoints(userId, points)`: Set points (admin only)
+- `addPointsToUser(userId, pointsToAdd)`: Increment points
+- `awardPointsForAction(userId, pointsToAward, action)`: Award with logging
+
+### Helper Functions
+
+Located in `src/types/points.ts`:
+- `normalizeUserPoints()`: Ensure proper typing from database
+- `formatPoints()`: Format with thousands separator (e.g., "1,000")
+- `formatRank()`: Format with ordinal suffix (e.g., "1st", "2nd", "3rd")
+- `getPointsColor()`: Get TailwindCSS color class for badge
+
+### Testing
+
+**Backend Tests** (`src/worker/__tests__/points.test.ts`):
+- Type normalization from database
+- Points formatting and color coding
+- Database storage and updates
+- Rank calculation
+- Authorization checks
+
+**Component Tests** (`src/react-app/__tests__/UserPointsBadge.test.tsx`):
+- Component rendering at different sizes
+- Rank display and formatting
+- Color styling based on points
+- Accessibility attributes
+- Edge cases (zero points, large values, undefined rank)
+
+### Integration Points
+
+**User Types** (`src/types/user.ts`):
+- Added optional `points?: number` field to User interface
+- Added optional `points?: number` to AuthPayload for JWT tokens
+
+**API Types** (`src/types/api.ts`):
+- `GetUserPointsResponse`: Response from GET endpoint
+- `UpdateUserPointsRequest`: Request body for PATCH endpoint
+- `UserPointsResponse`: Simplified response structure
+
+### Internationalization
+
+Translations added to both English and Chinese:
+- `points.title`: "Points System" / "积分系统"
+- `points.label`: "Points" / "积分"
+- `points.rank`: "Rank" / "排名"
+- `points.howToEarn`: "How to Earn Points" / "如何赚取积分"
+- `points.challengeCompletion`: "Complete a challenge" / "完成一个挑战"
+- `points.blogPublish`: "Publish a blog post" / "发布一篇博客"
+- `points.blogFeatured`: "Get your blog featured" / "获得你的博客被精选"
+- `points.mentorshipComplete`: "Complete a mentorship" / "完成一次导师指导"
+
+### Future Enhancements
+
+When implementing future features that award points:
+1. Fetch current points: `const current = await getUserPoints(userId)`
+2. Award points: `await awardPointsForAction(userId, pointsAmount, 'action_name')`
+3. Update JWT token in response to include new points count
+4. Refresh UI to show updated points badge
+
+Example from challenge completion:
+```typescript
+// Award points when challenge is approved
+await awardPointsForAction(userId, challenge.points_reward, 'challenge_completion');
+```
 
 ## Debugging and Monitoring
 

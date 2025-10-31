@@ -6,6 +6,7 @@ export interface User {
   name: string;
   google_id?: string | null;
   role?: UserRole;
+  points?: number;
   created_at: number;
   updated_at: number;
 }
@@ -15,6 +16,7 @@ export interface AuthPayload {
   email: string;
   name: string;
   role?: UserRole;
+  points?: number;
   iat?: number; // Issued at (Unix timestamp in seconds)
   exp?: number; // Expiration time (Unix timestamp in seconds)
 }

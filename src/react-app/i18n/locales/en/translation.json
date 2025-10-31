@@ -204,5 +204,23 @@
     "admin": "Admin",
     "member": "Member",
     "roleLabel": "Role"
+  },
+  "points": {
+    "title": "Points System",
+    "label": "Points",
+    "badge": "{{points}} Points",
+    "rank": "Rank",
+    "noPoints": "No points yet",
+    "earnPoints": "Earn Points",
+    "leaderboard": "Leaderboard",
+    "myPoints": "My Points",
+    "totalPoints": "Total Points",
+    "description": "Earn points by completing challenges, publishing blogs, and participating in the community",
+    "howToEarn": "How to Earn Points",
+    "challengeCompletion": "Complete a challenge",
+    "blogPublish": "Publish a blog post",
+    "blogFeatured": "Get your blog featured",
+    "mentorshipComplete": "Complete a mentorship",
+    "pointsUpdate": "Your points have been updated"
   }
 }

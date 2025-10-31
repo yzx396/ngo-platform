@@ -10,7 +10,9 @@ import type {
   RespondToMatchRequest,
   GetMatchesResponse,
   AssignRoleRequest,
-  GetUserRoleResponse
+  GetUserRoleResponse,
+  GetUserPointsResponse,
+  UpdateUserPointsRequest
 } from "../types/api";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
@@ -26,6 +28,7 @@ import {
 import { createToken } from "./auth/jwt";
 import { AuthPayload } from "../types/user";
 import { UserRole, DEFAULT_ROLE, normalizeUserRole } from "../types/role";
+import { normalizeUserPointsWithRank, INITIAL_POINTS } from "../types/points";
 
 /**
  * Environment variables and bindings for the Worker
@@ -356,6 +359,159 @@ app.get("/api/v1/users/:id/role", async (c) => {
   } catch (err) {
     console.error("Error fetching user role:", err);
     return c.json({ error: "Failed to fetch user role" }, 500);
+  }
+});
+
+// ============================================================================
+// Points System API (/api/v1/users/:id/points)
+// ============================================================================
+
+/**
+ * Helper function to calculate user rank in leaderboard
+ * @param db - Database instance
+ * @param userId - User ID to get rank for
+ * @returns User's rank (1-indexed) or null if user not found
+ */
+async function getUserRank(db: D1Database, userId: string): Promise<number | null> {
+  try {
+    const result = await db.prepare(`
+      SELECT COUNT(*) as count
+      FROM (
+        SELECT RANK() OVER (ORDER BY points DESC) as rank
+        FROM user_points
+      ) as ranked
+      WHERE rank <= (
+        SELECT RANK() OVER (ORDER BY points DESC)
+        FROM user_points
+        WHERE user_id = ?
+      )
+    `).bind(userId).first<{ count: number }>();
+
+    return result ? result.count : null;
+  } catch (err) {
+    console.error("Error calculating rank:", err);
+    return null;
+  }
+}
+
+/**
+ * GET /api/v1/users/:id/points - Get user points and rank
+ * Public endpoint - anyone can view user points and rank
+ */
+app.get("/api/v1/users/:id/points", async (c) => {
+  try {
+    const userId = c.req.param("id");
+
+    // Check if user exists
+    const user = await c.env.platform_db
+      .prepare("SELECT id FROM users WHERE id = ?")
+      .bind(userId)
+      .first();
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // Get user points (or create if doesn't exist)
+    let pointsRecord = await c.env.platform_db
+      .prepare("SELECT * FROM user_points WHERE user_id = ?")
+      .bind(userId)
+      .first<Record<string, unknown>>();
+
+    // If no points record exists, initialize it
+    if (!pointsRecord) {
+      const id = generateId();
+      const timestamp = getTimestamp();
+
+      await c.env.platform_db
+        .prepare("INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)")
+        .bind(id, userId, INITIAL_POINTS, timestamp)
+        .run();
+
+      pointsRecord = {
+        id,
+        user_id: userId,
+        points: INITIAL_POINTS,
+        updated_at: timestamp,
+      };
+    }
+
+    // Calculate rank
+    const rank = await getUserRank(c.env.platform_db, userId);
+
+    const response = normalizeUserPointsWithRank(pointsRecord, rank ?? undefined);
+    return c.json<GetUserPointsResponse>(response);
+  } catch (err) {
+    console.error("Error fetching user points:", err);
+    return c.json({ error: "Failed to fetch user points" }, 500);
+  }
+});
+
+/**
+ * PATCH /api/v1/users/:id/points - Update user points (admin only)
+ * Internal endpoint for awarding or adjusting points
+ */
+app.patch("/api/v1/users/:id/points", requireAuth, requireAdmin, async (c) => {
+  try {
+    const userId = c.req.param("id");
+    const body = await c.req.json<UpdateUserPointsRequest>();
+
+    // Validation: points field required
+    if (body.points === undefined) {
+      return c.json({ error: "points field is required" }, 400);
+    }
+
+    // Validation: points must be a non-negative integer
+    if (!Number.isInteger(body.points) || body.points < 0) {
+      return c.json({ error: "points must be a non-negative integer" }, 400);
+    }
+
+    // Check if user exists
+    const user = await c.env.platform_db
+      .prepare("SELECT id FROM users WHERE id = ?")
+      .bind(userId)
+      .first();
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const timestamp = getTimestamp();
+
+    // Get current points record
+    const pointsRecord = await c.env.platform_db
+      .prepare("SELECT id FROM user_points WHERE user_id = ?")
+      .bind(userId)
+      .first<{ id: string }>();
+
+    if (pointsRecord) {
+      // Update existing record
+      await c.env.platform_db
+        .prepare("UPDATE user_points SET points = ?, updated_at = ? WHERE user_id = ?")
+        .bind(body.points, timestamp, userId)
+        .run();
+    } else {
+      // Create new record
+      const id = generateId();
+      await c.env.platform_db
+        .prepare("INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)")
+        .bind(id, userId, body.points, timestamp)
+        .run();
+    }
+
+    // Fetch updated record and calculate rank
+    const updated = await c.env.platform_db
+      .prepare("SELECT * FROM user_points WHERE user_id = ?")
+      .bind(userId)
+      .first<Record<string, unknown>>();
+
+    const rank = await getUserRank(c.env.platform_db, userId);
+
+    const response = normalizeUserPointsWithRank(updated, rank ?? undefined);
+    return c.json<GetUserPointsResponse>(response);
+  } catch (err) {
+    console.error("Error updating user points:", err);
+    return c.json({ error: "Failed to update user points" }, 500);
   }
 });
 

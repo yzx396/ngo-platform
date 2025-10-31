@@ -205,5 +205,23 @@
     "admin": "管理员",
     "member": "成员",
     "roleLabel": "角色"
+  },
+  "points": {
+    "title": "积分系统",
+    "label": "积分",
+    "badge": "{{points}} 积分",
+    "rank": "排名",
+    "noPoints": "还没有积分",
+    "earnPoints": "赚取积分",
+    "leaderboard": "积分排行榜",
+    "myPoints": "我的积分",
+    "totalPoints": "总积分",
+    "description": "通过完成挑战、发布博客和参与社区互动来赚取积分",
+    "howToEarn": "如何赚取积分",
+    "challengeCompletion": "完成一个挑战",
+    "blogPublish": "发布一篇博客",
+    "blogFeatured": "获得你的博客被精选",
+    "mentorshipComplete": "完成一次导师指导",
+    "pointsUpdate": "你的积分已更新"
   }
 }

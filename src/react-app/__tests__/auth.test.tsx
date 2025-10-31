@@ -567,7 +567,9 @@ describe('API Client Token Attachment', () => {
       </BrowserRouter>
     );
 
-    authUtilsRef.current?.login('api-token-12345', mockUser);
+    await act(async () => {
+      authUtilsRef.current?.login('api-token-12345', mockUser);
+    });
 
     // After login, token should be retrievable
     const token = localStorage.getItem('auth_token');
