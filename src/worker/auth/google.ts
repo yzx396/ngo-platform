@@ -144,9 +144,6 @@ export async function getGoogleUserProfile(
 
   const profile = await response.json() as Record<string, unknown>;
 
-  // Log what Google returned for debugging
-  console.log('Google userinfo response keys:', Object.keys(profile));
-
   // Extract sub and email from id_token if missing
   if (!profile.sub && idToken) {
     const payload = decodeJwt(idToken);
