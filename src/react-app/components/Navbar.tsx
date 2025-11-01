@@ -31,7 +31,7 @@ export function Navbar() {
   const handleLogout = () => {
     logout();
     setIsOpen(false);
-    navigate('/login', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (
