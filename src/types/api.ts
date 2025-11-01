@@ -111,6 +111,26 @@ export interface UserPointsResponse {
   rank?: number; // User's rank in leaderboard
 }
 
+// Leaderboard API
+export interface LeaderboardEntry {
+  user_id: string;
+  name: string;
+  points: number;
+  rank: number; // 1-indexed rank in leaderboard
+}
+
+export interface GetLeaderboardRequest {
+  limit?: number; // Default: 50, max: 100
+  offset?: number; // Default: 0
+}
+
+export interface GetLeaderboardResponse {
+  users: LeaderboardEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // Posts API
 export interface GetPostsRequest {
   limit?: number; // Default: 20

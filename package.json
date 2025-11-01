@@ -16,6 +16,8 @@
 		"db:schema": "npx wrangler d1 execute platform-db-local --local --env local --command=\"SELECT sql FROM sqlite_master WHERE type='table' ORDER BY name;\"",
 		"db:schema:prod": "npx wrangler d1 execute platform-db --command=\"SELECT sql FROM sqlite_master WHERE type='table' ORDER BY name;\"",
 		"db:seed": "tsx scripts/seed-mentors.ts",
+		"db:seed:leaderboard": "tsx scripts/seed-leaderboard.ts",
+		"db:seed:posts": "tsx scripts/seed-posts.ts",
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview",
 		"test": "vitest run",

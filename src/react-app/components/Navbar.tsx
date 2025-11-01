@@ -23,9 +23,8 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: t('common.home') },
-    { href: '/mentors/browse', label: t('common.browseMentors') },
-    { href: '/matches', label: t('common.myMatches') },
-    { href: '/mentor/profile/setup', label: t('common.myProfile') },
+    { href: '/events', label: t('events.title', 'Events') },
+    { href: '/leaderboard', label: t('navigation.leaderboard', 'Leaderboard') },
   ];
 
   const handleLogout = () => {
@@ -53,7 +52,7 @@ export function Navbar() {
 
         {/* Navigation Links - Hidden on mobile, visible on sm+ */}
         <div className="hidden sm:flex items-center gap-1 flex-1 justify-center">
-          {navLinks.slice(1).map((link) => (
+          {navLinks.map((link) => (
             <Link key={link.href} to={link.href}>
               <Button
                 variant={isActive(link.href) ? 'default' : 'ghost'}
@@ -113,7 +112,7 @@ export function Navbar() {
       {isOpen && (
         <div className="sm:hidden border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container px-4 py-2 space-y-2">
-            {navLinks.slice(1).map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 to={link.href}

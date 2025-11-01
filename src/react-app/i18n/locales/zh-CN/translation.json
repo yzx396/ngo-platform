@@ -26,7 +26,9 @@
     "tryAgain": "重试",
     "goHome": "返回主页",
     "noDataAvailable": "暂无数据",
-    "add": "添加"
+    "add": "添加",
+    "you": "你",
+    "name": "名字"
   },
   "navigation": {
     "feed": "动态",
@@ -65,6 +67,28 @@
     "feature2": "获得个性化指导和建议",
     "feature3": "建立有意义的职业关系",
     "feature4": "按照自己的速度学习和成长"
+  },
+  "events": {
+    "title": "活动",
+    "subtitle": "即将举行的社区活动",
+    "calendarTitle": "社区日历",
+    "calendarDescription": "加入我们的社区活动、研讨会和交流机会。浏览完整的活动日历并报名参加您感兴趣的活动。",
+    "viewEventsButton": "查看活动日历",
+    "browseEventsTitle": "浏览活动",
+    "browseEventsDesc": "查看所有即将举行的社区活动",
+    "registerTitle": "轻松注册",
+    "registerDesc": "只需点击几下即可报名参加活动",
+    "remindersTitle": "获取提醒",
+    "remindersDesc": "接收通知和活动更新",
+    "lumaManaged": "ℹ️ 活动在我们的 Luma 日历上管理",
+    "lumaDescription": "您将被导向到我们的官方 Luma 活动页面（在新标签页打开），您可以浏览所有即将举行的活动并报名参加。"
+  },
+  "leaderboard": {
+    "title": "排行榜",
+    "subtitle": "社区顶级贡献者",
+    "rank": "排名",
+    "yourRank": "你的排名：{{rank}}",
+    "noData": "暂无排行榜数据"
   },
   "auth": {
     "loginTitle": "Lead Forward 平台",

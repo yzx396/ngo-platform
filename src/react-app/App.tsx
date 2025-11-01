@@ -17,6 +17,8 @@ import { AuthProvider } from './context/AuthContext';
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage').then(m => ({ default: m.OAuthCallbackPage })));
 const FeedPage = lazy(() => import('./pages/FeedPage').then(m => ({ default: m.FeedPage })));
+const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const MentorBrowse = lazy(() => import('./pages/MentorBrowse').then(m => ({ default: m.MentorBrowse })));
 const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m => ({ default: m.MentorDetailPage })));
 const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(m => ({ default: m.MentorProfileSetup })));
@@ -75,6 +77,12 @@ function AppContent() {
               {/* Feed Page - Main page showing community posts */}
               <Route path="/" element={<FeedPage />} />
 
+              {/* Events Page - Upcoming community events */}
+              <Route path="/events" element={<EventsPage />} />
+
+              {/* Leaderboard Page - User rankings by points */}
+              <Route path="/leaderboard" element={<LeaderboardPage />} />
+
               {/* Public mentor browsing */}
               <Route path="/mentors/browse" element={<MentorBrowse />} />
               <Route path="/mentors/:id" element={<MentorDetailPage />} />
@@ -101,7 +109,6 @@ function AppContent() {
                 - /feed
                 - /challenges
                 - /blogs
-                - /leaderboard
               */}
             </Routes>
           </Layout>

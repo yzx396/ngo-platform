@@ -27,13 +27,15 @@ describe('App', () => {
   describe('Navigation', () => {
     it('should have navigation links', () => {
       render(<App />);
-      // Check for Lead Forward branding logo (Home)
+      // Check for Lead Forward branding logo (Home - clicking logo goes to home)
       expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
-      // Find the first occurrence of Browse Mentors button in navbar
-      const browseMentorsButtons = screen.getAllByRole('button', { name: /Browse Mentors/i });
-      expect(browseMentorsButtons.length).toBeGreaterThan(0);
-      expect(screen.getByRole('button', { name: /My Matches/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /My Profile/i })).toBeInTheDocument();
+      // Check for new navigation links in navbar: Events, Leaderboard
+      // (Home is represented by the logo, not a button)
+      // These buttons appear in both navbar and sidebar, so check for multiple
+      const eventsButtons = screen.getAllByRole('button', { name: /Events/i });
+      const leaderboardButtons = screen.getAllByRole('button', { name: /Leaderboard/i });
+      expect(eventsButtons.length).toBeGreaterThan(0);
+      expect(leaderboardButtons.length).toBeGreaterThan(0);
     });
 
     it('should display main action buttons on home page', async () => {

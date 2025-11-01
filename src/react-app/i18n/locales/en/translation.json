@@ -26,7 +26,9 @@
     "tryAgain": "Try Again",
     "goHome": "Go Home",
     "noDataAvailable": "No data available",
-    "add": "Add"
+    "add": "Add",
+    "you": "You",
+    "name": "Name"
   },
   "navigation": {
     "feed": "Feed",
@@ -65,6 +67,28 @@
     "feature2": "Get personalized guidance and advice",
     "feature3": "Build meaningful professional relationships",
     "feature4": "Learn and grow at your own pace"
+  },
+  "events": {
+    "title": "Events",
+    "subtitle": "Upcoming community events",
+    "calendarTitle": "Community Calendar",
+    "calendarDescription": "Join us for upcoming community events, workshops, and networking opportunities. Browse the full event calendar and register for events that interest you.",
+    "viewEventsButton": "View Events Calendar",
+    "browseEventsTitle": "Browse Events",
+    "browseEventsDesc": "View all upcoming community events and activities",
+    "registerTitle": "Register Easily",
+    "registerDesc": "Sign up for events with just a few clicks",
+    "remindersTitle": "Get Reminders",
+    "remindersDesc": "Receive notifications and event updates",
+    "lumaManaged": "ℹ️ Events are managed on our Luma calendar",
+    "lumaDescription": "You will be directed to our official Luma event page in a new tab where you can browse all upcoming events and register."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Top contributors in our community",
+    "rank": "Rank",
+    "yourRank": "Your rank: {{rank}}",
+    "noData": "No leaderboard data yet"
   },
   "auth": {
     "loginTitle": "Lead Forward Platform",

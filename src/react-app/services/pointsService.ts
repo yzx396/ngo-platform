@@ -1,5 +1,5 @@
 import { apiGet, apiPatch } from './apiClient';
-import type { GetUserPointsResponse, UpdateUserPointsRequest } from '../../types/api';
+import type { GetUserPointsResponse, UpdateUserPointsRequest, GetLeaderboardResponse } from '../../types/api';
 
 /**
  * Points Service
@@ -64,4 +64,23 @@ export async function awardPointsForAction(
   // In a more complete system, this could log the action
   console.log(`Awarding ${pointsToAward} points to ${userId} for: ${action || 'unspecified action'}`);
   return addPointsToUser(userId, pointsToAward);
+}
+
+/**
+ * Get leaderboard - list of users sorted by points
+ * @param limit - Number of users to return (default 50, max 100)
+ * @param offset - Pagination offset (default 0)
+ * @returns Leaderboard with users, total count, and pagination info
+ */
+export async function getLeaderboard(
+  limit: number = 50,
+  offset: number = 0
+): Promise<GetLeaderboardResponse> {
+  const params = new URLSearchParams();
+  if (limit) params.append('limit', limit.toString());
+  if (offset) params.append('offset', offset.toString());
+
+  const queryString = params.toString();
+  const url = `/api/v1/leaderboard${queryString ? `?${queryString}` : ''}`;
+  return apiGet<GetLeaderboardResponse>(url);
 }

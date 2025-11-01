@@ -518,6 +518,71 @@ app.patch("/api/v1/users/:id/points", requireAuth, requireAdmin, async (c) => {
   }
 });
 
+/**
+ * GET /api/v1/leaderboard - Get leaderboard with users sorted by points
+ * Public endpoint - anyone can view the leaderboard
+ */
+app.get("/api/v1/leaderboard", async (c) => {
+  try {
+    // Get query parameters
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : 50;
+    const offset = c.req.query("offset") ? parseInt(c.req.query("offset") as string) : 0;
+
+    // Validation: limit and offset must be valid numbers
+    if (!Number.isInteger(limit) || !Number.isInteger(offset) || limit < 1 || offset < 0) {
+      return c.json({ error: "limit must be a positive integer and offset must be >= 0" }, 400);
+    }
+
+    // Cap limit at 100 to prevent excessive queries
+    const cappedLimit = Math.min(limit, 100);
+
+    // Get total count of users with points
+    const countResult = await c.env.platform_db
+      .prepare("SELECT COUNT(*) as count FROM user_points")
+      .first<{ count: number }>();
+
+    const total = countResult?.count || 0;
+
+    // Get leaderboard: users with points, joined with user names, ranked
+    const leaderboardResult = await c.env.platform_db
+      .prepare(`
+        SELECT
+          up.user_id,
+          u.name,
+          up.points,
+          RANK() OVER (ORDER BY up.points DESC) as rank
+        FROM user_points up
+        JOIN users u ON up.user_id = u.id
+        ORDER BY up.points DESC
+        LIMIT ? OFFSET ?
+      `)
+      .bind(cappedLimit, offset)
+      .all<{
+        user_id: string;
+        name: string;
+        points: number;
+        rank: number;
+      }>();
+
+    const users = (leaderboardResult.results || []).map((row) => ({
+      user_id: row.user_id,
+      name: row.name,
+      points: row.points,
+      rank: row.rank,
+    }));
+
+    return c.json({
+      users,
+      total,
+      limit: cappedLimit,
+      offset,
+    });
+  } catch (err) {
+    console.error("Error fetching leaderboard:", err);
+    return c.json({ error: "Failed to fetch leaderboard" }, 500);
+  }
+});
+
 // ============================================================================
 // Mentor Profile Management API (/api/v1/mentors/profiles)
 // ============================================================================

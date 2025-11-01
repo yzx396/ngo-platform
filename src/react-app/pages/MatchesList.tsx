@@ -103,10 +103,10 @@ export function MatchesList() {
   const completedCount = matches.filter((m) => m.status === 'completed' || m.status === 'rejected').length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="space-y-6">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold">{t('matches.myMatches')}</h1>
-        <p className="text-lg text-muted-foreground">
+        <h1 className="text-3xl font-bold">{t('matches.myMatches')}</h1>
+        <p className="text-muted-foreground">
           {role === 'mentor' ? t('matches.menteeRequests') : t('matches.yourRequests')}
         </p>
       </div>
