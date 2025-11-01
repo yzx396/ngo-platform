@@ -11,52 +11,29 @@ The platform is designed to support mentor-mentee matching and other community f
 ## Development Commands
 
 ```bash
-# Install dependencies
-npm install
+# Core commands
+npm install                                    # Install dependencies
+npm run dev                                    # Start dev server
+npm run build                                  # Build for production
+npm run lint                                   # Run linter
+npm run deploy                                 # Deploy to Cloudflare
 
-# Start local development server (includes both frontend and worker)
-npm run dev
+# Testing
+npm run test                                   # Run all tests
+npm run test:watch                             # Watch mode
+npm run test:watch -- --project=react          # React tests only
+npm run test:watch -- --project=worker         # Worker tests only
 
-# Run linter
-npm run lint
+# Database
+npm run db:migrate                             # Apply local migrations
+npm run db:schema                              # Show local schema
+npm run db:migrate:prod && npm run db:schema:prod  # Production migrations
 
-# Build for production (TypeScript compilation + Vite build)
-npm run build
-
-# Preview production build locally
-npm run preview
-
-# Type-check and build verification (includes dry-run deploy)
-npm run check
-
-# Deploy to Cloudflare Workers
-npm run deploy
-
-# Generate Cloudflare types from wrangler.json
-npm run cf-typegen
-
-# Monitor deployed worker logs
-npx wrangler tail
-
-# Run tests
-npm run test              # Run all tests once
-npm run test:watch        # Run tests in watch mode (auto-rerun on changes)
-npm run test:coverage     # Run tests with coverage report
-npm run test:ui           # Run tests with interactive UI
-
-# Run specific tests (for faster iteration)
-npm run test:watch -- src/react-app/__tests__/App.test.tsx    # Run single test file
-npm run test:watch -- --project=react                         # Run only React tests
-npm run test:watch -- --project=worker                        # Run only Worker tests
-npm run test -- --run src/worker/__tests__/index.test.ts      # Run single test once
-
-# Database migrations (local)
-npm run db:migrate        # Run all pending migrations on local D1 database
-npm run db:schema         # Display the current database schema
-
-# Database migrations (production)
-npm run db:migrate:prod   # Run all pending migrations on production Cloudflare D1
-npm run db:schema:prod    # Display the production database schema
+# Other
+npm run check                                  # Type-check & dry-run deploy
+npm run preview                                # Preview build locally
+npm run cf-typegen                             # Regenerate Cloudflare types
+npx wrangler tail                              # Monitor worker logs
 ```
 
 ## Test-Driven Development Workflow
@@ -65,30 +42,16 @@ This project follows a Test-Driven Development (TDD) approach. **Always write te
 
 ### TDD Cycle: Red-Green-Refactor
 
-1. **Red**: Write a failing test first
-   - Create a test that describes the desired behavior
-   - Run the test to confirm it fails (this validates the test works)
-
+1. **Red**: Write a failing test describing desired behavior
 2. **Green**: Write minimal code to make the test pass
-   - Implement just enough code to satisfy the test
-   - Don't worry about perfect code yet
-
-3. **Refactor**: Improve the code while keeping tests green
-   - Clean up implementation
-   - Remove duplication
-   - Improve readability
-   - Ensure all tests still pass
+3. **Refactor**: Improve code while keeping tests green
 
 ### When to Write Tests
 
-**ALWAYS write tests when:**
-- Adding a new feature (write test first, then implement)
-- Fixing a bug (write test that reproduces bug, then fix)
-- Refactoring existing code (ensure tests exist and pass before/after)
-- Modifying API endpoints or business logic
-- Creating new React components
+**Always write tests for:**
+- New features, bug fixes, refactoring, API changes, and new components
 
-**Tests are NOT optional** - they are part of the definition of "done" for any task.
+**Tests are mandatory** - part of "done" definition for any task.
 
 ### Test Organization
 
@@ -134,7 +97,7 @@ This separation ensures tests run in the correct environment (DOM for React, Nod
 
 ### Testing Frontend (React Components)
 
-Use React Testing Library for component tests:
+Use React Testing Library. Test user-facing behavior, not implementation. Use semantic queries (getByRole, getByLabelText, getByText):
 
 ```typescript
 import { render, screen } from '@testing-library/react';
@@ -142,85 +105,51 @@ import { describe, it, expect } from 'vitest';
 import { MyComponent } from './MyComponent';
 
 describe('MyComponent', () => {
-  it('should render greeting message', () => {
+  it('should render greeting', () => {
     render(<MyComponent name="World" />);
     expect(screen.getByText(/hello world/i)).toBeInTheDocument();
   });
 });
 ```
 
-**Best practices:**
-- Test user-facing behavior, not implementation details
-- Use semantic queries (getByRole, getByLabelText, getByText)
-- Avoid testing internal state
-- Test accessibility (proper ARIA labels, keyboard navigation)
-
 ### Testing Backend (Hono API Routes)
 
-Use Cloudflare Workers testing utilities:
+Test all HTTP methods, error cases, validation, auth flows, and mock dependencies:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
 import app from './index';
 
 describe('API Routes', () => {
-  it('GET /api/health should return 200', async () => {
+  it('GET /api/health returns 200', async () => {
     const req = new Request('http://localhost/api/health');
     const res = await app.fetch(req);
-
     expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data).toEqual({ status: 'ok' });
+    expect(await res.json()).toEqual({ status: 'ok' });
   });
 });
 ```
 
-**Best practices:**
-- Test all HTTP methods (GET, POST, PUT, DELETE)
-- Test error cases (400, 404, 500 responses)
-- Test request validation
-- Test authentication/authorization flows
-- Mock external dependencies (databases, APIs)
-
 ### Running Tests During Development
 
-1. **Start test watcher**: `npm run test:watch`
-   - Automatically reruns tests when files change
-   - Provides instant feedback during development
-
-2. **Write test first** (following TDD)
-   - Test will fail initially (Red)
-
-3. **Implement feature**
-   - Watch tests turn green as you code
-
-4. **Refactor if needed**
-   - Tests ensure you don't break functionality
+1. Start test watcher: `npm run test:watch` (auto-reruns on changes)
+2. Write test first, implement feature, refactor while keeping tests green
 
 ### Before Committing
 
-Always run the full test suite before committing:
-
 ```bash
-npm run test              # Ensure all tests pass
-npm run lint              # Fix any linting issues
-npm run build             # Verify build succeeds
+npm run test              # All tests pass
+npm run lint              # No linting issues
+npm run build             # Build succeeds
 ```
 
 ### Coverage Goals
 
-- Aim for **>80% code coverage** for critical paths
+- **>80% code coverage** for critical paths
 - **100% coverage** for business logic and API handlers
-- View coverage report: `npm run test:coverage`
+- View report: `npm run test:coverage`
 
-### Continuous Integration
-
-Tests run automatically on:
-- Pre-commit (via git hooks, if configured)
-- Pull requests
-- Before deployment
-
-**Never deploy code without passing tests.**
+Never deploy code without passing tests.
 
 ## Architecture
 
@@ -305,12 +234,7 @@ const profile = await mentorService.getProfile(userId);
 
 ### TypeScript Configuration
 
-The root `tsconfig.json` uses project references to coordinate three separate compilation contexts:
-- `tsconfig.app.json`: React app with DOM types and JSX
-- `tsconfig.worker.json`: Worker code with Cloudflare runtime types
-- `tsconfig.node.json`: Build tools and Vite config
-
-All projects use strict mode with `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` enabled.
+Root `tsconfig.json` uses project references for three contexts: app (DOM), worker (Cloudflare), and node (build tools). All use strict mode.
 
 ## Key Dependencies
 
@@ -798,43 +722,11 @@ When adding a new feature with user-facing text:
 
 ### Language Switcher
 
-The app includes a **LanguageSwitcher** component (`src/react-app/components/LanguageSwitcher.tsx`) in the navbar that allows users to toggle between Chinese and English. User preference is automatically saved to localStorage and persists across sessions.
+**LanguageSwitcher** component in navbar. User preference saved to localStorage.
 
 ### Testing with i18n
 
-The test environment is configured to use English translations by default for consistent test behavior. i18n is initialized in `vitest.setup.ts`:
-
-```typescript
-import i18n from './src/react-app/i18n';
-
-// Initialize with English for tests
-i18n.init();
-i18n.changeLanguage('en');
-```
-
-When writing tests, use the actual translated English text:
-
-```typescript
-// ✅ Correct - uses actual English translation
-expect(screen.getByText(/Browse Mentors/i)).toBeInTheDocument();
-
-// ❌ Avoid - hardcoded text that might differ from translation
-expect(screen.getByText(/Search mentors/i)).toBeInTheDocument();
-```
-
-### Performance Considerations
-
-- **Lazy loading**: Translations are bundled with the app (not lazy-loaded per language)
-- **Bundle size**: Translation JSON adds ~15KB gzipped total
-- **Re-renders**: Language changes trigger re-renders only for components using `useTranslation()`
-- **SSR**: Not applicable for this frontend-only app
-
-### Key Statistics
-
-- **Total translation keys**: ~100+ strings
-- **Languages supported**: Chinese (zh-CN) and English (en)
-- **Default UI language**: Simplified Chinese
-- **Coverage**: All user-facing text across all pages and components
+Tests use English by default (configured in `vitest.setup.ts`). Use actual translated English text in tests.
 
 ## Common Development Patterns
 
@@ -1141,56 +1033,11 @@ Located in `src/types/points.ts`:
 
 ### Testing
 
-**Backend Tests** (`src/worker/__tests__/points.test.ts`):
-- Type normalization from database
-- Points formatting and color coding
-- Database storage and updates
-- Rank calculation
-- Authorization checks
-
-**Component Tests** (`src/react-app/__tests__/UserPointsBadge.test.tsx`):
-- Component rendering at different sizes
-- Rank display and formatting
-- Color styling based on points
-- Accessibility attributes
-- Edge cases (zero points, large values, undefined rank)
+Test type normalization, formatting, storage, rank calculation, and authorization. Test component rendering, accessibility, and edge cases.
 
 ### Integration Points
 
-**User Types** (`src/types/user.ts`):
-- Added optional `points?: number` field to User interface
-- Added optional `points?: number` to AuthPayload for JWT tokens
-
-**API Types** (`src/types/api.ts`):
-- `GetUserPointsResponse`: Response from GET endpoint
-- `UpdateUserPointsRequest`: Request body for PATCH endpoint
-- `UserPointsResponse`: Simplified response structure
-
-### Internationalization
-
-Translations added to both English and Chinese:
-- `points.title`: "Points System" / "积分系统"
-- `points.label`: "Points" / "积分"
-- `points.rank`: "Rank" / "排名"
-- `points.howToEarn`: "How to Earn Points" / "如何赚取积分"
-- `points.challengeCompletion`: "Complete a challenge" / "完成一个挑战"
-- `points.blogPublish`: "Publish a blog post" / "发布一篇博客"
-- `points.blogFeatured`: "Get your blog featured" / "获得你的博客被精选"
-- `points.mentorshipComplete`: "Complete a mentorship" / "完成一次导师指导"
-
-### Future Enhancements
-
-When implementing future features that award points:
-1. Fetch current points: `const current = await getUserPoints(userId)`
-2. Award points: `await awardPointsForAction(userId, pointsAmount, 'action_name')`
-3. Update JWT token in response to include new points count
-4. Refresh UI to show updated points badge
-
-Example from challenge completion:
-```typescript
-// Award points when challenge is approved
-await awardPointsForAction(userId, challenge.points_reward, 'challenge_completion');
-```
+Points integrated into User types and API response types.
 
 ---
 
@@ -1287,306 +1134,51 @@ app.get("/api/v1/users/:id/role", async (c) => {
 
 ### Frontend Components
 
-**UserRoleBadge** (`src/react-app/components/UserRoleBadge.tsx`)
-- Displays user's role as a colored badge
-- Props: `role: UserRole | undefined`, `className?: string`
-- Variants:
-  - Admin: Default badge color (prominent)
-  - Member: Secondary badge color (subtle)
-- Translatable: Uses i18n for role display names
-
-**Usage Example:**
-
-```typescript
-import { UserRoleBadge } from './UserRoleBadge';
-import { UserRole } from '../types/role';
-
-export function UserProfile({ user }) {
-  return (
-    <div>
-      <h1>{user.name}</h1>
-      <UserRoleBadge role={user.role} />
-    </div>
-  );
-}
-```
+**UserRoleBadge** (`src/react-app/components/UserRoleBadge.tsx`) displays role as colored badge with translations.
 
 ### Integration with Authentication
 
-Roles are checked at multiple points:
+Roles checked via: JWT payload after login, `requireAdmin` middleware on requests, and conditional UI rendering.
 
-1. **JWT Token**: Role is included in JWT payload after login
-2. **Middleware**: `requireAdmin` middleware validates role on each request
-3. **UI Protection**: Frontend components conditionally render based on user's role
-
-**First Admin Bootstrap:**
-
-See "Bootstrapping First Admin User" section in Authentication System for instructions on creating the first admin user (requires direct database access).
+First admin setup: See "Bootstrapping First Admin User" in Authentication System.
 
 ### Testing
 
-**Backend Tests:**
-- Verify role assignment works (admin only)
-- Test role retrieval for users
-- Test middleware blocks unauthorized requests
-- Test role changes are persisted
-
-**Frontend Tests:**
-- UserRoleBadge renders correct role
-- Admin features hidden from member users
-- Protected routes redirect unauthorized users
-
-### Internationalization
-
-Role names are translated in both English and Chinese:
-```json
-{
-  "roles": {
-    "admin": "Admin",
-    "member": "Member"
-  }
-}
-```
+Test role assignment, retrieval, unauthorized blocking, UI rendering, and authorization checks.
 
 ---
 
 ## Navigation Layout & Sidebar
 
-### Overview
+Two-column layout: sidebar (fixed 256px, hidden on mobile) + scrollable main content.
 
-The platform uses a modern two-column layout with:
-- **Sidebar**: Fixed or collapsible navigation menu (desktop: fixed, mobile: hidden)
-- **Main Content**: Scrollable content area with responsive padding
-- **Navbar**: Top navigation bar with branding and user controls
+**Sidebar Sections:**
+1. **Feed**: Feed (/), Challenges (/challenges), Blogs (/blogs)
+2. **Member Area** (Auth only): My Profile, My Mentorships, My Challenges, My Blogs
+3. **Links**: Leaderboard, Browse Mentors
 
-This layout provides clear information hierarchy and improves user navigation across multiple community features.
+**Components:**
+- `Layout` (`src/react-app/components/Layout.tsx`): Two-column flex layout
+- `Sidebar` (`src/react-app/components/Sidebar.tsx`): Auth-aware navigation with three sections
+- `NavSection`: Reusable section component with active state styling
 
-### Architecture
+Desktop: Sidebar visible and fixed. Mobile: Sidebar hidden, full-width content.
 
-**Layout Component** (`src/react-app/components/Layout.tsx`)
-- Two-column flex layout: `sidebar + main-content`
-- Height: `calc(100vh - 56px)` (full screen minus navbar height)
-- Main content: Scrollable with responsive padding
-- Responsive: Sidebar collapses on mobile (hidden with `hidden md:flex`)
-
-```typescript
-<div className="flex h-[calc(100vh-56px)]">
-  <Sidebar />  {/* Fixed width 256px */}
-  <main className="flex-1 overflow-y-auto">
-    {children}
-  </main>
-</div>
-```
-
-**Sidebar Component** (`src/react-app/components/Sidebar.tsx`)
-- Fixed width: 256px (w-64)
-- Three navigation sections with dividers
-- Authentication-aware: Shows/hides items based on user status
-- Responsive: Hidden on mobile (`hidden md:flex`)
-- Accessibility: Uses semantic nav elements and ARIA attributes
-
-### Navigation Sections
-
-The sidebar organizes navigation into three distinct sections:
-
-#### 1. Feed Section (Always Visible)
-Public-facing community content:
-- **Feed** (/) - Community posts and updates
-- **Challenges** (/challenges) - Browse active challenges
-- **Blogs** (/blogs) - Read community blog posts
-
-#### 2. Member Area (Authenticated Only)
-User-specific functionality (conditionally rendered):
-- **My Profile** (/mentor/profile/setup) - Create/edit mentor profile
-- **My Mentorships** (/matches) - View and manage mentorships
-- **My Challenges** (/my-challenges) - Submit and track challenge progress
-- **My Blogs** (/my-blogs) - Manage published blogs
-
-#### 3. Links Section (Always Visible)
-Miscellaneous public links:
-- **Leaderboard** (/leaderboard) - View user rankings by points
-- **Browse Mentors** (/mentors/browse) - Search mentor profiles
-
-### Responsive Design
-
-**Desktop (md breakpoint and above):**
-- Sidebar visible and fixed
-- Content fills remaining horizontal space
-- Two-column layout maintained
-
-**Mobile (below md breakpoint):**
-- Sidebar hidden (`hidden md:flex`)
-- Full-width content area
-- Future: Hamburger menu toggle for mobile navigation (in navbar)
-
-### Integration with App.tsx
-
-The Layout component wraps all non-authentication routes:
-
-```typescript
-function AppContent() {
-  const isAuthPage = /* check if login page */;
-
-  return (
-    <>
-      {!isAuthPage && <Navbar />}
-      <Suspense fallback={<LoadingFallback />}>
-        {!isAuthPage && (
-          <Layout>
-            <Routes>
-              {/* All routes here get sidebar + main layout */}
-            </Routes>
-          </Layout>
-        )}
-      </Suspense>
-    </>
-  );
-}
-```
-
-### Implementation Details
-
-**NavSection Component** (internal):
-- Reusable component for rendering section with title + links
-- Filters links based on `requiresAuth` prop
-- Applies active state styling based on current pathname
-- Accessible: Uses proper semantic elements and ARIA attributes
-
-**Link Styling:**
-- Active link: Default button variant (highlighted)
-- Inactive link: Ghost button variant (subtle)
-- Icon + label with text truncation for long names
-- Smooth transitions and hover states
-
-### Internationalization
-
-All navigation labels are translatable:
-```json
-{
-  "navigation": {
-    "feed": "Feed",
-    "challenges": "Challenges",
-    "blogs": "Blogs",
-    "myProfile": "My Profile",
-    "myMatches": "My Mentorships",
-    "myChallenges": "My Challenges",
-    "myBlogs": "My Blogs",
-    "leaderboard": "Leaderboard",
-    "memberArea": "Member Area"
-  }
-}
-```
-
-### Future Enhancements
-
-- **Mobile Hamburger Menu**: Toggle sidebar on mobile using hamburger button in navbar
-- **Collapsible Sections**: Allow users to collapse/expand section groups
-- **User Preferences**: Remember user's sidebar state in localStorage
-- **Admin Panel**: Add admin-only navigation section for management features
-- **Breadcrumbs**: Add breadcrumb navigation in main content area
+All labels are translatable via i18n.
 
 ## Debugging and Monitoring
 
-### Local Development Logging
+**Local logging:** Use `console.log/error()` in Worker code (visible in terminal with `npm run dev`).
 
-Use `console.log()` or `console.error()` in Worker code—output appears in terminal:
+**Production logging:** Stream logs with `npx wrangler tail` or `npx wrangler tail --status error`.
 
-```typescript
-app.get('/api/v1/users/:id', async (c) => {
-  const userId = c.req.param('id');
-  console.log('Fetching user:', userId);  // Shows in terminal
+**Database:** View schema with `npm run db:schema`. Execute queries with `wrangler d1 execute platform-db-local --local --command "..."`
 
-  const user = await db.prepare('SELECT * FROM users WHERE id = ?')
-    .bind(userId)
-    .first();
+**Frontend:** Check AuthContext in React DevTools. Verify `localStorage.getItem('authToken')`. Check network tab for API requests.
 
-  console.error('Query error:', error);    // Error output
-  return c.json(user);
-});
-```
+**Performance:** Select only needed columns (not `SELECT *`). Check indexes on queries. For bundle size, analyze `dist/` after build.
 
-Run `npm run dev` and check the terminal output.
-
-### Production Logging
-
-Monitor Cloudflare Worker logs:
-
-```bash
-# Stream live logs from your deployed worker
-npx wrangler tail --format json
-
-# Filter for specific error level
-npx wrangler tail --status error
-```
-
-### Testing Database Locally
-
-View your local database using D1 CLI:
-
-```bash
-# List all tables
-npm run db:schema
-
-# Execute raw SQL query
-wrangler d1 execute platform-db-local --local --command "SELECT COUNT(*) FROM mentor_profiles;"
-
-# Export database
-wrangler d1 execute platform-db-local --local --command "SELECT * FROM users;" > users_export.sql
-```
-
-### Frontend Debugging
-
-**React DevTools:**
-- Check AuthContext state in React DevTools
-- Verify localStorage tokens: `localStorage.getItem('authToken')`
-- Check network tab for API requests and responses
-
-**Common Issues:**
-```typescript
-// Issue: Component not re-rendering after token update
-// Solution: Ensure useAuth hook is called correctly
-const { user, login, logout } = useAuth();  // ✅ Correct
-
-// Issue: 401 errors on protected routes
-// Check: Is token stored in localStorage?
-// Check: Is apiClient attaching token to requests?
-console.log(localStorage.getItem('authToken'));
-```
-
-### Performance Monitoring
-
-**Database Query Performance:**
-
-For slow queries, check:
-1. Are you selecting only needed columns? (Not `SELECT *`)
-2. Do relevant columns have indexes?
-3. Are you using bit flag queries efficiently?
-
-```typescript
-// ✅ Good: Select only needed fields
-const results = await db.prepare(`
-  SELECT id, name, rate FROM mentor_profiles WHERE available = 1
-`).all();
-
-// ❌ Avoid: Selecting all fields
-const results = await db.prepare(`
-  SELECT * FROM mentor_profiles
-`).all();
-```
-
-**Bundle Size:**
-
-Check your build output after `npm run build`:
-- Frontend bundle is in `dist/client/`
-- Worker bundle is in `dist/worker/`
-- Translation JSON is ~15KB gzipped (acceptable)
-
-View build analysis:
-```bash
-npm run build
-# Check dist/ directory sizes
-ls -lh dist/client/assets/
-```
+**Common issues:** 401 errors = check token in localStorage. Components not updating = ensure useAuth hook called. For slow queries = check indexes and column selection.
 
 ## Quick Troubleshooting
 
