@@ -128,6 +128,11 @@ export function Sidebar() {
   // Links section - always visible
   const linksSection: NavLink[] = [
     {
+      href: '/events',
+      label: t('navigation.events', 'Events'),
+      icon: '📅',
+    },
+    {
       href: '/leaderboard',
       label: t('navigation.leaderboard', 'Leaderboard'),
       icon: '🏆',

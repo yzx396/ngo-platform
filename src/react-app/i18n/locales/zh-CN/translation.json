@@ -42,6 +42,7 @@
     "links": "链接",
     "about": "关于",
     "help": "帮助",
+    "events": "活动",
     "leaderboard": "排行榜"
   },
   "home": {
@@ -70,7 +71,19 @@
   },
   "events": {
     "title": "活动",
-    "subtitle": "即将举行的社区活动",
+    "subtitle": "发现并参加我们的社区活动",
+    "upcomingEvents": "即将举行的活动",
+    "pastEvents": "过去的活动",
+    "noEvents": "未找到活动",
+    "location": "地点",
+    "price": "价格",
+    "availability": "剩余位置",
+    "spotsRemaining": "个位置",
+    "soldOut": "已售罄",
+    "hosts": "主持人",
+    "hostCount": "位主持人",
+    "attendees": "{{count}} 名参与者",
+    "viewEvent": "查看活动",
     "calendarTitle": "社区日历",
     "calendarDescription": "加入我们的社区活动、研讨会和交流机会。浏览完整的活动日历并报名参加您感兴趣的活动。",
     "viewEventsButton": "查看活动日历",

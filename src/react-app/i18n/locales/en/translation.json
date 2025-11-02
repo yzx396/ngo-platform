@@ -42,6 +42,7 @@
     "links": "Links",
     "about": "About",
     "help": "Help",
+    "events": "Events",
     "leaderboard": "Leaderboard"
   },
   "home": {
@@ -70,7 +71,19 @@
   },
   "events": {
     "title": "Events",
-    "subtitle": "Upcoming community events",
+    "subtitle": "Discover and join our community events",
+    "upcomingEvents": "Upcoming Events",
+    "pastEvents": "Past Events",
+    "noEvents": "No events found",
+    "location": "Location",
+    "price": "Price",
+    "availability": "Availability",
+    "spotsRemaining": "spots",
+    "soldOut": "Sold Out",
+    "hosts": "Hosts",
+    "hostCount": "hosts",
+    "attendees": "{{count}} attendees",
+    "viewEvent": "View Event",
     "calendarTitle": "Community Calendar",
     "calendarDescription": "Join us for upcoming community events, workshops, and networking opportunities. Browse the full event calendar and register for events that interest you.",
     "viewEventsButton": "View Events Calendar",

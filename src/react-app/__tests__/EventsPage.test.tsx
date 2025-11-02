@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
@@ -9,6 +9,10 @@ import { EventsPage } from '../pages/EventsPage';
 global.window.open = vi.fn();
 
 describe('EventsPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should render the events page title', () => {
     render(
       <I18nextProvider i18n={i18n}>
@@ -28,21 +32,43 @@ describe('EventsPage', () => {
       </I18nextProvider>
     );
 
-    expect(screen.getByText('Upcoming community events')).toBeInTheDocument();
+    expect(screen.getByText(/Discover and join our community events|发现并参加我们的社区活动/)).toBeInTheDocument();
   });
 
-  it('should have a view events button', () => {
+  it('should display upcoming events section', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
       </I18nextProvider>
     );
 
-    const button = screen.getByRole('button', { name: /View Events Calendar/i });
-    expect(button).toBeInTheDocument();
+    expect(screen.getByText(/Upcoming Events|即将举行的活动/)).toBeInTheDocument();
   });
 
-  it('should open Luma calendar when button is clicked', async () => {
+  it('should display event cards with event details', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for event title (upcoming event)
+    expect(screen.getByText(/Claude Code 实战工作坊/)).toBeInTheDocument();
+
+    // Check for location - there should be multiple San Jose entries
+    const locationElements = screen.getAllByText(/San Jose/);
+    expect(locationElements.length).toBeGreaterThan(0);
+
+    // Check for price - there should be multiple prices in the page
+    const priceElements = screen.getAllByText(/USD|Free/);
+    expect(priceElements.length).toBeGreaterThan(0);
+
+    // Check for hosts - there should be multiple host displays
+    const hostElements = screen.getAllByText(/hosts/);
+    expect(hostElements.length).toBeGreaterThan(0);
+  });
+
+  it('should open event in Luma when clicked', async () => {
     const user = userEvent.setup();
     render(
       <I18nextProvider i18n={i18n}>
@@ -50,50 +76,109 @@ describe('EventsPage', () => {
       </I18nextProvider>
     );
 
-    const button = screen.getByRole('button', { name: /View Events Calendar/i });
-    await user.click(button);
+    // Find and click the event card
+    const eventTitle = screen.getByText(/Claude Code 实战工作坊/);
+    const eventCard = eventTitle.closest('div');
 
-    expect(window.open).toHaveBeenCalledWith('https://luma.com/leadforward', '_blank');
+    if (eventCard) {
+      await user.click(eventCard);
+    }
+
+    expect(window.open).toHaveBeenCalledWith('https://luma.com/leadforward/o4f5akc4', '_blank');
   });
 
-  it('should display feature cards', () => {
+  it('should display event date and time', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
       </I18nextProvider>
     );
 
-    // Feature titles use translation keys
-    expect(screen.getByText(/Browse Events|浏览活动/)).toBeInTheDocument();
-    expect(screen.getByText(/Register Easily|轻松注册/)).toBeInTheDocument();
-    expect(screen.getByText(/Get Reminders|获取提醒/)).toBeInTheDocument();
+    // The event date should be displayed (Nov 15, 2025)
+    expect(screen.getByText(/Nov 15/)).toBeInTheDocument();
+    // Time should be displayed - check for PM or AM indicator
+    const eventContainer = screen.getByText(/Claude Code 实战工作坊/).closest('div');
+    expect(eventContainer).toBeInTheDocument();
+    // Look for either PM or the time separator
+    const pageText = eventContainer?.textContent || '';
+    expect(pageText).toMatch(/PM|AM|6|18/);
   });
 
-  it('should have info about events being managed on Luma', () => {
+  it('should display availability information', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
       </I18nextProvider>
     );
 
-    // Check for Luma managed message (in English by default in tests)
-    const lumaText = screen.getByText(/Events are managed on our Luma calendar|活动在我们的 Luma 日历上管理/);
-    expect(lumaText).toBeInTheDocument();
+    // Check for spots remaining
+    expect(screen.getByText(/12 spots/)).toBeInTheDocument();
   });
 
-  it('should explain that users will be directed to Luma', () => {
+  it('should display attendee count', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
       </I18nextProvider>
     );
 
-    expect(
-      screen.getByText(/official Luma event page|官方 Luma 活动页面/, { exact: false })
-    ).toBeInTheDocument();
+    // Check for attendee count - there should be multiple attendee displays
+    const attendeeElements = screen.getAllByText(/attendees/);
+    expect(attendeeElements.length).toBeGreaterThan(0);
   });
 
-  it('should be accessible with proper heading hierarchy', () => {
+  it('should display location information', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for city names in the page - there should be multiple cities
+    const cityElements = screen.getAllByText(/San Jose|Burlingame|Cupertino/);
+    expect(cityElements.length).toBeGreaterThan(0);
+  });
+
+  it('should display price information', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for price (USD 30.00 or USD 30)
+    const priceElements = screen.getAllByText(/USD 30|30.00/);
+    expect(priceElements.length).toBeGreaterThan(0);
+  });
+
+  it('should display hosts count', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for hosts information - there should be multiple host count displays
+    const hostElements = screen.getAllByText(/hosts/);
+    expect(hostElements.length).toBeGreaterThan(0);
+  });
+
+  it('should have event image', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for event image
+    const images = screen.getAllByRole('img');
+    const eventImage = images.find((img) =>
+      img.getAttribute('alt')?.includes('Claude Code')
+    );
+    expect(eventImage).toBeInTheDocument();
+  });
+
+  it('should have proper heading hierarchy', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
@@ -101,9 +186,58 @@ describe('EventsPage', () => {
     );
 
     const mainHeading = screen.getByRole('heading', { level: 1 });
-    const subHeading = screen.getByRole('heading', { level: 2 });
+    const subHeadings = screen.getAllByRole('heading', { level: 2 });
 
-    expect(mainHeading.textContent).toMatch(/Events|活动/);
-    expect(subHeading.textContent).toMatch(/Community Calendar|社区日历/);
+    expect(mainHeading.textContent).toContain('Events');
+    expect(subHeadings.length).toBeGreaterThan(0);
+    expect(subHeadings[0].textContent).toMatch(/Upcoming|即将/);
+  });
+
+  it('should have "View Event" link visible', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for "View Event" text - there should be multiple (one for each event)
+    const viewEventLinks = screen.getAllByText(/View Event|查看活动/);
+    expect(viewEventLinks.length).toBeGreaterThan(0);
+  });
+
+  it('should display both upcoming and past events sections', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for both sections
+    expect(screen.getByText(/Upcoming Events|即将举行的活动/)).toBeInTheDocument();
+    expect(screen.getByText(/Past Events|过去的活动/)).toBeInTheDocument();
+  });
+
+  it('should display past events from the data', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Check for some past event titles
+    expect(screen.getByText(/压力管理与情绪调适工作坊/)).toBeInTheDocument();
+    expect(screen.getByText(/Speed Mentoring 快速导师面对面/)).toBeInTheDocument();
+  });
+
+  it('should have correct number of event cards', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <EventsPage />
+      </I18nextProvider>
+    );
+
+    // Should have 9 events total (1 upcoming + 8 past)
+    const viewEventLinks = screen.getAllByText(/View Event|查看活动/);
+    expect(viewEventLinks.length).toBe(9);
   });
 });
