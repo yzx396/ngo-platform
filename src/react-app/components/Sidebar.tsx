@@ -93,6 +93,12 @@ export function Sidebar() {
 
   // Member Area section - authenticated only
   const memberAreaLinks: NavLink[] = [
+   {
+      href: '/mentors/browse',
+      label: t('common.browseMentors', 'Browse Mentors'),
+      icon: '🔍',
+      requiresAuth: true,
+    },
     {
       href: '/mentor/profile/setup',
       label: t('navigation.myProfile', 'My Profile'),
@@ -125,11 +131,6 @@ export function Sidebar() {
       href: '/leaderboard',
       label: t('navigation.leaderboard', 'Leaderboard'),
       icon: '🏆',
-    },
-    {
-      href: '/mentors/browse',
-      label: t('common.browseMentors', 'Browse Mentors'),
-      icon: '🔍',
     },
   ];
 

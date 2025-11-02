@@ -714,9 +714,9 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
 });
 
 /**
- * GET /api/v1/mentors/profiles/by-user/:userId - Get mentor profile by user ID
+ * GET /api/v1/mentors/profiles/by-user/:userId - Get mentor profile by user ID (requires authentication)
  */
-app.get("/api/v1/mentors/profiles/by-user/:userId", async (c) => {
+app.get("/api/v1/mentors/profiles/by-user/:userId", requireAuth, async (c) => {
   const userId = c.req.param("userId");
 
   const profile = await c.env.platform_db
@@ -732,9 +732,9 @@ app.get("/api/v1/mentors/profiles/by-user/:userId", async (c) => {
 });
 
 /**
- * GET /api/v1/mentors/profiles/:id - Get mentor profile by ID
+ * GET /api/v1/mentors/profiles/:id - Get mentor profile by ID (requires authentication)
  */
-app.get("/api/v1/mentors/profiles/:id", async (c) => {
+app.get("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
   const id = c.req.param("id");
 
   const profile = await c.env.platform_db
@@ -936,8 +936,10 @@ app.delete("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
  * - nick_name: partial nickname search (case-insensitive)
  * - limit: results per page (default: 20, max: 100)
  * - offset: pagination offset (default: 0)
+ *
+ * Note: This endpoint requires authentication
  */
-app.get("/api/v1/mentors/search", async (c) => {
+app.get("/api/v1/mentors/search", requireAuth, async (c) => {
   try {
     // Parse query parameters
     const url = new URL(c.req.url);

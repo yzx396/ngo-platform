@@ -38,16 +38,16 @@ describe('App', () => {
       expect(leaderboardButtons.length).toBeGreaterThan(0);
     });
 
-    it('should display main action buttons on home page', async () => {
+    it('should display public navigation links on home page', async () => {
       render(<App />);
       // Wait for HomePage to load
       await waitFor(() => {
-        // Check for Browse Mentors link (appears in navbar and sidebar)
-        const browseMentorsLinks = screen.getAllByRole('link', { name: /Browse Mentors/i });
-        expect(browseMentorsLinks.length).toBeGreaterThan(0);
-        // Check for Feed link in sidebar
+        // Check for Feed link in sidebar (public)
         const feedLinks = screen.getAllByRole('link', { name: /Feed/i });
         expect(feedLinks.length).toBeGreaterThan(0);
+        // Check for Leaderboard link (public)
+        const leaderboardLinks = screen.queryAllByRole('link', { name: /Leaderboard/i });
+        expect(leaderboardLinks.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
   });

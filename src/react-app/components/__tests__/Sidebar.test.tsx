@@ -41,11 +41,17 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /blogs/i })).toBeInTheDocument();
   });
 
-  it('should render Links section with Leaderboard and Browse Mentors', () => {
+  it('should not render Browse Mentors link when not authenticated', () => {
+    // Ensure no auth token - Browse Mentors requires authentication
+    localStorage.removeItem('auth_token');
     renderSidebar();
 
+    // Browse Mentors link should NOT be visible for unauthenticated users
+    const browseMentorsLinks = screen.queryAllByRole('link', { name: /browse mentors/i });
+    expect(browseMentorsLinks).toHaveLength(0);
+
+    // But Leaderboard link should be visible (it's public)
     expect(screen.getByRole('link', { name: /leaderboard/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /browse mentors/i })).toBeInTheDocument();
   });
 
   it('should conditionally show Member Area section based on auth state', () => {

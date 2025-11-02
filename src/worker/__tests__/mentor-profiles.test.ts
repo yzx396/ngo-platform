@@ -446,8 +446,74 @@ describe('Mentor Profile CRUD API', () => {
   // GET /api/v1/mentors/profiles/:id - Get Mentor Profile by ID
   // ==========================================================================
 
-  describe('GET /api/v1/mentors/profiles/:id', () => {
-    it('should return mentor profile when ID exists', async () => {
+  describe('GET /api/v1/mentors/profiles/:id - Authentication requirement', () => {
+    it('should return 401 when no authentication headers provided', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: `GetTestMentor_${Date.now()}`,
+          bio: 'Bio for get test',
+          mentoring_levels: MentoringLevel.Staff,
+          payment_types: PaymentType.Crypto,
+          hourly_rate: 100,
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Try to get profile without authentication
+      const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'GET',
+      });
+      const getRes = await app.fetch(getReq, mockEnv);
+
+      expect(getRes.status).toBe(401);
+      const data = await getRes.json();
+      expect(data.error).toContain('Unauthorized');
+    });
+
+    it('should return 401 when invalid authentication token provided', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: `InvalidAuthTest_${Date.now()}`,
+          bio: 'Bio for invalid auth test',
+          mentoring_levels: MentoringLevel.Entry,
+          payment_types: PaymentType.Venmo,
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Try to get profile with invalid token
+      const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer invalid-token',
+        },
+      });
+      const getRes = await app.fetch(getReq, mockEnv);
+
+      expect(getRes.status).toBe(401);
+    });
+  });
+
+  describe('GET /api/v1/mentors/profiles/:id - Get mentor profile (Protected)', () => {
+    it('should return mentor profile when ID exists (requires authentication)', async () => {
       // Create a profile first
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
 
@@ -469,9 +535,12 @@ describe('Mentor Profile CRUD API', () => {
       const createRes = await app.fetch(createReq, mockEnv);
       const created = await createRes.json();
 
-      // Get the profile
+      // Get the profile with authentication
       const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const getRes = await app.fetch(getReq, mockEnv);
 
@@ -495,8 +564,13 @@ describe('Mentor Profile CRUD API', () => {
     });
 
     it('should return 404 when profile does not exist', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/profiles/nonexistent-id', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -539,6 +613,9 @@ describe('Mentor Profile CRUD API', () => {
       // Get the profile and verify boolean types are preserved
       const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const getRes = await app.fetch(getReq, mockEnv);
       expect(getRes.status).toBe(200);
@@ -748,9 +825,12 @@ describe('Mentor Profile CRUD API', () => {
       const data = await deleteRes.json();
       expect(data).toEqual({ success: true });
 
-      // Verify profile is deleted (should return 404)
+      // Verify profile is deleted (should return 404 with auth)
       const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       const getRes = await app.fetch(getReq, mockEnv);
       expect(getRes.status).toBe(404);

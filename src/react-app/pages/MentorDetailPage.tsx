@@ -10,7 +10,6 @@ import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { getLevelNames, getPaymentTypeNames, getDomainNames, getTopicNames } from '../../types/mentor';
 import { getMentorProfile } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
-import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
 /**
@@ -22,7 +21,7 @@ export function MentorDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  // Note: Authentication is handled by ProtectedRoute wrapper, no need to check here
   const [mentor, setMentor] = useState<MentorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,11 +50,7 @@ export function MentorDetailPage() {
   }, [id]);
 
   const handleRequestMentorship = () => {
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: `/mentors/${id}` } });
-      return;
-    }
-
+    // Open dialog (auth already checked by ProtectedRoute)
     setIsDialogOpen(true);
   };
 

@@ -83,9 +83,23 @@ function AppContent() {
               {/* Leaderboard Page - User rankings by points */}
               <Route path="/leaderboard" element={<LeaderboardPage />} />
 
-              {/* Public mentor browsing */}
-              <Route path="/mentors/browse" element={<MentorBrowse />} />
-              <Route path="/mentors/:id" element={<MentorDetailPage />} />
+              {/* Protected mentor browsing - requires authentication */}
+              <Route
+                path="/mentors/browse"
+                element={
+                  <ProtectedRoute>
+                    <MentorBrowse />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mentors/:id"
+                element={
+                  <ProtectedRoute>
+                    <MentorDetailPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Routes */}
               <Route

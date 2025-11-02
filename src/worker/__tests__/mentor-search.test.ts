@@ -3,10 +3,10 @@
  * Following TDD: Write tests FIRST, then implement the API
  *
  * Endpoint under test:
- * - GET /api/v1/mentors/search - Search and filter mentor profiles (PUBLIC API)
+ * - GET /api/v1/mentors/search - Search and filter mentor profiles (PROTECTED API - requires authentication)
  *
  * Key features to test:
- * - PUBLIC API: No authentication required
+ * - PROTECTED API: Authentication required
  * - Bit flag filtering (mentoring_levels, payment_types)
  * - Hourly rate range filtering
  * - Nickname search (partial match)
@@ -260,24 +260,60 @@ describe('Mentor Search API', () => {
   });
 
   // ==========================================================================
-  // Public API Access (No Authentication Required)
+  // Authentication Requirement (PROTECTED API)
   // ==========================================================================
 
-  describe('GET /api/v1/mentors/search - Public API access', () => {
-    it('should be accessible without any authentication headers', async () => {
-      // Create a test mentor
-      const user = await createTestUser(mockEnv, 'mentor@example.com', 'Test Mentor');
+  describe('GET /api/v1/mentors/search - Authentication requirement', () => {
+    it('should return 401 when no authentication headers provided', async () => {
+      const req = new Request('http://localhost/api/v1/mentors/search', {
+        method: 'GET',
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+      const data = await res.json();
+      expect(data.error).toContain('Unauthorized');
+    });
+
+    it('should return 401 when invalid authentication token provided', async () => {
+      const req = new Request('http://localhost/api/v1/mentors/search', {
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer invalid-token',
+        },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(401);
+    });
+  });
+
+  // ==========================================================================
+  // Protected API Access (Authentication Required)
+  // ==========================================================================
+
+  describe('GET /api/v1/mentors/search - Protected API access', () => {
+    it('should be accessible with valid authentication headers', async () => {
+      // Create test user and mentor
+      const mentorUser = await createTestUser(mockEnv, 'mentor@example.com', 'Test Mentor');
+
       await createTestMentorProfile(mockEnv, {
-        user_id: user.id,
+        user_id: mentorUser.id,
         nick_name: 'PublicMentor',
         bio: 'Publicly accessible mentor',
         mentoring_levels: MentoringLevel.Entry,
         payment_types: PaymentType.Venmo,
       });
 
-      // No Authorization header - completely public API
+      // Create another user to search mentors
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -287,7 +323,7 @@ describe('Mentor Search API', () => {
       expect(data.mentors[0].nick_name).toBe('PublicMentor');
     });
 
-    it('should work with filters without authentication', async () => {
+    it('should work with filters when authenticated', async () => {
       // Create test mentors
       const user1 = await createTestUser(mockEnv, 'mentor1@example.com', 'Mentor One');
       const user2 = await createTestUser(mockEnv, 'mentor2@example.com', 'Mentor Two');
@@ -310,9 +346,16 @@ describe('Mentor Search API', () => {
         hourly_rate: 100,
       });
 
-      // Test multiple filters without authentication
+      // Create searcher user and token
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
+      // Test multiple filters with authentication
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=1&hourly_rate_max=75', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -327,8 +370,8 @@ describe('Mentor Search API', () => {
   // Basic Search (No Filters)
   // ==========================================================================
 
-  describe('GET /api/v1/mentors/search - Basic search (PUBLIC API)', () => {
-    it('should return all mentor profiles when no filters provided (no authentication required)', async () => {
+  describe('GET /api/v1/mentors/search - Basic search (PROTECTED API)', () => {
+    it('should return all mentor profiles when no filters provided (requires authentication)', async () => {
       // Create test mentors
       const user1 = await createTestUser(mockEnv, 'mentor1@example.com', 'Mentor One');
       const user2 = await createTestUser(mockEnv, 'mentor2@example.com', 'Mentor Two');
@@ -349,9 +392,15 @@ describe('Mentor Search API', () => {
         payment_types: PaymentType.Paypal,
       });
 
-      // PUBLIC API: No authentication headers required
+      // Create searcher user and token
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -367,10 +416,16 @@ describe('Mentor Search API', () => {
       expect(data.offset).toBe(0); // default
     });
 
-    it('should return empty array when no mentors exist (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should return empty array when no mentors exist (requires authentication)', async () => {
+      // Create a test user with auth token
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -419,10 +474,15 @@ describe('Mentor Search API', () => {
       });
     });
 
-    it('should filter mentors with Entry level (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with Entry level (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=1', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -433,10 +493,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors.every((m: Record<string, unknown>) => ((m.mentoring_levels as number) & MentoringLevel.Entry) > 0)).toBe(true);
     });
 
-    it('should filter mentors with Senior level (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with Senior level (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=2', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -446,12 +511,17 @@ describe('Mentor Search API', () => {
       expect(data.mentors[0].nick_name).toBe('EntrySeniorMentor');
     });
 
-    it('should filter mentors with Entry OR Senior (bit flag: 3) (no authentication required)', async () => {
+    it('should filter mentors with Entry OR Senior (bit flag: 3) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, 'searcher@example.com', 'Searcher User');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const levels = MentoringLevel.Entry | MentoringLevel.Senior; // 3
-      // PUBLIC API: No authentication headers required
 
       const req = new Request(`http://localhost/api/v1/mentors/search?mentoring_levels=${levels}`, {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -461,10 +531,15 @@ describe('Mentor Search API', () => {
       expect(data.total).toBe(2);
     });
 
-    it('should filter mentors with Staff level (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with Staff level (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=4', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -473,13 +548,17 @@ describe('Mentor Search API', () => {
       expect(data.mentors).toHaveLength(1); // Only StaffManagementMentor
     });
 
-    it('should return mentors that match ANY level in the filter (bitwise AND) (no authentication required)', async () => {
+    it('should return mentors that match ANY level in the filter (bitwise AND) (requires authentication)', async () => {
       // Search for all levels combined (15 = Entry|Senior|Staff|Management)
       // This should return all mentors since they all have at least one of these levels
-      // PUBLIC API: No authentication headers required
-      
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=15', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -516,10 +595,15 @@ describe('Mentor Search API', () => {
       });
     });
 
-    it('should filter mentors accepting Venmo (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors accepting Venmo (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=1', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -529,10 +613,15 @@ describe('Mentor Search API', () => {
       expect(data.total).toBe(2);
     });
 
-    it('should filter mentors accepting Paypal (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors accepting Paypal (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=2', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -542,10 +631,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors[0].nick_name).toBe('VenmoPaypalMentor');
     });
 
-    it('should filter mentors accepting Crypto (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors accepting Crypto (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?payment_types=32', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -594,10 +688,15 @@ describe('Mentor Search API', () => {
       });
     });
 
-    it('should filter mentors with hourly_rate_max (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with hourly_rate_max (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_max=100', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -608,10 +707,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors.every((m: Record<string, unknown>) => (m.hourly_rate as number) <= 100)).toBe(true);
     });
 
-    it('should filter mentors with hourly_rate_min (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with hourly_rate_min (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_min=50', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -622,10 +726,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors.every((m: Record<string, unknown>) => (m.hourly_rate as number) >= 50)).toBe(true);
     });
 
-    it('should filter mentors with both hourly_rate_min and hourly_rate_max (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should filter mentors with both hourly_rate_min and hourly_rate_max (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?hourly_rate_min=50&hourly_rate_max=100', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -671,10 +780,15 @@ describe('Mentor Search API', () => {
       });
     });
 
-    it('should search mentors by nickname (partial match) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should search mentors by nickname (partial match) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=Code', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -685,10 +799,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors.every((m: Record<string, unknown>) => (m.nick_name as string).includes('Code'))).toBe(true);
     });
 
-    it('should be case-insensitive for nickname search (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should be case-insensitive for nickname search (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=code', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -697,10 +816,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors).toHaveLength(2); // CodeMaster and CodeNinja
     });
 
-    it('should return empty when nickname does not match (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should return empty when nickname does not match (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?nick_name=Python', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -730,10 +854,15 @@ describe('Mentor Search API', () => {
       }
     });
 
-    it('should use default pagination (limit: 20, offset: 0) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should use default pagination (limit: 20, offset: 0) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -745,10 +874,15 @@ describe('Mentor Search API', () => {
       expect(data.offset).toBe(0);
     });
 
-    it('should respect custom limit (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should respect custom limit (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -759,10 +893,15 @@ describe('Mentor Search API', () => {
       expect(data.limit).toBe(10);
     });
 
-    it('should respect offset for pagination (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should respect offset for pagination (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10&offset=20', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -774,10 +913,15 @@ describe('Mentor Search API', () => {
       expect(data.offset).toBe(20);
     });
 
-    it('should handle offset beyond total results (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should handle offset beyond total results (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?limit=10&offset=100', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -826,10 +970,15 @@ describe('Mentor Search API', () => {
       });
     });
 
-    it('should combine mentoring_levels and payment_types filters (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should combine mentoring_levels and payment_types filters (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=2&payment_types=1', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -839,10 +988,15 @@ describe('Mentor Search API', () => {
       expect(data.total).toBe(2);
     });
 
-    it('should combine all filters (levels, payment, rate, nickname) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should combine all filters (levels, payment, rate, nickname) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=2&payment_types=1&hourly_rate_max=80&nick_name=Code', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -852,10 +1006,15 @@ describe('Mentor Search API', () => {
       expect(data.mentors[0].nick_name).toBe('CodeMaster');
     });
 
-    it('should return empty when combined filters match nothing (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should return empty when combined filters match nothing (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=4&payment_types=32&hourly_rate_max=10', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -871,10 +1030,15 @@ describe('Mentor Search API', () => {
   // ==========================================================================
 
   describe('Edge cases', () => {
-    it('should handle invalid limit (negative) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should handle invalid limit (negative) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?limit=-10', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -883,10 +1047,15 @@ describe('Mentor Search API', () => {
       expect(data).toHaveProperty('error');
     });
 
-    it('should handle invalid offset (negative) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should handle invalid offset (negative) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?offset=-10', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -895,10 +1064,15 @@ describe('Mentor Search API', () => {
       expect(data).toHaveProperty('error');
     });
 
-    it('should handle limit exceeding maximum (e.g., 100) (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should handle limit exceeding maximum (e.g., 100) (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?limit=200', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 
@@ -907,10 +1081,15 @@ describe('Mentor Search API', () => {
       expect(data.error.toLowerCase()).toContain('limit');
     });
 
-    it('should handle non-numeric query parameters gracefully (no authentication required)', async () => {
-      // PUBLIC API: No authentication headers required
+    it('should handle non-numeric query parameters gracefully (requires authentication)', async () => {
+      const searcherUser = await createTestUser(mockEnv, `searcher-${Date.now()}@example.com`, 'Searcher');
+      const searcherToken = await createTestToken(searcherUser.id as string, searcherUser.email as string, searcherUser.name as string);
+
       const req = new Request('http://localhost/api/v1/mentors/search?mentoring_levels=abc', {
         method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${searcherToken}`,
+        },
       });
       const res = await app.fetch(req, mockEnv);
 

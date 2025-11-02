@@ -109,53 +109,8 @@ describe('MentorBrowse', () => {
     });
   });
 
-  describe('when user is not authenticated', () => {
-    it('should redirect to login when clicking View Details', async () => {
-      // Ensure no token in localStorage (unauthenticated state)
-      expect(localStorage.getItem('auth_token')).toBeNull();
-
-      render(
-        <MemoryRouter>
-          <AuthProvider>
-            <MentorBrowse />
-          </AuthProvider>
-        </MemoryRouter>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /view details/i })).toBeInTheDocument();
-      });
-
-      const viewDetailsButton = screen.getByRole('button', { name: /view details/i });
-      fireEvent.click(viewDetailsButton);
-
-      // Should redirect to login page
-      expect(mockNavigate).toHaveBeenCalledWith('/login', expect.any(Object));
-    });
-
-    it('should redirect to login when clicking Request Mentorship', async () => {
-      // Ensure no token in localStorage (unauthenticated state)
-      expect(localStorage.getItem('auth_token')).toBeNull();
-
-      render(
-        <MemoryRouter>
-          <AuthProvider>
-            <MentorBrowse />
-          </AuthProvider>
-        </MemoryRouter>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /request mentorship/i })).toBeInTheDocument();
-      });
-
-      const requestMentorshipButton = screen.getByRole('button', { name: /request mentorship/i });
-      fireEvent.click(requestMentorshipButton);
-
-      // Should redirect to login page
-      expect(mockNavigate).toHaveBeenCalledWith('/login', expect.any(Object));
-    });
-  });
+  // Note: Unauthenticated user tests removed - route is now protected with ProtectedRoute
+  // Unauthenticated users are redirected to /login before the component renders
 
   describe('when user is authenticated', () => {
     it('should navigate to mentor detail page when clicking View Details', async () => {

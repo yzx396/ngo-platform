@@ -16,7 +16,6 @@ import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { searchMentors } from '../services/mentorService';
 import { handleApiError } from '../services/apiClient';
-import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
 /**
@@ -27,7 +26,7 @@ import type { MentorProfile } from '../../types/mentor';
 export function MentorBrowse() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuth();
+  // Note: Authentication is handled by ProtectedRoute wrapper, no need to check here
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,24 +84,12 @@ export function MentorBrowse() {
   };
 
   const handleViewDetails = (mentor: MentorProfile) => {
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/mentors/browse' } });
-      return;
-    }
-    
-    // Navigate to mentor detail page
+    // Navigate to mentor detail page (auth already checked by ProtectedRoute)
     navigate(`/mentors/${mentor.id}`);
   };
 
   const handleRequestMentorship = (mentor: MentorProfile) => {
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/mentors/browse' } });
-      return;
-    }
-
-    // Open dialog to collect introduction and preferred time
+    // Open dialog to collect introduction and preferred time (auth already checked by ProtectedRoute)
     setSelectedMentor(mentor);
     setIsDialogOpen(true);
   };
