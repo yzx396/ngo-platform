@@ -342,5 +342,13 @@
     "announcement": "Announcement",
     "discussion": "Discussion",
     "general": "General"
+  },
+  "comments": {
+    "reply": "Reply",
+    "replyingTo": "Replying to {{name}}",
+    "cancelReply": "Cancel reply",
+    "submitReply": "Reply",
+    "deleted": "deleted",
+    "replyPlaceholder": "Write a reply..."
   }
 }

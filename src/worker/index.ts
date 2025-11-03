@@ -2260,10 +2260,11 @@ app.get("/api/v1/posts/:id/comments", async (c) => {
 });
 
 /**
- * DELETE /api/v1/comments/:id - Delete a comment
+ * DELETE /api/v1/comments/:id - Delete a comment (soft delete)
  * Authenticated endpoint
  * Author or admin can delete a comment
- * Decrements comments_count on parent post
+ * Performs soft delete by setting content to '[deleted]' and preserving thread structure
+ * This allows replies to remain visible and the comment tree to stay intact
  * Returns 403 if user is not author or admin
  * Returns 404 if comment not found
  */
@@ -2296,25 +2297,16 @@ app.delete("/api/v1/comments/:id", requireAuth, async (c) => {
       return c.json({ error: "Not authorized to delete this comment" }, 403);
     }
 
-    // Delete the comment
-    const deleteResult = await c.env.platform_db
-      .prepare("DELETE FROM post_comments WHERE id = ?")
-      .bind(commentId)
-      .run();
-
-    if (!deleteResult.success) {
-      throw new Error("Failed to delete comment");
-    }
-
-    // Decrement comments_count in posts table
+    // Soft delete: set content to '[deleted]' instead of removing the record
+    // This preserves the comment tree structure and keeps replies visible
     const now = Math.floor(Date.now() / 1000);
     const updateResult = await c.env.platform_db
-      .prepare("UPDATE posts SET comments_count = MAX(0, comments_count - 1), updated_at = ? WHERE id = ?")
-      .bind(now, comment.post_id)
+      .prepare("UPDATE post_comments SET content = '[deleted]', updated_at = ? WHERE id = ?")
+      .bind(now, commentId)
       .run();
 
     if (!updateResult.success) {
-      throw new Error("Failed to update comments count");
+      throw new Error("Failed to delete comment");
     }
 
     return c.json({ success: true });

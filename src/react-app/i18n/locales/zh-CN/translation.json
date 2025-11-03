@@ -342,5 +342,13 @@
     "announcement": "公告",
     "discussion": "讨论",
     "general": "一般"
+  },
+  "comments": {
+    "reply": "回复",
+    "replyingTo": "回复给 {{name}}",
+    "cancelReply": "取消回复",
+    "submitReply": "回复",
+    "deleted": "已删除",
+    "replyPlaceholder": "写个回复..."
   }
 }

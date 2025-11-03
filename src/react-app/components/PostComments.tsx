@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
-import { getComments, deleteComment } from '../services/postService';
+import { getComments } from '../services/postService';
 import { handleApiError } from '../services/apiClient';
-import { formatPostTime } from '../../types/post';
-import type { PostCommentWithAuthor } from '../../types/post';
+import { buildCommentTree } from '../../types/post';
+import type { PostCommentWithAuthor, PostCommentWithReplies } from '../../types/post';
+import { ThreadedComment } from './ThreadedComment';
 
 interface PostCommentsProps {
   postId: string;
@@ -31,13 +30,19 @@ export function PostComments({
   onLoadingChange,
 }: PostCommentsProps) {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [comments, setComments] = useState<PostCommentWithAuthor[]>(initialComments);
+  const [flatComments, setFlatComments] = useState<PostCommentWithAuthor[]>(initialComments);
+  const [treeComments, setTreeComments] = useState<PostCommentWithReplies[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
   const limit = 20;
+
+  // Build tree structure whenever flat comments change
+  useEffect(() => {
+    const tree = buildCommentTree(flatComments);
+    setTreeComments(tree);
+  }, [flatComments]);
 
   // Fetch comments on mount
   useEffect(() => {
@@ -46,7 +51,7 @@ export function PostComments({
         setIsLoading(true);
         setError(null);
         const response = await getComments(postId, limit, 0);
-        setComments(response.comments);
+        setFlatComments(response.comments);
         setTotal(response.total);
         setOffset(0);
       } catch (err) {
@@ -69,7 +74,7 @@ export function PostComments({
       setIsLoading(true);
       setError(null);
       const response = await getComments(postId, limit, newOffset);
-      setComments(response.comments);
+      setFlatComments(response.comments);
       setTotal(response.total);
       setOffset(newOffset);
     } catch (err) {
@@ -80,27 +85,19 @@ export function PostComments({
     }
   };
 
-  const handleDelete = async (commentId: string) => {
-    if (!window.confirm(t('posts.deleteCommentConfirm', 'Delete this comment?'))) {
-      return;
-    }
-
-    try {
-      await deleteComment(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-      setTotal((prev) => Math.max(0, prev - 1));
-      onCommentDeleted?.(commentId);
-    } catch (err) {
-      handleApiError(err);
-    }
+  const handleCommentDeleted = (commentId: string) => {
+    // Remove comment from flat list
+    setFlatComments((prev) => prev.filter((c) => c.id !== commentId));
+    setTotal((prev) => Math.max(0, prev - 1));
+    onCommentDeleted?.(commentId);
   };
 
-  const canDelete = (comment: PostCommentWithAuthor) => {
-    if (!user) return false;
-    return user.id === comment.user_id || user.role === 'admin';
+  const handleReplyCreated = () => {
+    // Refresh comments to get the new reply
+    loadComments(offset);
   };
 
-  if (isLoading && comments.length === 0) {
+  if (isLoading && flatComments.length === 0) {
     return (
       <div className="text-center py-4">
         <p className="text-sm text-muted-foreground">
@@ -126,7 +123,7 @@ export function PostComments({
     );
   }
 
-  if (comments.length === 0) {
+  if (flatComments.length === 0) {
     return (
       <div className="text-center py-4">
         <p className="text-sm text-muted-foreground">
@@ -138,39 +135,14 @@ export function PostComments({
 
   return (
     <div className="space-y-4">
-      {comments.map((comment) => (
-        <div
+      {treeComments.map((comment) => (
+        <ThreadedComment
           key={comment.id}
-          className="border rounded-lg p-3 space-y-2 hover:bg-muted/50 transition-colors"
-        >
-          {/* Comment Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <p className="text-sm font-medium">
-                {comment.author_name || 'Anonymous'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatPostTime(comment.created_at)}
-              </p>
-            </div>
-            {canDelete(comment) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleDelete(comment.id)}
-                className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                title={t('posts.delete', 'Delete')}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-
-          {/* Comment Content */}
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
-        </div>
+          comment={comment}
+          postId={postId}
+          onCommentDeleted={handleCommentDeleted}
+          onReplyCreated={handleReplyCreated}
+        />
       ))}
 
       {/* Pagination */}

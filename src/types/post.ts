@@ -84,6 +84,15 @@ export interface PostCommentWithAuthor extends PostComment {
 }
 
 /**
+ * PostCommentWithReplies - Comment with nested replies (for hierarchical display)
+ * Used to build and display threaded comment trees
+ * Includes recursively nested replies from child comments
+ */
+export interface PostCommentWithReplies extends PostCommentWithAuthor {
+  replies?: PostCommentWithReplies[]; // Nested replies (recursive structure)
+}
+
+/**
  * Normalize post from database
  * Ensures all fields are properly typed and handles edge cases
  * @param dbPost - Raw data from database
@@ -242,4 +251,96 @@ export function formatPostTime(timestamp: number): string {
 
   // Fall back to formatted date
   return date.toLocaleDateString();
+}
+
+/**
+ * Build a nested comment tree from a flat array of comments
+ * Transforms comments with parent_comment_id into a hierarchical structure
+ * Enforces maximum nesting depth of 5 levels to keep threads readable
+ *
+ * @param comments - Flat array of comments from API response
+ * @param maxDepth - Maximum nesting depth (default 5)
+ * @returns Array of root comments with nested replies
+ */
+export function buildCommentTree(
+  comments: PostCommentWithAuthor[],
+  maxDepth: number = 5
+): PostCommentWithReplies[] {
+  // Create a map of comments by ID for O(1) lookup
+  const commentMap = new Map<string, PostCommentWithReplies>();
+
+  // Initialize all comments as potential root comments
+  for (const comment of comments) {
+    commentMap.set(comment.id, {
+      ...comment,
+      replies: [],
+    });
+  }
+
+  // Root comments (no parent)
+  const rootComments: PostCommentWithReplies[] = [];
+
+  // Build tree structure
+  for (const comment of comments) {
+    const treeComment = commentMap.get(comment.id)!;
+
+    if (!comment.parent_comment_id) {
+      // This is a root comment
+      rootComments.push(treeComment);
+    } else {
+      // This is a reply - find parent and add as child
+      const parent = commentMap.get(comment.parent_comment_id);
+      if (parent) {
+        // Calculate depth of parent comment
+        const parentDepth = calculateCommentDepth(comment.parent_comment_id, commentMap);
+        // Child will be at parentDepth + 1
+        const childDepth = parentDepth + 1;
+
+        if (childDepth < maxDepth) {
+          // Only add if child depth is within max depth
+          parent.replies!.push(treeComment);
+        } else {
+          // If beyond max depth, treat as root (flatten)
+          rootComments.push(treeComment);
+        }
+      } else {
+        // Parent comment doesn't exist (orphaned comment) - treat as root
+        rootComments.push(treeComment);
+      }
+    }
+  }
+
+  // Sort root comments by creation time
+  rootComments.sort((a, b) => a.created_at - b.created_at);
+
+  // Recursively sort replies
+  const sortReplies = (comment: PostCommentWithReplies) => {
+    if (comment.replies && comment.replies.length > 0) {
+      comment.replies.sort((a, b) => a.created_at - b.created_at);
+      comment.replies.forEach(sortReplies);
+    }
+  };
+
+  rootComments.forEach(sortReplies);
+
+  return rootComments;
+}
+
+/**
+ * Helper function to calculate the depth of a comment in the tree
+ * Traverses up the parent chain to count nesting level
+ *
+ * @param commentId - ID of the comment to calculate depth for
+ * @param commentMap - Map of all comments by ID
+ * @returns Depth level (0 = root, 1 = first reply, etc.)
+ */
+function calculateCommentDepth(
+  commentId: string,
+  commentMap: Map<string, PostCommentWithReplies>
+): number {
+  const comment = commentMap.get(commentId);
+  if (!comment || !comment.parent_comment_id) {
+    return 0;
+  }
+  return 1 + calculateCommentDepth(comment.parent_comment_id, commentMap);
 }

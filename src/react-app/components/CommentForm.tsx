@@ -7,23 +7,32 @@ import { handleApiError } from '../services/apiClient';
 
 interface CommentFormProps {
   postId: string;
+  parentCommentId?: string;
   onCommentCreated?: (content: string) => void;
   placeholder?: string;
+  isReply?: boolean;
 }
 
 const MAX_COMMENT_LENGTH = 500;
 
 /**
  * CommentForm component
- * Form for users to add comments on posts
+ * Form for users to add comments on posts or reply to comments
  * Features:
  * - Character limit (500 chars)
  * - Character counter
  * - Loading state
  * - Error handling
+ * - Support for nested replies via parentCommentId
  * - Submit button disabled when empty or > max length
  */
-export function CommentForm({ postId, onCommentCreated, placeholder }: CommentFormProps) {
+export function CommentForm({
+  postId,
+  parentCommentId,
+  onCommentCreated,
+  placeholder,
+  isReply = false,
+}: CommentFormProps) {
   const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +50,7 @@ export function CommentForm({ postId, onCommentCreated, placeholder }: CommentFo
         setIsSubmitting(true);
         setError(null);
 
-        await createComment(postId, content.trim());
+        await createComment(postId, content.trim(), parentCommentId);
 
         // Clear form on success
         setContent('');
@@ -56,7 +65,7 @@ export function CommentForm({ postId, onCommentCreated, placeholder }: CommentFo
         setIsSubmitting(false);
       }
     },
-    [postId, content, isValid, isSubmitting, onCommentCreated, t]
+    [postId, parentCommentId, content, isValid, isSubmitting, onCommentCreated, t]
   );
 
   return (
@@ -66,7 +75,7 @@ export function CommentForm({ postId, onCommentCreated, placeholder }: CommentFo
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={placeholder || t('posts.addComment', 'Add a comment...')}
-          className="min-h-24 resize-none"
+          className={isReply ? 'min-h-20 resize-none' : 'min-h-24 resize-none'}
           disabled={isSubmitting}
         />
         <div className="flex justify-between items-center text-xs text-muted-foreground">
@@ -89,16 +98,20 @@ export function CommentForm({ postId, onCommentCreated, placeholder }: CommentFo
         <div className="text-sm text-red-500">{error}</div>
       )}
 
-      <Button
-        type="submit"
-        disabled={!isValid || isSubmitting}
-        size="sm"
-        className="w-full"
-      >
-        {isSubmitting
-          ? t('common.loading', 'Loading...')
-          : t('posts.submitComment', 'Submit')}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={!isValid || isSubmitting}
+          size="sm"
+          className={isReply ? 'flex-1' : 'w-full'}
+        >
+          {isSubmitting
+            ? t('common.loading', 'Loading...')
+            : isReply
+              ? t('comments.submitReply', 'Reply')
+              : t('posts.submitComment', 'Submit')}
+        </Button>
+      </div>
     </form>
   );
 }
