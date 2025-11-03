@@ -101,13 +101,13 @@ export function Sidebar() {
     },
     {
       href: '/mentor/profile/setup',
-      label: t('navigation.myProfile', 'My Profile'),
+      label: t('navigation.becomeMentor', 'Become a Mentor'),
       icon: '👤',
       requiresAuth: true,
     },
     {
       href: '/matches',
-      label: t('navigation.myMatches', 'My Mentorships'),
+      label: t('navigation.mentorshipRequests', 'Mentorship Requests'),
       icon: '🤝',
       requiresAuth: true,
     },
