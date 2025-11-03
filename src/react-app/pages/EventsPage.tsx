@@ -4,7 +4,6 @@ import { events } from '../data/events';
 import {
   formatEventDate,
   formatEventTime,
-  formatPrice,
   isUpcomingEvent,
   type Event,
 } from '../../types/event';
@@ -141,14 +140,6 @@ function EventCard({ event, isPast }: EventCardProps) {
                   {event.location.region && `, ${event.location.region}`}
                 </div>
               )}
-            </div>
-
-            {/* Price */}
-            <div>
-              <div className="text-muted-foreground text-xs mb-1">
-                {t('events.price', 'Price')}
-              </div>
-              <div className="font-medium">{formatPrice(event)}</div>
             </div>
 
             {/* Availability */}

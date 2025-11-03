@@ -31,7 +31,7 @@ export const events: Event[] = [
     guest_count: 8,
     ticket_count: 8,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/c7/f478f17a-9b2c-470d-b2b6-7046bfde8674',
-    luma_url: 'https://luma.com/leadforward/o4f5akc4',
+    luma_url: 'https://luma.com/o4f5akc4',
     luma_slug: 'o4f5akc4',
   },
 
@@ -61,7 +61,7 @@ export const events: Event[] = [
     guest_count: 15,
     ticket_count: 15,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/ll/e2f4f925-c2f4-4258-ab7b-5ffa176284e8',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/81wz9vy6',
     luma_slug: 'past-event-001',
   },
   {
@@ -93,7 +93,7 @@ export const events: Event[] = [
     guest_count: 20,
     ticket_count: 20,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/uz/49704622-9e5f-46ed-ad62-46dc3ed83c20',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/9v4jagz7',
     luma_slug: 'past-event-002',
   },
   {
@@ -120,7 +120,7 @@ export const events: Event[] = [
     guest_count: 49,
     ticket_count: 49,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/sx/81dcf961-c47a-4474-a332-2640c211ac3e.png',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/udk5zjr4',
     luma_slug: 'past-event-003',
   },
   {
@@ -152,7 +152,7 @@ export const events: Event[] = [
     guest_count: 24,
     ticket_count: 24,
     cover_image_url: 'https://images.lumacdn.com/event-covers/xp/b72d32df-063a-4902-819a-a7ca01f2f664.jpg',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/p9g0jymg',
     luma_slug: 'past-event-004',
   },
   {
@@ -183,7 +183,7 @@ export const events: Event[] = [
     guest_count: 20,
     ticket_count: 20,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/uz/49704622-9e5f-46ed-ad62-46dc3ed83c20',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/qtja9vvw',
     luma_slug: 'past-event-005',
   },
   {
@@ -214,7 +214,7 @@ export const events: Event[] = [
     guest_count: 18,
     ticket_count: 18,
     cover_image_url: 'https://images.lumacdn.com/gallery-images/ll/e2f4f925-c2f4-4258-ab7b-5ffa176284e8',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/0nq018yj',
     luma_slug: 'past-event-006',
   },
   {
@@ -245,7 +245,7 @@ export const events: Event[] = [
     guest_count: 9,
     ticket_count: 9,
     cover_image_url: 'https://images.unsplash.com/photo-1690264321869-86e4ca12f262?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&ixid=M3wxMjQyMjF8MHwxfHNlYXJjaHw0OHx8TWVudG9yaW5nfGVufDB8fHx8MTc0NzExNTA0NHwy&ixlib=rb-4.1.0&q=80&w=400&h=400',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/xcycoow8',
     luma_slug: 'past-event-007',
   },
   {
@@ -273,7 +273,7 @@ export const events: Event[] = [
     guest_count: 10,
     ticket_count: 10,
     cover_image_url: 'https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,background=white,quality=75,width=400,height=400/event-covers/b3/d96f5fac-7012-4a7d-bc70-89b54f95c3fe.jpg',
-    luma_url: 'https://luma.com/leadforward',
+    luma_url: 'https://luma.com/xrstjpqu',
     luma_slug: 'past-event-008',
   },
 ];

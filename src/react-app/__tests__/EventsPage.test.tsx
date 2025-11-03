@@ -59,10 +59,6 @@ describe('EventsPage', () => {
     const locationElements = screen.getAllByText(/San Jose/);
     expect(locationElements.length).toBeGreaterThan(0);
 
-    // Check for price - there should be multiple prices in the page
-    const priceElements = screen.getAllByText(/USD|Free/);
-    expect(priceElements.length).toBeGreaterThan(0);
-
     // Check for hosts - there should be multiple host displays
     const hostElements = screen.getAllByText(/hosts/);
     expect(hostElements.length).toBeGreaterThan(0);
@@ -84,7 +80,7 @@ describe('EventsPage', () => {
       await user.click(eventCard);
     }
 
-    expect(window.open).toHaveBeenCalledWith('https://luma.com/leadforward/o4f5akc4', '_blank');
+    expect(window.open).toHaveBeenCalledWith('https://luma.com/o4f5akc4', '_blank');
   });
 
   it('should display event date and time', () => {
@@ -137,18 +133,6 @@ describe('EventsPage', () => {
     // Check for city names in the page - there should be multiple cities
     const cityElements = screen.getAllByText(/San Jose|Burlingame|Cupertino/);
     expect(cityElements.length).toBeGreaterThan(0);
-  });
-
-  it('should display price information', () => {
-    render(
-      <I18nextProvider i18n={i18n}>
-        <EventsPage />
-      </I18nextProvider>
-    );
-
-    // Check for price (USD 30.00 or USD 30)
-    const priceElements = screen.getAllByText(/USD 30|30.00/);
-    expect(priceElements.length).toBeGreaterThan(0);
   });
 
   it('should display hosts count', () => {
