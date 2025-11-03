@@ -2,7 +2,7 @@ import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
 import { UserPointsWithRank } from './points';
-import { Post, PostType, PostCommentWithAuthor } from './post';
+import { Post, PostType, PostCommentWithAuthor, PostWithLikeStatus } from './post';
 
 // User API
 export interface CreateUserRequest {
@@ -139,7 +139,7 @@ export interface GetPostsRequest {
 }
 
 export interface GetPostsResponse {
-  posts: Post[];
+  posts: PostWithLikeStatus[];
   total: number;
   limit: number;
   offset: number;

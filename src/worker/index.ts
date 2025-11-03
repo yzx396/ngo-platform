@@ -1594,8 +1594,9 @@ app.get("/api/v1/posts", async (c) => {
       .bind(...bindings)
       .all<Record<string, unknown>>();
 
-    // Normalize posts and attach author info
-    const postsWithAuthors = await Promise.all(
+    // Normalize posts and attach author info and user like status
+    const user = c.get('user') as AuthPayload | undefined;
+    const postsWithAuthorsAndLikes = await Promise.all(
       results.results.map(async (post) => {
         // Fetch author name
         const author = await c.env.platform_db
@@ -1603,15 +1604,26 @@ app.get("/api/v1/posts", async (c) => {
           .bind(post.user_id)
           .first<{ name: string }>();
 
+        // Check if current user has liked this post
+        let userHasLiked = false;
+        if (user) {
+          const likeRecord = await c.env.platform_db
+            .prepare("SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ? LIMIT 1")
+            .bind(post.id, user.userId)
+            .first();
+          userHasLiked = !!likeRecord;
+        }
+
         return {
           ...post,
           author_name: author?.name || "Unknown User",
+          user_has_liked: userHasLiked,
         };
       })
     );
 
     const response: GetPostsResponse = {
-      posts: postsWithAuthors as unknown as Post[],
+      posts: postsWithAuthorsAndLikes as unknown as Post[],
       total,
       limit,
       offset,

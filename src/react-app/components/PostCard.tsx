@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { MoreHorizontal, Edit2, Trash2, Heart, MessageSquare } from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, Heart, MessageSquare, Loader2 } from 'lucide-react';
 import { getPostTypeName, formatPostTime } from '../../types/post';
 import { likePost, unlikePost } from '../services/postService';
 import { handleApiError } from '../services/apiClient';
@@ -13,7 +13,7 @@ import { CommentForm } from './CommentForm';
 import type { Post, PostType } from '../../types/post';
 
 interface PostCardProps {
-  post: Post & { author_name?: string };
+  post: Post & { author_name?: string; user_has_liked?: boolean };
   onViewDetails?: () => void;
   onEdit?: (post: Post) => void;
   onDelete?: (postId: string) => void;
@@ -31,8 +31,9 @@ interface PostCardProps {
  * - Like functionality with optimistic UI updates
  * - Engagement counts (likes and comments)
  * - Responsive design
+ * - Memoized to prevent unnecessary re-renders
  */
-export function PostCard({
+function PostCardComponent({
   post,
   onViewDetails,
   onEdit,
@@ -45,11 +46,16 @@ export function PostCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes_count);
-  const [userHasLiked, setUserHasLiked] = useState(false);
+  const [userHasLiked, setUserHasLiked] = useState(post.user_has_liked || false);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
   const [showComments, setShowComments] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Initialize/update like status when post changes
+  useEffect(() => {
+    setUserHasLiked(post.user_has_liked || false);
+  }, [post.id, post.user_has_liked]);
 
   const postTypeLabel = getPostTypeName(post.post_type as PostType);
   const timeAgo = formatPostTime(post.created_at);
@@ -220,11 +226,15 @@ export function PostCard({
                 className="h-8 px-2 text-xs"
                 title={userHasLiked ? t('posts.unlike', 'Unlike') : t('posts.like', 'Like')}
               >
-                <Heart
-                  className={`h-4 w-4 mr-1 ${
-                    userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
-                  }`}
-                />
+                {isLiking ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Heart
+                    className={`h-4 w-4 mr-1 ${
+                      userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                    }`}
+                  />
+                )}
                 {t('posts.like', 'Like')}
               </Button>
               <Button
@@ -284,3 +294,17 @@ export function PostCard({
     </Card>
   );
 }
+
+// Export memoized component to prevent unnecessary re-renders
+// Only re-render if post, callbacks, or user_has_liked changes
+export const PostCard = memo(PostCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.user_has_liked === nextProps.post.user_has_liked &&
+    prevProps.post.likes_count === nextProps.post.likes_count &&
+    prevProps.post.comments_count === nextProps.post.comments_count &&
+    prevProps.onEdit === nextProps.onEdit &&
+    prevProps.onDelete === nextProps.onDelete &&
+    prevProps.onLikesChange === nextProps.onLikesChange
+  );
+});

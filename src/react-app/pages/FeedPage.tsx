@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { PostCard } from '../components/PostCard';
-import { CreatePostForm } from '../components/CreatePostForm';
 import { EditPostDialog } from '../components/EditPostDialog';
+import { FeedControls } from '../components/FeedControls';
 import { Button } from '../components/ui/button';
 import { getPosts, deletePost } from '../services/postService';
 import type { Post, PostType } from '../../types/post';
@@ -29,8 +29,9 @@ export function FeedPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  // Fetch posts when offset or filter changes
+  // Fetch posts when offset, filter, or refetch trigger changes
   useEffect(() => {
     const loadPosts = async () => {
       try {
@@ -51,7 +52,7 @@ export function FeedPage() {
     };
 
     loadPosts();
-  }, [offset, selectedType]);
+  }, [offset, selectedType, refetchTrigger]);
 
   // Calculate pagination info
   const hasNextPage = offset + POSTS_PER_PAGE < total;
@@ -67,11 +68,17 @@ export function FeedPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Handle post creation - reset to first page to show new post and close form
+  // Handle post creation - show new post to user
   const handlePostCreated = () => {
-    setOffset(0); // Reset to first page
     setShowCreateForm(false); // Close the form after successful creation
-    // The useEffect will automatically refetch when offset changes
+
+    // If on first page, refetch to show new post
+    // Otherwise, show toast notification to let user know new post is available
+    if (offset === 0) {
+      setRefetchTrigger((prev) => prev + 1); // Trigger refetch via useEffect
+    } else {
+      toast.info(t('posts.newPostAtTop', 'New post added at the top! Scroll up to see it.'));
+    }
   };
 
   // Handle filter type change - reset to first page
@@ -103,14 +110,27 @@ export function FeedPage() {
   // Handle post update from edit dialog
   const handlePostUpdated = () => {
     setEditDialogOpen(false);
-    setOffset(0); // Reset to first page to show latest posts
+    setRefetchTrigger((prev) => prev + 1); // Refetch current page to show updated post
   };
 
   // Render loading state
   if (loading && posts.length === 0) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+          <p className="text-muted-foreground">
+            {t('posts.subtitle', 'See what the community is sharing')}
+          </p>
+        </div>
+        <FeedControls
+          selectedType={selectedType}
+          onTypeChange={handleFilterChange}
+          showCreateForm={showCreateForm}
+          onShowCreateFormChange={setShowCreateForm}
+          onPostCreated={handlePostCreated}
+          isAuthenticated={!!user}
+        />
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">{t('common.loading', 'Loading...')}</p>
         </div>
@@ -122,43 +142,21 @@ export function FeedPage() {
   if (error && posts.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
-
-        {/* Filter Dropdown and Create Post Button */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          {/* Filter Section */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
-              {t('posts.filterLabel', 'Filter by type')}
-            </label>
-            <select
-              id="post-type-filter"
-              value={selectedType}
-              onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
-              className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="all">{t('posts.filterAll', 'All Posts')}</option>
-              <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
-              <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
-              <option value="general">{t('posts.filterGeneral', 'General')}</option>
-            </select>
-          </div>
-
-          {/* Create Post Button */}
-          {user && !showCreateForm && (
-            <Button onClick={() => setShowCreateForm(true)}>
-              {t('posts.createButton', '📝 Create Post')}
-            </Button>
-          )}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+          <p className="text-muted-foreground">
+            {t('posts.subtitle', 'See what the community is sharing')}
+          </p>
         </div>
 
-        {/* Create Post Form (if visible) */}
-        {showCreateForm && (
-          <CreatePostForm
-            onPostCreated={handlePostCreated}
-            onCancel={() => setShowCreateForm(false)}
-          />
-        )}
+        <FeedControls
+          selectedType={selectedType}
+          onTypeChange={handleFilterChange}
+          showCreateForm={showCreateForm}
+          onShowCreateFormChange={setShowCreateForm}
+          onPostCreated={handlePostCreated}
+          isAuthenticated={!!user}
+        />
 
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
           <p className="text-destructive">{error}</p>
@@ -182,41 +180,14 @@ export function FeedPage() {
           </p>
         </div>
 
-        {/* Filter Dropdown and Create Post Button */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          {/* Filter Section */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
-              {t('posts.filterLabel', 'Filter by type')}
-            </label>
-            <select
-              id="post-type-filter"
-              value={selectedType}
-              onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
-              className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="all">{t('posts.filterAll', 'All Posts')}</option>
-              <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
-              <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
-              <option value="general">{t('posts.filterGeneral', 'General')}</option>
-            </select>
-          </div>
-
-          {/* Create Post Button */}
-          {user && !showCreateForm && (
-            <Button onClick={() => setShowCreateForm(true)}>
-              {t('posts.createButton', '📝 Create Post')}
-            </Button>
-          )}
-        </div>
-
-        {/* Create Post Form (if visible) */}
-        {showCreateForm && (
-          <CreatePostForm
-            onPostCreated={handlePostCreated}
-            onCancel={() => setShowCreateForm(false)}
-          />
-        )}
+        <FeedControls
+          selectedType={selectedType}
+          onTypeChange={handleFilterChange}
+          showCreateForm={showCreateForm}
+          onShowCreateFormChange={setShowCreateForm}
+          onPostCreated={handlePostCreated}
+          isAuthenticated={!!user}
+        />
 
         {/* Empty state message */}
         <div className="flex items-center justify-center min-h-[400px]">
@@ -237,41 +208,14 @@ export function FeedPage() {
         </p>
       </div>
 
-      {/* Filter Dropdown and Create Post Button */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        {/* Filter Section */}
-        <div className="flex items-center gap-2">
-          <label htmlFor="post-type-filter" className="text-sm font-medium whitespace-nowrap">
-            {t('posts.filterLabel', 'Filter by type')}
-          </label>
-          <select
-            id="post-type-filter"
-            value={selectedType}
-            onChange={(e) => handleFilterChange(e.target.value as PostType | 'all')}
-            className="rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="all">{t('posts.filterAll', 'All Posts')}</option>
-            <option value="announcement">{t('posts.filterAnnouncements', 'Announcements')}</option>
-            <option value="discussion">{t('posts.filterDiscussions', 'Discussions')}</option>
-            <option value="general">{t('posts.filterGeneral', 'General')}</option>
-          </select>
-        </div>
-
-        {/* Create Post Button */}
-        {user && !showCreateForm && (
-          <Button onClick={() => setShowCreateForm(true)}>
-            {t('posts.createButton', '📝 Create Post')}
-          </Button>
-        )}
-      </div>
-
-      {/* Create Post Form (if visible) */}
-      {showCreateForm && (
-        <CreatePostForm
-          onPostCreated={handlePostCreated}
-          onCancel={() => setShowCreateForm(false)}
-        />
-      )}
+      <FeedControls
+        selectedType={selectedType}
+        onTypeChange={handleFilterChange}
+        showCreateForm={showCreateForm}
+        onShowCreateFormChange={setShowCreateForm}
+        onPostCreated={handlePostCreated}
+        isAuthenticated={!!user}
+      />
 
       {/* Posts Grid */}
       <div className="space-y-4">
