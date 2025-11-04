@@ -5,6 +5,8 @@ import { z } from 'zod';
 // The form now displays all fields at once (no wizard steps)
 // All validation runs on form submission
 
+const linkedInUrlRegex = /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/;
+
 const mentorProfileSchema = z.object({
   nick_name: z.string().min(2, 'Nickname must be at least 2 characters'),
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
@@ -19,6 +21,10 @@ const mentorProfileSchema = z.object({
   allow_recording: z.boolean().refine(
     (val) => val === true,
     'You must accept this term to continue'
+  ),
+  linkedin_url: z.string().optional().refine(
+    (val) => !val || linkedInUrlRegex.test(val),
+    'Invalid LinkedIn URL format. Must be https://www.linkedin.com/in/username or https://linkedin.com/in/username'
   ),
 });
 
@@ -258,6 +264,128 @@ describe('MentorProfileSetup - Single Form Validation', () => {
       expect(errorPaths).toContain('payment_types');
       expect(errorPaths).toContain('allow_reviews');
       expect(errorPaths).toContain('allow_recording');
+    }
+  });
+
+  it('should pass validation with valid LinkedIn URL', () => {
+    const validData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+      linkedin_url: 'https://www.linkedin.com/in/johndoe',
+    };
+
+    const result = mentorProfileSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  it('should pass validation without LinkedIn URL (optional field)', () => {
+    const validData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+      // linkedin_url is not provided
+    };
+
+    const result = mentorProfileSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  it('should pass validation with empty string LinkedIn URL', () => {
+    const validData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+      linkedin_url: '',
+    };
+
+    const result = mentorProfileSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  it('should fail validation with invalid LinkedIn URL format', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+      linkedin_url: 'https://twitter.com/johndoe', // Invalid: not LinkedIn
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const linkedInError = result.error.issues.find((err) => err.path[0] === 'linkedin_url');
+      expect(linkedInError?.message).toContain('Invalid LinkedIn URL format');
+    }
+  });
+
+  it('should fail validation with malformed LinkedIn URL', () => {
+    const invalidData = {
+      nick_name: 'TestMentor',
+      bio: 'This is a test bio for mentoring',
+      mentoring_levels: 1,
+      availability: 'Flexible schedule',
+      hourly_rate: 50,
+      payment_types: 1,
+      allow_reviews: true,
+      allow_recording: true,
+      linkedin_url: 'linkedin.com/in/johndoe', // Missing protocol
+    };
+
+    const result = mentorProfileSchema.safeParse(invalidData);
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const linkedInError = result.error.issues.find((err) => err.path[0] === 'linkedin_url');
+      expect(linkedInError?.message).toContain('Invalid LinkedIn URL format');
+    }
+  });
+
+  it('should accept various valid LinkedIn URL formats', () => {
+    const validUrls = [
+      'https://www.linkedin.com/in/johndoe',
+      'https://linkedin.com/in/johndoe',
+      'https://www.linkedin.com/in/john-doe-123456',
+      'http://www.linkedin.com/in/johndoe',
+      'https://www.linkedin.com/in/johndoe/',
+    ];
+
+    for (const linkedin_url of validUrls) {
+      const validData = {
+        nick_name: 'TestMentor',
+        bio: 'This is a test bio for mentoring',
+        mentoring_levels: 1,
+        availability: 'Flexible schedule',
+        hourly_rate: 50,
+        payment_types: 1,
+        allow_reviews: true,
+        allow_recording: true,
+        linkedin_url,
+      };
+
+      const result = mentorProfileSchema.safeParse(validData);
+      expect(result.success).toBe(true);
     }
   });
 });

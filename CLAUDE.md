@@ -433,6 +433,25 @@ The platform uses a **mentee-initiated** matching system (not algorithm-based):
 
 This keeps the UX simple and gives users full control over matching.
 
+### LinkedIn Profile Integration
+
+Mentors can optionally add their LinkedIn profile URL to their mentor profile, allowing mentees to review their professional background before requesting mentorship.
+
+**Key Features:**
+- Optional field in mentor profile setup/edit form
+- URL validation (must be valid LinkedIn profile URL: `https://www.linkedin.com/in/username` or `https://linkedin.com/in/username`)
+- Displayed prominently on mentor detail page with LinkedIn icon
+- Links open in new tab with proper security attributes (`target="_blank" rel="noopener noreferrer"`)
+
+**Implementation:**
+- Database: `linkedin_url` column in `mentor_profiles` table (TEXT, nullable)
+- Backend validation: Regex pattern in `src/worker/index.ts` validates LinkedIn URL format
+- Frontend form: Input field in `src/react-app/pages/MentorProfileSetup.tsx` with Zod validation
+- Display: Link component in `src/react-app/pages/MentorDetailPage.tsx` with SVG LinkedIn icon
+- i18n: Translations in both English and Chinese for labels and validation messages
+
+**Migration:** `migrations/0012_add_linkedin_url_to_mentor_profiles.sql`
+
 ## Authentication System
 
 ### Overview
