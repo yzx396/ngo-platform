@@ -40,6 +40,7 @@ export interface CreateMentorProfileRequest {
   expertise_topics_custom?: string[]; // Custom topic tags
   allow_reviews?: boolean;
   allow_recording?: boolean;
+  linkedin_url?: string | null; // LinkedIn profile URL
 }
 
 export interface UpdateMentorProfileRequest {
@@ -54,6 +55,7 @@ export interface UpdateMentorProfileRequest {
   expertise_topics_custom?: string[];
   allow_reviews?: boolean;
   allow_recording?: boolean;
+  linkedin_url?: string | null; // LinkedIn profile URL
 }
 
 // Search API

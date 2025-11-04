@@ -85,6 +85,15 @@ function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Validate LinkedIn URL format
+ * Accepts: https://www.linkedin.com/in/username or https://linkedin.com/in/username
+ */
+function isValidLinkedInUrl(url: string): boolean {
+  const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/;
+  return linkedinRegex.test(url);
+}
+
+/**
  * Convert mentor profile with SQLite boolean integers (0/1) to JavaScript booleans
  * SQLite stores BOOLEAN as INTEGER, so we need to convert 0->false, 1->true
  * This ensures the TypeScript types match the runtime values
@@ -121,6 +130,7 @@ function normalizeMentorProfile(profile: unknown): MentorProfile {
     expertise_topics_custom,
     allow_reviews: dbProfile.allow_reviews === 1 || dbProfile.allow_reviews === true,
     allow_recording: dbProfile.allow_recording === 1 || dbProfile.allow_recording === true,
+    linkedin_url: (dbProfile.linkedin_url as string | null) || null,
     created_at: dbProfile.created_at as number,
     updated_at: dbProfile.updated_at as number,
   };
@@ -613,6 +623,11 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
       return c.json({ error: "Bit flags must be non-negative integers" }, 400);
     }
 
+    // Validation: LinkedIn URL format if provided
+    if (body.linkedin_url && !isValidLinkedInUrl(body.linkedin_url)) {
+      return c.json({ error: "Invalid LinkedIn URL format. Must be https://www.linkedin.com/in/username or https://linkedin.com/in/username" }, 400);
+    }
+
     // Set default values for expertise fields if not provided
     const expertise_domains = body.expertise_domains !== undefined ? body.expertise_domains : 0;
     const expertise_topics_preset = body.expertise_topics_preset !== undefined ? body.expertise_topics_preset : 0;
@@ -667,8 +682,8 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
         `INSERT INTO mentor_profiles (
           id, user_id, nick_name, bio, mentoring_levels, availability,
           hourly_rate, payment_types, expertise_domains, expertise_topics_preset,
-          expertise_topics_custom, allow_reviews, allow_recording, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         id,
@@ -684,6 +699,7 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
         JSON.stringify(expertise_topics_custom),
         body.allow_reviews !== undefined ? body.allow_reviews : true,
         body.allow_recording !== undefined ? body.allow_recording : true,
+        body.linkedin_url !== undefined ? body.linkedin_url : null,
         timestamp,
         timestamp
       )
@@ -703,6 +719,7 @@ app.post("/api/v1/mentors/profiles", requireAuth, async (c) => {
       expertise_topics_custom,
       allow_reviews: body.allow_reviews !== undefined ? body.allow_reviews : true,
       allow_recording: body.allow_recording !== undefined ? body.allow_recording : true,
+      linkedin_url: body.linkedin_url !== undefined ? body.linkedin_url : null,
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -765,7 +782,8 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
                        body.availability !== undefined || body.hourly_rate !== undefined ||
                        body.payment_types !== undefined || body.expertise_domains !== undefined ||
                        body.expertise_topics_preset !== undefined || body.expertise_topics_custom !== undefined ||
-                       body.allow_reviews !== undefined || body.allow_recording !== undefined;
+                       body.allow_reviews !== undefined || body.allow_recording !== undefined ||
+                       body.linkedin_url !== undefined;
 
     if (!hasUpdates) {
       return c.json({ error: "At least one field must be provided for update" }, 400);
@@ -777,6 +795,11 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
         (body.expertise_domains !== undefined && body.expertise_domains < 0) ||
         (body.expertise_topics_preset !== undefined && body.expertise_topics_preset < 0)) {
       return c.json({ error: "Bit flags must be non-negative integers" }, 400);
+    }
+
+    // Validation: LinkedIn URL format if provided
+    if (body.linkedin_url !== undefined && body.linkedin_url !== null && !isValidLinkedInUrl(body.linkedin_url)) {
+      return c.json({ error: "Invalid LinkedIn URL format. Must be https://www.linkedin.com/in/username or https://linkedin.com/in/username" }, 400);
     }
 
     // Validation: expertise_topics_custom must be an array if provided
@@ -858,6 +881,10 @@ app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
     if (body.allow_recording !== undefined) {
       updates.push("allow_recording = ?");
       params.push(body.allow_recording);
+    }
+    if (body.linkedin_url !== undefined) {
+      updates.push("linkedin_url = ?");
+      params.push(body.linkedin_url);
     }
 
     const timestamp = getTimestamp();

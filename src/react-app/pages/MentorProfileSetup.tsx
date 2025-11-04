@@ -20,6 +20,9 @@ import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
+// LinkedIn URL regex validation
+const linkedInUrlRegex = /^https?:\/\/(www\.)?linkedin\.com\/in\/[\w-]+\/?$/;
+
 // Create schema factory to use translations
 const createMentorProfileSchema = (t: (key: string) => string) => z.object({
   nick_name: z.string().min(2, t('mentor.validationNickname')),
@@ -38,6 +41,10 @@ const createMentorProfileSchema = (t: (key: string) => string) => z.object({
   allow_recording: z.boolean().refine(
     (val) => val === true,
     t('mentor.validationRecordingRequired')
+  ),
+  linkedin_url: z.string().optional().refine(
+    (val) => !val || linkedInUrlRegex.test(val),
+    t('mentor.validationLinkedInUrl')
   ),
 });
 
@@ -71,6 +78,7 @@ export function MentorProfileSetup() {
       expertise_topics_custom: [],
       allow_reviews: false,
       allow_recording: false,
+      linkedin_url: '',
     },
   });
 
@@ -99,6 +107,7 @@ export function MentorProfileSetup() {
             expertise_topics_custom: profile.expertise_topics_custom || [],
             allow_reviews: profile.allow_reviews,
             allow_recording: profile.allow_recording,
+            linkedin_url: profile.linkedin_url || '',
           });
         }
       } catch (error) {
@@ -220,6 +229,22 @@ export function MentorProfileSetup() {
                   {form.formState.errors.bio && (
                     <p className="text-sm text-red-500">{form.formState.errors.bio.message}</p>
                   )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin_url">
+                    {t('mentor.linkedinUrl')}
+                  </Label>
+                  <Input
+                    id="linkedin_url"
+                    type="url"
+                    placeholder="https://www.linkedin.com/in/your-profile"
+                    {...form.register('linkedin_url')}
+                  />
+                  {form.formState.errors.linkedin_url && (
+                    <p className="text-sm text-red-500">{form.formState.errors.linkedin_url.message}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">{t('mentor.linkedinUrlHelp')}</p>
                 </div>
               </div>
 

@@ -108,12 +108,12 @@ const createMockDb = () => {
             return { success: true, meta: { changes: 1 } };
           }
           if (query.includes('INSERT INTO mentor_profiles')) {
-            // Extract all fields from params (now includes expertise fields)
-            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, created_at, updated_at] = params;
+            // Extract all fields from params (now includes expertise fields and linkedin_url)
+            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at] = params;
             const profile = {
               id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types,
               expertise_domains, expertise_topics_preset, expertise_topics_custom,
-              allow_reviews, allow_recording, created_at, updated_at
+              allow_reviews, allow_recording, linkedin_url, created_at, updated_at
             };
             mockProfiles.set(id, profile);
             return { success: true, meta: { changes: 1 } };
@@ -144,6 +144,7 @@ const createMockDb = () => {
               if (query.includes('expertise_topics_custom =')) updated.expertise_topics_custom = params[paramIndex++];
               if (query.includes('allow_reviews =')) updated.allow_reviews = params[paramIndex++];
               if (query.includes('allow_recording =')) updated.allow_recording = params[paramIndex++];
+              if (query.includes('linkedin_url =')) updated.linkedin_url = params[paramIndex++];
 
               updated.updated_at = params[params.length - 2];
               mockProfiles.set(id, updated);
@@ -984,6 +985,252 @@ describe('Mentor Profile CRUD API', () => {
       expect(res.status).toBe(201);
       const data = await res.json();
       expect(data.payment_types).toBe(63);
+    });
+  });
+
+  // ==========================================================================
+  // LinkedIn URL Tests
+  // ==========================================================================
+
+  describe('LinkedIn URL Feature', () => {
+    it('should create a mentor profile with a valid LinkedIn URL', async () => {
+      const profileData = {
+        user_id: testUser.id,
+        nick_name: 'LinkedInMentor',
+        bio: 'Software engineer with LinkedIn profile',
+        mentoring_levels: MentoringLevel.Entry,
+        payment_types: PaymentType.Venmo,
+        linkedin_url: 'https://www.linkedin.com/in/johndoe',
+      };
+
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.linkedin_url).toBe('https://www.linkedin.com/in/johndoe');
+    });
+
+    it('should create a mentor profile without LinkedIn URL (null)', async () => {
+      const profileData = {
+        user_id: testUser.id,
+        nick_name: 'NoLinkedInMentor',
+        bio: 'Software engineer without LinkedIn',
+        mentoring_levels: MentoringLevel.Entry,
+        payment_types: PaymentType.Venmo,
+      };
+
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.linkedin_url).toBe(null);
+    });
+
+    it('should reject invalid LinkedIn URL formats', async () => {
+      const invalidUrls = [
+        'not-a-url',
+        'http://example.com',
+        'https://twitter.com/johndoe',
+        'linkedin.com/in/johndoe', // Missing protocol
+      ];
+
+      for (const invalidUrl of invalidUrls) {
+        const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+        const req = new Request('http://localhost/api/v1/mentors/profiles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            user_id: testUser.id,
+            nick_name: `InvalidLinkedIn_${Date.now()}`,
+            bio: 'Testing invalid LinkedIn URL',
+            mentoring_levels: MentoringLevel.Entry,
+            payment_types: PaymentType.Venmo,
+            linkedin_url: invalidUrl,
+          }),
+        });
+
+        const res = await app.fetch(req, mockEnv);
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.error).toContain('LinkedIn URL');
+      }
+    });
+
+    it('should accept various valid LinkedIn URL formats', async () => {
+      const validUrls = [
+        'https://www.linkedin.com/in/johndoe',
+        'https://linkedin.com/in/johndoe',
+        'https://www.linkedin.com/in/john-doe-123456',
+        'http://www.linkedin.com/in/johndoe',
+      ];
+
+      for (const validUrl of validUrls) {
+        // Create a new user for each test to avoid conflicts
+        const newUser = await createTestUser(mockEnv, `test${Date.now()}@example.com`, 'Test User');
+        const token = await createTestToken(newUser.id as string, newUser.email as string, newUser.name as string);
+
+        const req = new Request('http://localhost/api/v1/mentors/profiles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            user_id: newUser.id,
+            nick_name: `ValidLinkedIn_${Date.now()}`,
+            bio: 'Testing valid LinkedIn URL',
+            mentoring_levels: MentoringLevel.Entry,
+            payment_types: PaymentType.Venmo,
+            linkedin_url: validUrl,
+          }),
+        });
+
+        const res = await app.fetch(req, mockEnv);
+        expect(res.status).toBe(201);
+        const data = await res.json();
+        expect(data.linkedin_url).toBe(validUrl);
+      }
+    });
+
+    it('should update mentor profile to add LinkedIn URL', async () => {
+      // Create a profile without LinkedIn URL
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: 'UpdateLinkedInMentor',
+          bio: 'Will add LinkedIn later',
+          mentoring_levels: MentoringLevel.Entry,
+          payment_types: PaymentType.Venmo,
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Update to add LinkedIn URL
+      const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          linkedin_url: 'https://www.linkedin.com/in/newprofile',
+        }),
+      });
+      const updateRes = await app.fetch(updateReq, mockEnv);
+
+      expect(updateRes.status).toBe(200);
+      const updated = await updateRes.json();
+      expect(updated.linkedin_url).toBe('https://www.linkedin.com/in/newprofile');
+    });
+
+    it('should update mentor profile to remove LinkedIn URL', async () => {
+      // Create a profile with LinkedIn URL
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: 'RemoveLinkedInMentor',
+          bio: 'Will remove LinkedIn later',
+          mentoring_levels: MentoringLevel.Entry,
+          payment_types: PaymentType.Venmo,
+          linkedin_url: 'https://www.linkedin.com/in/oldprofile',
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Update to remove LinkedIn URL
+      const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          linkedin_url: null,
+        }),
+      });
+      const updateRes = await app.fetch(updateReq, mockEnv);
+
+      expect(updateRes.status).toBe(200);
+      const updated = await updateRes.json();
+      expect(updated.linkedin_url).toBe(null);
+    });
+
+    it('should return LinkedIn URL when getting mentor profile', async () => {
+      // Create a profile with LinkedIn URL
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: testUser.id,
+          nick_name: 'GetLinkedInMentor',
+          bio: 'Testing GET with LinkedIn',
+          mentoring_levels: MentoringLevel.Entry,
+          payment_types: PaymentType.Venmo,
+          linkedin_url: 'https://www.linkedin.com/in/testprofile',
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      const created = await createRes.json();
+
+      // Get the profile
+      const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const getRes = await app.fetch(getReq, mockEnv);
+
+      expect(getRes.status).toBe(200);
+      const data = await getRes.json();
+      expect(data.linkedin_url).toBe('https://www.linkedin.com/in/testprofile');
     });
   });
 });

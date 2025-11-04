@@ -49,6 +49,7 @@ export interface MentorProfile {
   expertise_topics_custom: string[]; // Custom tags as array
   allow_reviews: boolean;
   allow_recording: boolean;
+  linkedin_url: string | null; // LinkedIn profile URL
   created_at: number;
   updated_at: number;
 }

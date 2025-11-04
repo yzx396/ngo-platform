@@ -170,7 +170,12 @@
     "expertiseTopics": "专长方向",
     "customTopics": "自定义专长标签",
     "addCustomTopicPlaceholder": "输入专长标签（如：创业指导）",
-    "customTopicsHint": "按回车键或点击'添加'按钮添加标签"
+    "customTopicsHint": "按回车键或点击'添加'按钮添加标签",
+    "linkedinUrl": "LinkedIn 个人主页链接",
+    "linkedinUrlHelp": "可选：添加您的 LinkedIn 个人主页链接，方便学员了解您的职业背景",
+    "validationLinkedInUrl": "LinkedIn URL 格式无效。必须是 https://www.linkedin.com/in/用户名 或 https://linkedin.com/in/用户名",
+    "linkedinProfile": "LinkedIn 个人主页",
+    "viewLinkedInProfile": "查看 LinkedIn 个人主页"
   },
   "mentoringLevel": {
     "entry": "Entry level (对标谷歌L3-4)",

@@ -170,7 +170,12 @@
     "expertiseTopics": "Your Areas of Expertise",
     "customTopics": "Custom Expertise Tags",
     "addCustomTopicPlaceholder": "Enter expertise tag (e.g., startup strategy)",
-    "customTopicsHint": "Press Enter or click \"Add\" to add a tag"
+    "customTopicsHint": "Press Enter or click \"Add\" to add a tag",
+    "linkedinUrl": "LinkedIn Profile URL",
+    "linkedinUrlHelp": "Optional: Add your LinkedIn profile URL for mentees to learn more about your professional background",
+    "validationLinkedInUrl": "Invalid LinkedIn URL format. Must be https://www.linkedin.com/in/username or https://linkedin.com/in/username",
+    "linkedinProfile": "LinkedIn Profile",
+    "viewLinkedInProfile": "View LinkedIn Profile"
   },
   "mentoringLevel": {
     "entry": "Entry level (Google L3-4)",
