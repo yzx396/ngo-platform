@@ -113,3 +113,41 @@ export const INITIAL_POINTS = 0;
  * Maximum reasonable points (for validation)
  */
 export const MAX_POINTS = 999999;
+
+/**
+ * Point Reward Constants for Post Engagement System
+ * Creation-focused: Higher points for creating content, author rewards for engagement
+ */
+
+// Points awarded to content creators
+export const POINTS_FOR_CREATE_DISCUSSION_POST = 15; // Creating discussion post
+export const POINTS_FOR_CREATE_GENERAL_POST = 10; // Creating general post
+export const POINTS_FOR_CREATE_ANNOUNCEMENT_POST = 0; // Admin-only, shouldn't game system
+export const POINTS_FOR_CREATE_COMMENT = 5; // Creating comment
+
+// Points awarded to content authors for receiving engagement
+export const POINTS_FOR_RECEIVING_LIKE = 2; // Post author receives when someone likes their post
+export const POINTS_FOR_RECEIVING_COMMENT = 3; // Post author receives when someone comments on their post
+
+/**
+ * Diminishing Returns Configuration
+ * Anti-spam mechanism: Points reduce after exceeding thresholds within 1-hour window
+ */
+
+// Likes received: First 5 = full points, next 10 = 50% points, then 0
+export const LIKES_RECEIVED_FULL_POINTS_THRESHOLD = 5;
+export const LIKES_RECEIVED_REDUCED_POINTS_THRESHOLD = 15; // 5 + 10
+export const LIKES_RECEIVED_REDUCED_MULTIPLIER = 0.5;
+
+// Comments created: First 10 = full points, next 10 = 40% points, then 0
+export const COMMENTS_CREATED_FULL_POINTS_THRESHOLD = 10;
+export const COMMENTS_CREATED_REDUCED_POINTS_THRESHOLD = 20; // 10 + 10
+export const COMMENTS_CREATED_REDUCED_MULTIPLIER = 0.4;
+
+// Posts created: First 3 = full points, next 2 = 50% points, then 0
+export const POSTS_CREATED_FULL_POINTS_THRESHOLD = 3;
+export const POSTS_CREATED_REDUCED_POINTS_THRESHOLD = 5; // 3 + 2
+export const POSTS_CREATED_REDUCED_MULTIPLIER = 0.5;
+
+// Time window for diminishing returns (in seconds): 1 hour
+export const DIMINISHING_RETURNS_WINDOW_SECONDS = 3600;

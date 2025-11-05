@@ -31,7 +31,26 @@ import {
 import { createToken } from "./auth/jwt";
 import { AuthPayload } from "../types/user";
 import { UserRole, DEFAULT_ROLE, normalizeUserRole } from "../types/role";
-import { normalizeUserPointsWithRank, INITIAL_POINTS } from "../types/points";
+import {
+  normalizeUserPointsWithRank,
+  INITIAL_POINTS,
+  POINTS_FOR_CREATE_DISCUSSION_POST,
+  POINTS_FOR_CREATE_GENERAL_POST,
+  POINTS_FOR_CREATE_ANNOUNCEMENT_POST,
+  POINTS_FOR_CREATE_COMMENT,
+  POINTS_FOR_RECEIVING_LIKE,
+  POINTS_FOR_RECEIVING_COMMENT,
+  LIKES_RECEIVED_FULL_POINTS_THRESHOLD,
+  LIKES_RECEIVED_REDUCED_POINTS_THRESHOLD,
+  LIKES_RECEIVED_REDUCED_MULTIPLIER,
+  COMMENTS_CREATED_FULL_POINTS_THRESHOLD,
+  COMMENTS_CREATED_REDUCED_POINTS_THRESHOLD,
+  COMMENTS_CREATED_REDUCED_MULTIPLIER,
+  POSTS_CREATED_FULL_POINTS_THRESHOLD,
+  POSTS_CREATED_REDUCED_POINTS_THRESHOLD,
+  POSTS_CREATED_REDUCED_MULTIPLIER,
+  DIMINISHING_RETURNS_WINDOW_SECONDS,
+} from "../types/points";
 
 /**
  * Environment variables and bindings for the Worker
@@ -466,6 +485,116 @@ async function getUserRank(db: D1Database, userId: string): Promise<number | nul
   } catch (err) {
     console.error("Error calculating rank:", err);
     return null;
+  }
+}
+
+/**
+ * Award points to a user for a specific action with diminishing returns
+ * Applies anti-spam logic based on action type and recent activity
+ * @param db - Database instance
+ * @param userId - User ID to award points to
+ * @param actionType - Type of action (e.g., 'like_received', 'comment_created')
+ * @param referenceId - ID of the referenced content (post/comment/like)
+ * @param basePoints - Base points before diminishing returns calculation
+ * @returns Actual points awarded (may be reduced by diminishing returns)
+ */
+async function awardPointsForAction(
+  db: D1Database,
+  userId: string,
+  actionType: string,
+  referenceId: string,
+  basePoints: number
+): Promise<number> {
+  try {
+    // Silently return 0 for non-positive base points
+    if (basePoints <= 0) {
+      return 0;
+    }
+
+    const now = getTimestamp();
+    const windowStart = now - DIMINISHING_RETURNS_WINDOW_SECONDS;
+
+    // Count recent actions of the same type in the time window
+    const recentActionsResult = await db.prepare(`
+      SELECT COUNT(*) as count
+      FROM point_actions_log
+      WHERE user_id = ? AND action_type = ? AND created_at >= ?
+    `).bind(userId, actionType, windowStart).first<{ count: number }>();
+
+    const recentActionCount = recentActionsResult?.count || 0;
+
+    // Calculate adjusted points based on diminishing returns thresholds
+    let adjustedPoints = basePoints;
+
+    if (actionType === 'like_received') {
+      if (recentActionCount >= LIKES_RECEIVED_REDUCED_POINTS_THRESHOLD) {
+        adjustedPoints = 0; // Over threshold, no points
+      } else if (recentActionCount >= LIKES_RECEIVED_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = Math.floor(basePoints * LIKES_RECEIVED_REDUCED_MULTIPLIER);
+      }
+    } else if (actionType === 'comment_created') {
+      if (recentActionCount >= COMMENTS_CREATED_REDUCED_POINTS_THRESHOLD) {
+        adjustedPoints = 0; // Over threshold, no points
+      } else if (recentActionCount >= COMMENTS_CREATED_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = Math.floor(basePoints * COMMENTS_CREATED_REDUCED_MULTIPLIER);
+      }
+    } else if (actionType === 'post_created') {
+      if (recentActionCount >= POSTS_CREATED_REDUCED_POINTS_THRESHOLD) {
+        adjustedPoints = 0; // Over threshold, no points
+      } else if (recentActionCount >= POSTS_CREATED_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = Math.floor(basePoints * POSTS_CREATED_REDUCED_MULTIPLIER);
+      }
+    }
+
+    // If no points to award, still log the action but return 0
+    if (adjustedPoints === 0) {
+      const logId = generateId();
+      await db.prepare(`
+        INSERT INTO point_actions_log (id, user_id, action_type, reference_id, points_awarded, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(logId, userId, actionType, referenceId, 0, now).run();
+      return 0;
+    }
+
+    // Update user points (increment by adjusted amount)
+    // First, fetch current points
+    const pointsRecord = await db.prepare(`
+      SELECT id, points FROM user_points WHERE user_id = ?
+    `).bind(userId).first<{ id: string; points: number }>();
+
+    const timestamp = getTimestamp();
+
+    if (pointsRecord) {
+      // Update existing points record
+      const newPoints = Math.min(
+        pointsRecord.points + adjustedPoints,
+        999999 // Cap at reasonable max
+      );
+      await db.prepare(`
+        UPDATE user_points SET points = ?, updated_at = ? WHERE user_id = ?
+      `).bind(newPoints, timestamp, userId).run();
+    } else {
+      // Create new points record
+      const id = generateId();
+      const newPoints = Math.min(adjustedPoints, 999999);
+      await db.prepare(`
+        INSERT INTO user_points (id, user_id, points, updated_at)
+        VALUES (?, ?, ?, ?)
+      `).bind(id, userId, newPoints, timestamp).run();
+    }
+
+    // Log the action
+    const logId = generateId();
+    await db.prepare(`
+      INSERT INTO point_actions_log (id, user_id, action_type, reference_id, points_awarded, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(logId, userId, actionType, referenceId, adjustedPoints, now).run();
+
+    return adjustedPoints;
+  } catch (err) {
+    console.error("Error awarding points for action:", err);
+    // Silently fail to avoid blocking user actions
+    return 0;
   }
 }
 
@@ -2014,6 +2143,24 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
       throw new Error("Failed to insert post");
     }
 
+    // Award points to the post creator (silent failure if points system fails)
+    const basePoints =
+      post_type === "discussion"
+        ? POINTS_FOR_CREATE_DISCUSSION_POST
+        : post_type === "general"
+          ? POINTS_FOR_CREATE_GENERAL_POST
+          : POINTS_FOR_CREATE_ANNOUNCEMENT_POST;
+
+    if (basePoints > 0) {
+      await awardPointsForAction(
+        c.env.platform_db,
+        userId,
+        "post_created",
+        postId,
+        basePoints
+      );
+    }
+
     // Fetch and return the created post
     const post = await c.env.platform_db
       .prepare("SELECT * FROM posts WHERE id = ?")
@@ -2292,6 +2439,19 @@ app.post("/api/v1/posts/:id/like", requireAuth, async (c) => {
       throw new Error("Failed to update likes count");
     }
 
+    // Award points to the post author for receiving a like (silent failure if points system fails)
+    const postAuthorId = post.user_id as string;
+    if (postAuthorId !== userId) {
+      // Only award points if the liker is not the post author
+      await awardPointsForAction(
+        c.env.platform_db,
+        postAuthorId,
+        "like_received",
+        likeId,
+        POINTS_FOR_RECEIVING_LIKE
+      );
+    }
+
     // Fetch updated post
     const updatedPost = await c.env.platform_db
       .prepare("SELECT * FROM posts WHERE id = ?")
@@ -2469,6 +2629,28 @@ app.post("/api/v1/posts/:id/comments", requireAuth, async (c) => {
 
     if (!updateResult.success) {
       throw new Error("Failed to update comments count");
+    }
+
+    // Award points to the comment creator (silent failure if points system fails)
+    await awardPointsForAction(
+      c.env.platform_db,
+      userId,
+      "comment_created",
+      commentId,
+      POINTS_FOR_CREATE_COMMENT
+    );
+
+    // Award points to the post author for receiving a comment (silent failure if points system fails)
+    const postAuthorId = post.user_id as string;
+    if (postAuthorId !== userId) {
+      // Only award points if the commenter is not the post author
+      await awardPointsForAction(
+        c.env.platform_db,
+        postAuthorId,
+        "comment_received",
+        commentId,
+        POINTS_FOR_RECEIVING_COMMENT
+      );
     }
 
     // Fetch the created comment with author info

@@ -1058,6 +1058,85 @@ Test type normalization, formatting, storage, rank calculation, and authorizatio
 
 Points integrated into User types and API response types.
 
+### Post Engagement Point System
+
+The platform automatically awards points for creating and engaging with community posts. This gamification system encourages quality content creation and community participation.
+
+**Point Values (Creation-Focused):**
+
+Content Creation:
+- Discussion posts: 15 points
+- General posts: 10 points
+- Announcement posts: 0 points (admin-only, no gamification)
+- Comments: 5 points
+
+Content Author Rewards (for receiving engagement):
+- Each like on their post: 2 points (to post author)
+- Each comment on their post: 3 points (to post author)
+
+**Anti-Spam: Diminishing Returns**
+
+All point awards use a rolling 1-hour window with diminishing returns to prevent spam:
+
+- **Likes received**: First 5 per hour = full points, next 10 = 50% points, then 0 points
+- **Comments created**: First 10 per hour = full points, next 10 = 40% points, then 0 points
+- **Posts created**: First 3 per hour = full points, next 2 = 50% points, then 0 points
+
+**How It Works:**
+
+1. **Post Creation**: When user creates a discussion/general post, they immediately receive points based on post type
+2. **Receiving Like**: When another user likes a post, the post author receives points (not the liker)
+3. **Creating Comment**: When user comments on a post, they receive points AND the post author receives points (unless commenter is the author)
+4. **Point Tracking**: All point awards are logged in `point_actions_log` table for audit and diminishing returns calculation
+
+**Database Schema (New Tables):**
+
+**point_actions_log table** (migration 0013):
+- `id` (TEXT PRIMARY KEY): Unique log entry
+- `user_id` (TEXT FOREIGN KEY): User receiving points
+- `action_type` (TEXT): `post_created`, `like_received`, `comment_created`, `comment_received`
+- `reference_id` (TEXT): ID of the post/comment/like
+- `points_awarded` (INTEGER): Actual points awarded (after diminishing returns)
+- `created_at` (INTEGER): Unix timestamp
+
+**Indexes:**
+- `idx_point_actions_user_time`: Fast lookups for diminishing returns calculations
+
+**Implementation Details:**
+
+Points awarding is handled silently - if point system fails, the post/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
+
+**Constants:** (defined in `src/types/points.ts`)
+```typescript
+POINTS_FOR_CREATE_DISCUSSION_POST = 15
+POINTS_FOR_CREATE_GENERAL_POST = 10
+POINTS_FOR_CREATE_COMMENT = 5
+POINTS_FOR_RECEIVING_LIKE = 2
+POINTS_FOR_RECEIVING_COMMENT = 3
+DIMINISHING_RETURNS_WINDOW_SECONDS = 3600
+```
+
+**Helper Function:** (in `src/worker/index.ts`)
+```typescript
+async function awardPointsForAction(
+  db: D1Database,
+  userId: string,
+  actionType: string,
+  referenceId: string,
+  basePoints: number
+): Promise<number>
+```
+- Calculates diminishing returns based on recent actions
+- Updates user_points table
+- Logs action in point_actions_log
+- Returns actual points awarded
+
+**Integration with Endpoints:**
+
+- `POST /api/v1/posts`: Awards creator points after post insertion
+- `POST /api/v1/posts/:id/like`: Awards post author points after like created
+- `POST /api/v1/posts/:id/comments`: Awards commenter AND post author points after comment created
+
 ---
 
 ## Role-Based Access Control System
