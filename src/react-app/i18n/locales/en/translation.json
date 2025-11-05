@@ -180,7 +180,8 @@
     "addCustomTopicPlaceholder": "Enter expertise tag (e.g., startup strategy)",
     "customTopicsHint": "Press Enter or click \"Add\" to add a tag",
     "linkedinUrl": "LinkedIn Profile URL",
-    "linkedinUrlHelp": "Optional: Add your LinkedIn profile URL for mentees to learn more about your professional background",
+    "linkedinUrlHelp": "Add your LinkedIn profile URL for mentees to learn more about your professional background",
+    "validationLinkedInRequired": "LinkedIn URL is required",
     "validationLinkedInUrl": "Invalid LinkedIn URL format. Must be https://www.linkedin.com/in/username or https://linkedin.com/in/username",
     "linkedinProfile": "LinkedIn Profile",
     "viewLinkedInProfile": "View LinkedIn Profile"

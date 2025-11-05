@@ -42,8 +42,8 @@ const createMentorProfileSchema = (t: (key: string) => string) => z.object({
     (val) => val === true,
     t('mentor.validationRecordingRequired')
   ),
-  linkedin_url: z.string().optional().refine(
-    (val) => !val || linkedInUrlRegex.test(val),
+  linkedin_url: z.string().min(1, t('mentor.validationLinkedInRequired')).refine(
+    (val) => linkedInUrlRegex.test(val),
     t('mentor.validationLinkedInUrl')
   ),
 });
@@ -234,6 +234,7 @@ export function MentorProfileSetup() {
                 <div className="space-y-2">
                   <Label htmlFor="linkedin_url">
                     {t('mentor.linkedinUrl')}
+                    <span className="text-red-500 ml-1">*</span>
                   </Label>
                   <Input
                     id="linkedin_url"
