@@ -18,6 +18,10 @@ npm run build                                  # Build for production
 npm run lint                                   # Run linter
 npm run deploy                                 # Deploy to Cloudflare
 
+# Quality checks (automated in Claude Code, or run manually)
+npm run quality-check                          # Lint (auto-fix) + test + build all-in-one
+npm run lint -- --fix                          # Auto-fix linting issues
+
 # Testing
 npm run test                                   # Run all tests
 npm run test:watch                             # Watch mode
@@ -35,6 +39,8 @@ npm run preview                                # Preview build locally
 npm run cf-typegen                             # Regenerate Cloudflare types
 npx wrangler tail                              # Monitor worker logs
 ```
+
+**Note**: When working in Claude Code, linting, type-checking, and tests run **automatically** via hooks configured in `.claude/settings.local.json`. See [Automated Quality Enforcement](#automated-quality-enforcement-with-claude-code-hooks) section for details.
 
 ## Test-Driven Development Workflow
 
@@ -142,6 +148,48 @@ npm run test              # All tests pass
 npm run lint              # No linting issues
 npm run build             # Build succeeds
 ```
+
+### Automated Quality Enforcement with Claude Code Hooks
+
+This project has automated quality checks configured in Claude Code that run automatically during development sessions:
+
+**How It Works:**
+
+When you work with Claude Code in this repository, quality checks run automatically:
+
+1. **After every file edit/write**: `npm run lint -- --fix` (auto-fixes formatting and linting issues)
+2. **After TypeScript file changes**: `npm run build` (type-checking and compilation)
+3. **When Claude finishes responding**: `npm run test` (full test suite)
+
+These hooks are configured in `.claude/settings.local.json` and provide real-time feedback without manual intervention.
+
+**Manual Quality Check:**
+
+If you want to manually run all quality checks at once:
+```bash
+npm run quality-check     # Lints with auto-fix, runs tests, and builds
+```
+
+**What Each Hook Does:**
+
+| Trigger | Command | Purpose |
+|---------|---------|---------|
+| After Edit/Write | `npm run lint -- --fix` | Auto-fix linting issues (formatting, simple fixes) |
+| After .ts/.tsx edit | `npm run build` | Type-check and compile (catches type errors) |
+| When Claude stops | `npm test` | Full test suite (ensures nothing broke) |
+
+**If a Hook Fails:**
+
+- Hook failures are reported in the Claude Code session
+- Fix the issues following the error messages
+- Hooks will re-run on your next file edit
+
+**Performance Tips:**
+
+- Hooks use reasonable timeouts (lint: 30s, build: 60s, test: 120s)
+- Linting is fast (only checks changed files)
+- Build type-checks all three TypeScript projects
+- Tests run full suite; consider `npm run test:watch` for iterative development
 
 ### Coverage Goals
 

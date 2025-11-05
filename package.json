@@ -20,6 +20,7 @@
 		"db:seed:posts": "tsx scripts/seed-posts.ts",
 		"lint": "eslint .",
 		"preview": "npm run build && vite preview",
+		"quality-check": "npm run lint -- --fix && npm test && npm run build",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
