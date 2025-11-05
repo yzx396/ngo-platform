@@ -30,7 +30,8 @@
     "noDataAvailable": "暂无数据",
     "add": "添加",
     "you": "你",
-    "name": "名字"
+    "name": "名字",
+    "email": "邮箱"
   },
   "navigation": {
     "feed": "动态",
@@ -45,7 +46,11 @@
     "about": "关于",
     "help": "帮助",
     "events": "活动",
-    "leaderboard": "排行榜"
+    "leaderboard": "排行榜",
+    "admin": {
+      "title": "管理员",
+      "users": "用户管理"
+    }
   },
   "home": {
     "title": "欢迎来到 Lead Forward 平台",
@@ -393,5 +398,17 @@
     "submitReply": "回复",
     "deleted": "已删除",
     "replyPlaceholder": "写个回复..."
+  },
+  "admin": {
+    "roleUpdated": "角色更新成功",
+    "users": {
+      "title": "用户管理",
+      "subtitle": "管理用户角色和权限",
+      "currentRole": "当前角色",
+      "actions": "操作",
+      "makeAdmin": "设为管理员",
+      "removeMember": "降级为成员",
+      "noUsers": "未找到用户"
+    }
   }
 }

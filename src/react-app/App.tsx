@@ -24,6 +24,7 @@ const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m =>
 const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(m => ({ default: m.MentorProfileSetup })));
 const UserProfileEdit = lazy(() => import('./pages/UserProfileEdit').then(m => ({ default: m.UserProfileEdit })));
 const MatchesList = lazy(() => import('./pages/MatchesList').then(m => ({ default: m.MatchesList })));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
 
 /**
  * Loading fallback component for Suspense
@@ -124,6 +125,16 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <MatchesList />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Admin Routes */}
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute>
+                    <AdminUsersPage />
                   </ProtectedRoute>
                 }
               />

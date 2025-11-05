@@ -15,6 +15,18 @@ export interface UpdateUserRequest {
   email?: string;
 }
 
+export interface GetUsersRequest {
+  limit?: number;
+  offset?: number;
+}
+
+export interface GetUsersResponse {
+  users: import('./user').User[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 // Role API
 export interface AssignRoleRequest {
   userId: string;

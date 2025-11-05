@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
+import { UserRole } from '../../types/role';
 
 interface NavLink {
   href: string;
@@ -67,10 +68,11 @@ function NavSection({
  */
 export function Sidebar() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useTranslation();
 
   const isActive = (path: string) => location.pathname === path;
+  const isAdmin = user?.role === UserRole.Admin;
 
   // Feed section - always visible
   const feedLinks: NavLink[] = [
@@ -131,6 +133,16 @@ export function Sidebar() {
     },
   ];
 
+  // Admin section - admin only
+  const adminLinks: NavLink[] = [
+    {
+      href: '/admin/users',
+      label: t('navigation.admin.users', 'User Management'),
+      icon: '👥',
+      requiresAuth: true,
+    },
+  ];
+
   // Links section - always visible
   const linksSection: NavLink[] = [
     {
@@ -158,6 +170,19 @@ export function Sidebar() {
             <NavSection
               title={t('navigation.memberArea', 'Member Area')}
               links={memberAreaLinks}
+              isActive={isActive}
+              isAuthenticated={isAuthenticated}
+            />
+          </>
+        )}
+
+        {/* Admin Section - Only show if admin */}
+        {isAuthenticated && isAdmin && (
+          <>
+            <div className="border-t" />
+            <NavSection
+              title={t('navigation.admin.title', 'Admin')}
+              links={adminLinks}
               isActive={isActive}
               isAuthenticated={isAuthenticated}
             />

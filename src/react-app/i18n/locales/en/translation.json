@@ -30,7 +30,8 @@
     "noDataAvailable": "No data available",
     "add": "Add",
     "you": "You",
-    "name": "Name"
+    "name": "Name",
+    "email": "Email"
   },
   "navigation": {
     "feed": "Feed",
@@ -45,7 +46,11 @@
     "about": "About",
     "help": "Help",
     "events": "Events",
-    "leaderboard": "Leaderboard"
+    "leaderboard": "Leaderboard",
+    "admin": {
+      "title": "Admin",
+      "users": "User Management"
+    }
   },
   "home": {
     "title": "Welcome to Lead Forward Platform",
@@ -393,5 +398,17 @@
     "submitReply": "Reply",
     "deleted": "deleted",
     "replyPlaceholder": "Write a reply..."
+  },
+  "admin": {
+    "roleUpdated": "Role updated successfully",
+    "users": {
+      "title": "User Management",
+      "subtitle": "Manage user roles and permissions",
+      "currentRole": "Current Role",
+      "actions": "Actions",
+      "makeAdmin": "Make Admin",
+      "removeMember": "Demote to Member",
+      "noUsers": "No users found"
+    }
   }
 }
