@@ -105,3 +105,30 @@ export async function acceptMatch(matchId: string): Promise<Match> {
 export async function rejectMatch(matchId: string): Promise<Match> {
   return respondToMatch(matchId, 'reject');
 }
+
+/**
+ * Check if a match already exists between current user (mentee) and a mentor
+ * @param mentorId - ID of the mentor to check
+ * @returns Match status if exists, null if not
+ */
+export async function checkExistingMatch(mentorId: string): Promise<{
+  exists: boolean;
+  matchId?: string;
+  status?: string;
+} | null> {
+  try {
+    const response = await apiGet<{
+      exists: boolean;
+      matchId?: string;
+      status?: string;
+    }>(`/api/v1/matches/check/${mentorId}`);
+    return response;
+  } catch (error) {
+    // 404 means no match exists - return null or false
+    if (error instanceof Error && error.message.includes('404')) {
+      return { exists: false };
+    }
+    // Re-throw other errors
+    throw error;
+  }
+}

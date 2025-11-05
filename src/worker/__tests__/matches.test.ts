@@ -54,6 +54,9 @@ interface MockMatch {
   mentor_id: string;
   mentee_id: string;
   status: string;
+  introduction: string;
+  preferred_time: string;
+  cv_included: number;
   created_at: number;
   updated_at: number;
 }
@@ -73,23 +76,23 @@ const createMockDb = () => {
             let paramIndex = 0;
 
             // Handle OR condition first (it appears first in query string)
-            if (query.includes('(mentor_id = ? OR mentee_id = ?)')) {
+            if (query.includes('(matches.mentor_id = ? OR matches.mentee_id = ?)')) {
               const userId = params[paramIndex++];
               results = results.filter(m => m.mentor_id === userId || m.mentee_id === userId);
               // The OR condition has two parameters (same value repeated)
               paramIndex++; // Skip the second parameter in the OR
               // Check for role filter (additional condition after OR)
-              if (query.includes('AND mentor_id = ?')) {
+              if (query.includes('AND matches.mentor_id = ?')) {
                 const mentorId = params[paramIndex++];
                 results = results.filter(m => m.mentor_id === mentorId);
-              } else if (query.includes('AND mentee_id = ?')) {
+              } else if (query.includes('AND matches.mentee_id = ?')) {
                 const menteeId = params[paramIndex++];
                 results = results.filter(m => m.mentee_id === menteeId);
               }
-            } else if (query.includes('mentor_id = ?') && !query.includes('OR')) {
+            } else if (query.includes('matches.mentor_id = ?') && !query.includes('OR')) {
               const mentorId = params[paramIndex++];
               results = results.filter(m => m.mentor_id === mentorId);
-            } else if (query.includes('mentee_id = ?') && !query.includes('OR')) {
+            } else if (query.includes('matches.mentee_id = ?') && !query.includes('OR')) {
               const menteeId = params[paramIndex++];
               results = results.filter(m => m.mentee_id === menteeId);
             }
@@ -149,8 +152,8 @@ const createMockDb = () => {
           }
 
           if (query.includes('INSERT INTO matches')) {
-            const [id, mentor_id, mentee_id, status, created_at, updated_at] = params;
-            mockMatches.set(id, { id, mentor_id, mentee_id, status, created_at, updated_at });
+            const [id, mentor_id, mentee_id, status, introduction, preferred_time, cv_included, created_at, updated_at] = params;
+            mockMatches.set(id, { id, mentor_id, mentee_id, status, introduction, preferred_time, cv_included, created_at, updated_at });
             return { success: true, meta: { changes: 1 } };
           }
 

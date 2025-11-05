@@ -2,12 +2,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
+import { AuthProvider } from '../context/AuthContext';
 import * as matchService from '../services/matchService';
 import * as apiClient from '../services/apiClient';
+import * as cvService from '../services/cvService';
 
 // Mock dependencies
 vi.mock('../services/matchService');
 vi.mock('../services/apiClient');
+vi.mock('../services/cvService');
 
 const mockMentor = {
   id: '1',
@@ -30,16 +33,20 @@ describe('RequestMentorshipDialog', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock getCVMetadata to return null
+    vi.mocked(cvService.getCVMetadata).mockResolvedValue(null);
   });
 
   it('should not render when isOpen is false', () => {
     const { container } = render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={false}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={false}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     // Dialog should not be visible
@@ -48,12 +55,14 @@ describe('RequestMentorshipDialog', () => {
 
   it('should render form fields when dialog is open', () => {
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     expect(screen.getByText(/Request Mentorship/i)).toBeInTheDocument();
@@ -64,12 +73,14 @@ describe('RequestMentorshipDialog', () => {
   it('should show validation error for introduction when empty', async () => {
     const user = userEvent.setup();
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     // Try to submit empty form
@@ -85,12 +96,14 @@ describe('RequestMentorshipDialog', () => {
   it('should show validation error for preferred_time when empty', async () => {
     const user = userEvent.setup();
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     const introductionInput = screen.getByLabelText(/Personal Introduction/i);
@@ -121,12 +134,14 @@ describe('RequestMentorshipDialog', () => {
     vi.mocked(apiClient.showSuccessToast).mockImplementation(() => {});
 
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     // Fill in the form
@@ -146,6 +161,7 @@ describe('RequestMentorshipDialog', () => {
         mentor_id: mockMentor.user_id,
         introduction: 'This is my introduction',
         preferred_time: 'Weekends',
+        cv_included: false,
       });
     });
 
@@ -161,12 +177,14 @@ describe('RequestMentorshipDialog', () => {
   it('should close dialog when cancel button is clicked', async () => {
     const user = userEvent.setup();
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     const cancelButton = screen.getByText('Cancel');
@@ -182,12 +200,14 @@ describe('RequestMentorshipDialog', () => {
     vi.mocked(apiClient.handleApiError).mockImplementation(() => {});
 
     render(
-      <RequestMentorshipDialog
-        mentor={mockMentor}
-        isOpen={true}
-        onOpenChange={mockOnOpenChange}
-        onSuccess={mockOnSuccess}
-      />
+      <AuthProvider>
+        <RequestMentorshipDialog
+          mentor={mockMentor}
+          isOpen={true}
+          onOpenChange={mockOnOpenChange}
+          onSuccess={mockOnSuccess}
+        />
+      </AuthProvider>
     );
 
     // Fill in and submit form

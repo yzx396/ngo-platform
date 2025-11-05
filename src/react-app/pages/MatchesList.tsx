@@ -9,6 +9,7 @@ import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
 import { getMatches, acceptMatch, rejectMatch, completeMatch } from '../services/matchService';
 import { getMentorProfileByUserId } from '../services/mentorService';
+import { getCVMetadata } from '../services/cvService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { useAuth } from '../context/AuthContext';
 import type { Match } from '../../types/match';
@@ -275,10 +276,34 @@ function MatchCard({
   onComplete?: (matchId: string) => void;
 }) {
   const { t } = useTranslation();
-  // For display, use mentor_id or mentee_id as fallback
-  const displayName = role === 'mentor' ? `Mentee ${match.mentee_id.slice(0, 8)}` : `Mentor ${match.mentor_id.slice(0, 8)}`;
+  const [loadingCv, setLoadingCv] = useState(false);
+
+  // Display mentor or mentee name, with ID fallback
+  const displayName = role === 'mentor'
+    ? match.mentee_name || `Mentee ${match.mentee_id.slice(0, 8)}`
+    : match.mentor_name || `Mentor ${match.mentor_id.slice(0, 8)}`;
   const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const createdDate = new Date(match.created_at * 1000).toLocaleDateString();
+
+  // Handle CV download for mentors
+  const handleDownloadCV = async () => {
+    setLoadingCv(true);
+    try {
+      // Get CV metadata which includes signed URL
+      const metadata = await getCVMetadata(match.mentee_id);
+      if (metadata?.cv_url) {
+        // Open the signed URL in a new window (download)
+        window.open(metadata.cv_url, '_blank');
+        showSuccessToast(t('matches.downloadingCv'));
+      } else {
+        handleApiError(new Error('CV not available'));
+      }
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setLoadingCv(false);
+    }
+  };
 
   return (
     <Card className="flex flex-col h-full hover:shadow-md transition-shadow">
@@ -320,11 +345,36 @@ function MatchCard({
             )}
           </>
         )}
+
+        {/* Show CV availability badge for mentors */}
+        {role === 'mentor' && (
+          <div>
+            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+              match.cv_included
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {match.cv_included ? t('matches.cvAvailable') : t('matches.cvNotAvailable')}
+            </span>
+          </div>
+        )}
       </CardContent>
 
-      <CardFooter className="flex gap-2 pt-3">
+      <CardFooter className="flex gap-2 pt-3 flex-wrap">
         {match.status === 'pending' && role === 'mentor' && onRespond && (
           <>
+            {/* Show CV button if CV is included */}
+            {match.cv_included && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={handleDownloadCV}
+                disabled={loadingCv}
+              >
+                {loadingCv ? t('matches.downloadingCv') : t('matches.viewCv')}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="default"
@@ -344,19 +394,47 @@ function MatchCard({
           </>
         )}
         {(match.status === 'active' || match.status === 'accepted') && onComplete && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            onClick={() => onComplete(match.id)}
-          >
-            {t('matches.complete')}
-          </Button>
+          <>
+            {/* Show CV button if CV is included */}
+            {match.cv_included && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={handleDownloadCV}
+                disabled={loadingCv}
+              >
+                {loadingCv ? t('matches.downloadingCv') : t('matches.viewCv')}
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={() => onComplete(match.id)}
+            >
+              {t('matches.complete')}
+            </Button>
+          </>
         )}
         {match.status === 'completed' && (
-          <Button size="sm" variant="outline" className="w-full" disabled>
-            {t('matches.viewDetails')}
-          </Button>
+          <>
+            {/* Show CV button if CV is included */}
+            {match.cv_included && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={handleDownloadCV}
+                disabled={loadingCv}
+              >
+                {loadingCv ? t('matches.downloadingCv') : t('matches.viewCv')}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="flex-1" disabled>
+              {t('matches.viewDetails')}
+            </Button>
+          </>
         )}
       </CardFooter>
     </Card>

@@ -38,6 +38,7 @@ import { normalizeUserPointsWithRank, INITIAL_POINTS } from "../types/points";
  */
 interface Env {
   platform_db: D1Database;
+  CV_BUCKET: R2Bucket;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   JWT_SECRET: string;
@@ -590,6 +591,140 @@ app.get("/api/v1/leaderboard", async (c) => {
   } catch (err) {
     console.error("Error fetching leaderboard:", err);
     return c.json({ error: "Failed to fetch leaderboard" }, 500);
+  }
+});
+
+// ============================================================================
+// CV Management API (/api/v1/users/:userId/cv)
+// ============================================================================
+
+/**
+ * POST /api/v1/users/:userId/cv - Upload user CV to R2
+ * Accepts PDF files only, max 5MB
+ */
+app.post("/api/v1/users/:userId/cv", requireAuth, async (c) => {
+  try {
+    const userId = c.req.param("userId");
+    const formData = await c.req.formData();
+    const file = formData.get("file");
+
+    // Validate file exists
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: "No file provided" }, 400);
+    }
+
+    // Validate file type (PDF only)
+    if (file.type !== "application/pdf") {
+      return c.json({ error: "Only PDF files are allowed" }, 400);
+    }
+
+    // Validate file size (max 5MB)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return c.json({ error: "File size must be less than 5MB" }, 400);
+    }
+
+    // Generate unique filename: userId-timestamp.pdf
+    const timestamp = Date.now();
+    const filename = `${userId}-${timestamp}.pdf`;
+
+    // Upload to R2
+    const arrayBuffer = await file.arrayBuffer();
+    await c.env.CV_BUCKET.put(filename, arrayBuffer, {
+      httpMetadata: {
+        contentType: "application/pdf",
+        contentDisposition: `attachment; filename="${file.name}"`,
+      },
+      customMetadata: {
+        uploadedBy: userId,
+        originalName: file.name,
+      },
+    });
+
+    // Update user record with CV info
+    const cvUploadedAt = getTimestamp();
+    await c.env.platform_db
+      .prepare(
+        `UPDATE users SET cv_url = ?, cv_filename = ?, cv_uploaded_at = ?, updated_at = ?
+         WHERE id = ?`
+      )
+      .bind(filename, file.name, cvUploadedAt, cvUploadedAt, userId)
+      .run();
+
+    // Return success with file info
+    return c.json({
+      success: true,
+      filename: file.name,
+      originalFilename: file.name,
+      uploadedAt: cvUploadedAt,
+      message: "CV uploaded successfully",
+    }, 201);
+  } catch (error) {
+    console.error("CV upload error:", error);
+    return c.json({ error: "Failed to upload CV" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/users/:userId/cv - Get user CV metadata
+ * Returns CV metadata including filename and upload timestamp
+ */
+app.get("/api/v1/users/:userId/cv", requireAuth, async (c) => {
+  try {
+    const userId = c.req.param("userId");
+
+    const user = await c.env.platform_db
+      .prepare(`SELECT cv_url, cv_filename, cv_uploaded_at FROM users WHERE id = ?`)
+      .bind(userId)
+      .first<{ cv_url: string | null; cv_filename: string | null; cv_uploaded_at: number | null }>();
+
+    if (!user || !user.cv_url) {
+      return c.json({ error: "No CV found" }, 404);
+    }
+
+    return c.json({
+      cv_filename: user.cv_filename,
+      cv_uploaded_at: user.cv_uploaded_at,
+    });
+  } catch (error) {
+    console.error("CV fetch error:", error);
+    return c.json({ error: "Failed to fetch CV" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/users/:userId/cv - Delete user CV
+ */
+app.delete("/api/v1/users/:userId/cv", requireAuth, async (c) => {
+  try {
+    const userId = c.req.param("userId");
+
+    // Get current CV filename
+    const user = await c.env.platform_db
+      .prepare(`SELECT cv_url FROM users WHERE id = ?`)
+      .bind(userId)
+      .first<{ cv_url: string | null }>();
+
+    if (!user || !user.cv_url) {
+      return c.json({ error: "No CV found" }, 404);
+    }
+
+    // Delete from R2
+    await c.env.CV_BUCKET.delete(user.cv_url);
+
+    // Clear CV fields from user record
+    await c.env.platform_db
+      .prepare(
+        `UPDATE users SET cv_url = NULL, cv_filename = NULL, cv_uploaded_at = NULL, updated_at = ?
+         WHERE id = ?`
+      )
+      .bind(getTimestamp(), userId)
+      .run();
+
+    return c.json({ success: true, message: "CV deleted successfully" });
+  } catch (error) {
+    console.error("CV deletion error:", error);
+    return c.json({ error: "Failed to delete CV" }, 500);
   }
 });
 
@@ -1179,12 +1314,13 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
     // Create match
     const matchId = generateId();
     const timestamp = getTimestamp();
+    const cvIncluded = body.cv_included ? 1 : 0;
 
     await c.env.platform_db
       .prepare(
-        "INSERT INTO matches (id, mentor_id, mentee_id, status, introduction, preferred_time, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO matches (id, mentor_id, mentee_id, status, introduction, preferred_time, cv_included, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(matchId, body.mentor_id, menteeId, "pending", body.introduction, body.preferred_time, timestamp, timestamp)
+      .bind(matchId, body.mentor_id, menteeId, "pending", body.introduction, body.preferred_time, cvIncluded, timestamp, timestamp)
       .run();
 
     const match: Match = {
@@ -1194,6 +1330,7 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
       status: "pending",
       introduction: body.introduction,
       preferred_time: body.preferred_time,
+      cv_included: cvIncluded,
       created_at: timestamp,
       updated_at: timestamp,
     };
@@ -1201,6 +1338,40 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
     return c.json<Match>(match, 201);
   } catch {
     return c.json({ error: "Invalid request body" }, 400);
+  }
+});
+
+/**
+ * GET /api/v1/matches/check/:mentorId - Check if match exists between current user (mentee) and mentor
+ * Returns the existing match status, or 404 if no match exists
+ */
+app.get("/api/v1/matches/check/:mentorId", requireAuth, async (c) => {
+  try {
+    const mentorId = c.req.param("mentorId");
+    const user = c.get('user') as AuthPayload;
+    const menteeId = user.userId;
+
+    // Check for any non-rejected match between mentee and mentor
+    const result = await c.env.platform_db
+      .prepare(
+        `SELECT id, status FROM matches
+         WHERE mentee_id = ? AND mentor_id = ? AND status != 'rejected'
+         LIMIT 1`
+      )
+      .bind(menteeId, mentorId)
+      .first<{ id: string; status: string }>();
+
+    if (!result) {
+      return c.json({ exists: false }, 404);
+    }
+
+    return c.json({
+      exists: true,
+      matchId: result.id,
+      status: result.status,
+    });
+  } catch {
+    return c.json({ error: "Invalid request" }, 400);
   }
 });
 
@@ -1226,29 +1397,49 @@ app.get("/api/v1/matches", requireAuth, async (c) => {
     const params: string[] = [];
 
     // Filter by user (as mentor or mentee)
-    conditions.push("(mentor_id = ? OR mentee_id = ?)");
+    conditions.push("(matches.mentor_id = ? OR matches.mentee_id = ?)");
     params.push(userId, userId);
 
     // Filter by role if provided
     if (roleParam === "mentor") {
-      conditions.push("mentor_id = ?");
+      conditions.push("matches.mentor_id = ?");
       params.push(userId);
     } else if (roleParam === "mentee") {
-      conditions.push("mentee_id = ?");
+      conditions.push("matches.mentee_id = ?");
       params.push(userId);
     }
 
     // Filter by status if provided
     if (statusParam) {
-      conditions.push("status = ?");
+      conditions.push("matches.status = ?");
       params.push(statusParam);
     }
 
     const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
-    // Get matches
+    // Get matches with mentor and mentee names via JOIN
+    const sql = `
+      SELECT
+        matches.id,
+        matches.mentor_id,
+        matches.mentee_id,
+        mentor_users.name as mentor_name,
+        mentee_users.name as mentee_name,
+        matches.status,
+        matches.introduction,
+        matches.preferred_time,
+        matches.cv_included,
+        matches.created_at,
+        matches.updated_at
+      FROM matches
+      LEFT JOIN users as mentor_users ON matches.mentor_id = mentor_users.id
+      LEFT JOIN users as mentee_users ON matches.mentee_id = mentee_users.id
+      ${whereClause}
+      ORDER BY matches.created_at DESC
+    `;
+
     const results = await c.env.platform_db
-      .prepare(`SELECT * FROM matches ${whereClause} ORDER BY created_at DESC`)
+      .prepare(sql)
       .bind(...params)
       .all<Match>();
 

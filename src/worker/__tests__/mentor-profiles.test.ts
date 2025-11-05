@@ -1090,9 +1090,10 @@ describe('Mentor Profile CRUD API', () => {
         'http://www.linkedin.com/in/johndoe',
       ];
 
-      for (const validUrl of validUrls) {
+      for (let i = 0; i < validUrls.length; i++) {
+        const validUrl = validUrls[i];
         // Create a new user for each test to avoid conflicts
-        const newUser = await createTestUser(mockEnv, `test${Date.now()}@example.com`, 'Test User');
+        const newUser = await createTestUser(mockEnv, `test${Date.now()}_${i}@example.com`, 'Test User');
         const token = await createTestToken(newUser.id as string, newUser.email as string, newUser.name as string);
 
         const req = new Request('http://localhost/api/v1/mentors/profiles', {
@@ -1103,7 +1104,7 @@ describe('Mentor Profile CRUD API', () => {
           },
           body: JSON.stringify({
             user_id: newUser.id,
-            nick_name: `ValidLinkedIn_${Date.now()}`,
+            nick_name: `ValidLinkedIn_${Date.now()}_${i}`,
             bio: 'Testing valid LinkedIn URL',
             mentoring_levels: MentoringLevel.Entry,
             payment_types: PaymentType.Venmo,

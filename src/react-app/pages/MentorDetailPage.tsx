@@ -6,9 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader } from '../components/ui/card
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { AvailabilityDisplay } from '../components/AvailabilityDisplay';
+import { MentorDetailSkeleton } from '../components/MentorDetailSkeleton';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { getLevelNames, getPaymentTypeNames, getDomainNames, getTopicNames } from '../../types/mentor';
 import { getMentorProfile } from '../services/mentorService';
+import { checkExistingMatch } from '../services/matchService';
 import { handleApiError } from '../services/apiClient';
 import type { MentorProfile } from '../../types/mentor';
 
@@ -26,6 +28,7 @@ export function MentorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [hasExistingMatch, setHasExistingMatch] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -38,6 +41,15 @@ export function MentorDetailPage() {
       try {
         const data = await getMentorProfile(id);
         setMentor(data);
+
+        // Check if user already has a pending/active match with this mentor
+        try {
+          const matchResult = await checkExistingMatch(data.user_id);
+          setHasExistingMatch(matchResult?.exists ?? false);
+        } catch (error) {
+          // Silently fail - don't show error for this background operation
+          console.error('Failed to check existing match:', error);
+        }
       } catch (err) {
         setError('Failed to load mentor profile');
         handleApiError(err);
@@ -63,13 +75,7 @@ export function MentorDetailPage() {
   };
 
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <p className="text-muted-foreground">{t('common.loading')}</p>
-        </div>
-      </div>
-    );
+    return <MentorDetailSkeleton />;
   }
 
   if (error || !mentor) {
@@ -238,8 +244,9 @@ export function MentorDetailPage() {
               size="lg"
               className="w-full"
               onClick={handleRequestMentorship}
+              disabled={hasExistingMatch}
             >
-              {t('mentor.requestMentorship')}
+              {hasExistingMatch ? t('mentor.alreadyMatched') : t('mentor.requestMentorship')}
             </Button>
           </CardFooter>
         </Card>

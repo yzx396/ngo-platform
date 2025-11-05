@@ -9,6 +9,8 @@
     "signOut": "Sign Out",
     "signedInAs": "Signed in as {{name}}",
     "loading": "Loading...",
+    "uploading": "Uploading...",
+    "deleting": "Deleting...",
     "error": "Error",
     "success": "Success",
     "back": "Back",
@@ -68,6 +70,12 @@
     "feature2": "Get personalized guidance and advice",
     "feature3": "Build meaningful professional relationships",
     "feature4": "Learn and grow at your own pace"
+  },
+  "profile": {
+    "manageYourProfile": "Manage your profile and personal information",
+    "profileInformation": "Profile Information",
+    "yourAccountDetails": "Your account details and settings",
+    "email": "Email"
   },
   "events": {
     "title": "Events",
@@ -221,7 +229,15 @@
     "preferredTimePlaceholder": "For example: Tuesday evenings, weekend afternoons, etc.",
     "requestDialogTitle": "Request Mentorship",
     "requestDialogDescription": "Please fill in the following information. The mentor will decide whether to accept your request based on your details.",
-    "sendRequest": "Send Request"
+    "sendRequest": "Send Request",
+    "noCvPrompt": "You haven't uploaded your CV yet. Uploading your CV helps mentors understand your background and skills.",
+    "uploadCvLink": "Upload CV now",
+    "includeCv": "Include my CV with this request",
+    "viewCv": "View CV",
+    "downloadCv": "Download CV",
+    "cvAvailable": "CV available",
+    "cvNotAvailable": "No CV",
+    "downloadingCv": "Downloading..."
   },
   "status": {
     "pending": "Pending",
@@ -347,6 +363,27 @@
     "announcement": "Announcement",
     "discussion": "Discussion",
     "general": "General"
+  },
+  "cv": {
+    "yourCV": "Your CV",
+    "description": "Upload your CV to help mentors learn about your background",
+    "noCV": "No CV uploaded yet",
+    "currentCV": "Current CV",
+    "uploaded": "Uploaded",
+    "uploadCV": "Upload CV",
+    "replaceCV": "Replace CV",
+    "deleteCV": "Delete CV",
+    "uploadSuccess": "CV uploaded successfully",
+    "deleteSuccess": "CV deleted successfully",
+    "confirmDelete": "Are you sure you want to delete your CV?",
+    "uploadedOn": "Uploaded on",
+    "pdfOnly": "PDF files only",
+    "maxSize": "Maximum file size: 5MB",
+    "fileHelp": "Your CV is securely stored and shared only with mentors",
+    "errors": {
+      "onlyPDF": "Only PDF files are allowed",
+      "fileTooLarge": "File size must be less than 5MB"
+    }
   },
   "comments": {
     "reply": "Reply",

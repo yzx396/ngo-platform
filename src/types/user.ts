@@ -7,6 +7,9 @@ export interface User {
   google_id?: string | null;
   role?: UserRole;
   points?: number;
+  cv_url?: string | null;           // URL to CV stored in R2
+  cv_filename?: string | null;      // Original filename of uploaded CV
+  cv_uploaded_at?: number | null;   // Timestamp of CV upload
   created_at: number;
   updated_at: number;
 }

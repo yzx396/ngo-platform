@@ -9,6 +9,8 @@
     "signOut": "退出登录",
     "signedInAs": "登录身份：{{name}}",
     "loading": "加载中...",
+    "uploading": "上传中...",
+    "deleting": "删除中...",
     "error": "错误",
     "success": "成功",
     "back": "返回",
@@ -68,6 +70,12 @@
     "feature2": "获得个性化指导和建议",
     "feature3": "建立有意义的职业关系",
     "feature4": "按照自己的速度学习和成长"
+  },
+  "profile": {
+    "manageYourProfile": "管理你的个人资料和信息",
+    "profileInformation": "个人资料信息",
+    "yourAccountDetails": "你的账户详情和设置",
+    "email": "邮箱"
   },
   "events": {
     "title": "活动",
@@ -221,7 +229,15 @@
     "preferredTimePlaceholder": "例如：每周二晚上、周末下午等",
     "requestDialogTitle": "申请辅导",
     "requestDialogDescription": "请填写以下信息，导师将根据您的情况决定是否接受申请",
-    "sendRequest": "发送申请"
+    "sendRequest": "发送申请",
+    "noCvPrompt": "您还没有上传简历。上传简历可以帮助导师了解您的背景和技能。",
+    "uploadCvLink": "现在上传简历",
+    "includeCv": "随此申请附加我的简历",
+    "viewCv": "查看简历",
+    "downloadCv": "下载简历",
+    "cvAvailable": "简历已提供",
+    "cvNotAvailable": "未提供简历",
+    "downloadingCv": "下载中..."
   },
   "status": {
     "pending": "待处理",
@@ -347,6 +363,27 @@
     "announcement": "公告",
     "discussion": "讨论",
     "general": "一般"
+  },
+  "cv": {
+    "yourCV": "你的简历",
+    "description": "上传你的简历，帮助导师了解你的背景",
+    "noCV": "还没有上传简历",
+    "currentCV": "当前简历",
+    "uploaded": "已上传",
+    "uploadCV": "上传简历",
+    "replaceCV": "替换简历",
+    "deleteCV": "删除简历",
+    "uploadSuccess": "简历上传成功",
+    "deleteSuccess": "简历删除成功",
+    "confirmDelete": "确定要删除你的简历吗？",
+    "uploadedOn": "上传于",
+    "pdfOnly": "仅支持 PDF 文件",
+    "maxSize": "最大文件大小：5MB",
+    "fileHelp": "你的简历将被安全保存，仅与导师分享",
+    "errors": {
+      "onlyPDF": "仅支持 PDF 文件",
+      "fileTooLarge": "文件大小必须小于 5MB"
+    }
   },
   "comments": {
     "reply": "回复",

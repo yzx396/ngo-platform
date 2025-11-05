@@ -196,6 +196,82 @@ export async function apiDelete<T>(url: string, options?: ApiOptions): Promise<T
 }
 
 /**
+ * Helper function for file uploads (multipart/form-data)
+ * Used for uploading files to R2 via the backend
+ */
+export async function apiUpload<T>(
+  url: string,
+  formData: FormData,
+  options?: ApiOptions
+): Promise<T> {
+  const { retries = MAX_RETRIES, ...fetchOptions } = options || {};
+
+  // Create headers without Content-Type - browser will set it with boundary
+  const headers = new Headers(fetchOptions.headers || {});
+
+  // Inject JWT token for authentication
+  const token = getAuthToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const finalOptions: RequestInit = {
+    ...fetchOptions,
+    method: 'POST',
+    headers,
+    body: formData,
+  };
+
+  let lastError: Error | null = null;
+
+  // Attempt request with retries
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, finalOptions);
+
+      // Handle HTTP error statuses
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = (errorData as Record<string, unknown>).error as string || `HTTP ${response.status}`;
+        throw new ApiError(errorMessage, response.status, errorData);
+      }
+
+      // Parse and return response
+      const data = await response.json() as T;
+      return data;
+    } catch (error) {
+      lastError = error as Error;
+
+      // Check if error is retryable and we have attempts left
+      if (isRetryableError(error) && attempt < retries) {
+        const delay = getBackoffDelay(attempt);
+        console.warn(
+          `File upload to ${url} failed (attempt ${attempt + 1}/${retries + 1}). ` +
+          `Retrying in ${delay}ms...`,
+          error
+        );
+        // Wait before retrying
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // No more retries, throw error
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError(
+        error instanceof Error ? error.message : 'Unknown error',
+        0,
+        error
+      );
+    }
+  }
+
+  // Should never reach here, but just in case
+  throw lastError || new ApiError('File upload failed after all retries');
+}
+
+/**
  * Helper to handle API errors with user feedback
  * Automatically shows toast notification for errors
  */

@@ -36,6 +36,7 @@ vi.mock('../services/apiClient', () => ({
 // Mock match service
 vi.mock('../services/matchService', () => ({
   createMatch: vi.fn(),
+  getMatches: vi.fn(),
 }));
 
 const mockMentor: MentorProfile = {

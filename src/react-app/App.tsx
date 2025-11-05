@@ -22,6 +22,7 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => (
 const MentorBrowse = lazy(() => import('./pages/MentorBrowse').then(m => ({ default: m.MentorBrowse })));
 const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m => ({ default: m.MentorDetailPage })));
 const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(m => ({ default: m.MentorProfileSetup })));
+const UserProfileEdit = lazy(() => import('./pages/UserProfileEdit').then(m => ({ default: m.UserProfileEdit })));
 const MatchesList = lazy(() => import('./pages/MatchesList').then(m => ({ default: m.MatchesList })));
 
 /**
@@ -103,6 +104,14 @@ function AppContent() {
 
               {/* Protected Routes */}
               <Route
+                path="/profile/edit"
+                element={
+                  <ProtectedRoute>
+                    <UserProfileEdit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/mentor/profile/setup"
                 element={
                   <ProtectedRoute>
@@ -119,7 +128,6 @@ function AppContent() {
                 }
               />
               {/* TODO: Add more routes:
-                - /mentor/profile/edit
                 - /feed
                 - /challenges
                 - /blogs

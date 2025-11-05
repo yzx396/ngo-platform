@@ -93,7 +93,13 @@ export function Sidebar() {
 
   // Member Area section - authenticated only
   const memberAreaLinks: NavLink[] = [
-   {
+    {
+      href: '/profile/edit',
+      label: t('common.myProfile', 'My Profile'),
+      icon: '👥',
+      requiresAuth: true,
+    },
+    {
       href: '/mentors/browse',
       label: t('common.browseMentors', 'Browse Mentors'),
       icon: '🔍',

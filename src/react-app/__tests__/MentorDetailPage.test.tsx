@@ -135,7 +135,9 @@ describe('MentorDetailPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    // Check for loading skeleton elements
+    const skeletonElements = screen.getAllByRole('presentation', { hidden: true });
+    expect(skeletonElements.length).toBeGreaterThan(0);
   });
 
   it('should show error if mentor not found', async () => {

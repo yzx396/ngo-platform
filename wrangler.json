@@ -36,6 +36,16 @@
 		}
 	],
 	/**
+	 * R2 Object Storage
+	 * https://developers.cloudflare.com/r2/
+	 */
+	"r2_buckets": [
+		{
+			"binding": "CV_BUCKET",
+			"bucket_name": "platform-cvs"
+		}
+	],
+	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
@@ -78,6 +88,13 @@
 					"binding": "platform_db",
 					"database_name": "platform-db-local",
 					"database_id": "LOCAL"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "CV_BUCKET",
+					"bucket_name": "platform-cvs-local",
+					"preview_bucket_name": "platform-cvs-local"
 				}
 			]
 		}

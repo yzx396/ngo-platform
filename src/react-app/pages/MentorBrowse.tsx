@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { debounce } from '../utils/debounce';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
@@ -12,9 +13,11 @@ import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
 import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { MentorCard } from '../components/MentorCard';
+import { MentorCardSkeleton } from '../components/MentorCardSkeleton';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { searchMentors } from '../services/mentorService';
+import { getMatches } from '../services/matchService';
 import { handleApiError } from '../services/apiClient';
 import type { MentorProfile } from '../../types/mentor';
 
@@ -33,6 +36,7 @@ export function MentorBrowse() {
   const [total, setTotal] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMentor, setSelectedMentor] = useState<MentorProfile | null>(null);
+  const [requestedMentorIds, setRequestedMentorIds] = useState<Set<string>>(new Set());
   const itemsPerPage = 12;
 
   const form = useForm({
@@ -47,6 +51,30 @@ export function MentorBrowse() {
       expertise_topics_custom: [],
     },
   });
+
+  // Create debounced search function ref (initialize with empty function, update in useEffect)
+  const debouncedSearchRef = useRef<() => void>(() => {});
+
+  // Fetch user's existing matches to show "Already Requested" status
+  useEffect(() => {
+    const loadRequestedMentors = async () => {
+      try {
+        const matches = await getMatches({ role: 'mentee' });
+        // Build set of mentor IDs that have pending or active matches
+        const mentorIds = new Set(
+          matches
+            .filter(m => m.status === 'pending' || m.status === 'accepted' || m.status === 'active')
+            .map(m => m.mentor_id)
+        );
+        setRequestedMentorIds(mentorIds);
+      } catch (error) {
+        // Silently fail - don't show error for this background operation
+        console.error('Failed to load existing matches:', error);
+      }
+    };
+
+    loadRequestedMentors();
+  }, []);
 
   const handleSearch = useCallback(async () => {
     setLoading(true);
@@ -72,6 +100,14 @@ export function MentorBrowse() {
       setLoading(false);
     }
   }, [currentPage, form]);
+
+  // Update debounced search function when handleSearch changes
+  useEffect(() => {
+    debouncedSearchRef.current = debounce(() => {
+      setCurrentPage(1);
+      handleSearch();
+    }, 300);
+  }, [handleSearch]);
 
   // Auto-fetch on mount
   useEffect(() => {
@@ -120,7 +156,12 @@ export function MentorBrowse() {
                   id="search"
                   placeholder={t('mentor.nicknameHelp')}
                   {...form.register('nick_name')}
-                  onChange={handleFilterChange}
+                  onChange={() => {
+                    // Use debounced search for name input
+                    if (debouncedSearchRef.current) {
+                      debouncedSearchRef.current();
+                    }
+                  }}
                 />
               </div>
 
@@ -164,7 +205,13 @@ export function MentorBrowse() {
 
           {/* Results */}
           <div className="lg:col-span-3 space-y-6">
-            {mentors.length === 0 && !loading ? (
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <MentorCardSkeleton key={`skeleton-${i}`} />
+                ))}
+              </div>
+            ) : mentors.length === 0 ? (
               <Empty>
                 <EmptyContent>
                   <EmptyTitle>{t('mentor.noMentorsFound')}</EmptyTitle>
@@ -174,10 +221,6 @@ export function MentorBrowse() {
                   </Button>
                 </EmptyContent>
               </Empty>
-            ) : loading ? (
-              <div className="flex justify-center items-center py-12">
-                <p className="text-muted-foreground">{t('common.loading')}</p>
-              </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -187,6 +230,7 @@ export function MentorBrowse() {
                       mentor={mentor}
                       onViewDetails={() => handleViewDetails(mentor)}
                       onRequestMentorship={() => handleRequestMentorship(mentor)}
+                      isMatched={requestedMentorIds.has(mentor.user_id)}
                     />
                   ))}
                 </div>
