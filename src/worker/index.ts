@@ -194,6 +194,67 @@ app.post("/api/v1/users", async (c) => {
 });
 
 /**
+ * GET /api/v1/users - List all users (admin only)
+ * Supports pagination
+ */
+app.get("/api/v1/users", requireAuth, requireAdmin, async (c) => {
+  try {
+    // Get query parameters
+    const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string) : 50;
+    const offset = c.req.query("offset") ? parseInt(c.req.query("offset") as string) : 0;
+
+    // Validation: limit and offset must be valid numbers
+    if (!Number.isInteger(limit) || !Number.isInteger(offset) || limit < 1 || offset < 0) {
+      return c.json({ error: "limit must be a positive integer and offset must be >= 0" }, 400);
+    }
+
+    // Cap limit at 100 to prevent excessive queries
+    const cappedLimit = Math.min(limit, 100);
+
+    // Get total count
+    const countResult = await c.env.platform_db
+      .prepare("SELECT COUNT(*) as count FROM users")
+      .first<{ count: number }>();
+
+    const total = countResult?.count || 0;
+
+    // Get users with their roles
+    const usersResult = await c.env.platform_db
+      .prepare(`
+        SELECT
+          u.id,
+          u.email,
+          u.name,
+          u.google_id,
+          u.cv_url,
+          u.cv_filename,
+          u.cv_uploaded_at,
+          u.created_at,
+          u.updated_at,
+          ur.role
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        ORDER BY u.created_at DESC
+        LIMIT ? OFFSET ?
+      `)
+      .bind(cappedLimit, offset)
+      .all<User>();
+
+    const users = usersResult.results || [];
+
+    return c.json({
+      users,
+      total,
+      limit: cappedLimit,
+      offset,
+    });
+  } catch (err) {
+    console.error("Error listing users:", err);
+    return c.json({ error: "Failed to list users" }, 500);
+  }
+});
+
+/**
  * GET /api/v1/users/:id - Get user by ID
  */
 app.get("/api/v1/users/:id", async (c) => {
