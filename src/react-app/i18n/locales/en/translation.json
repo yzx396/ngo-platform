@@ -75,7 +75,15 @@
     "manageYourProfile": "Manage your profile and personal information",
     "profileInformation": "Profile Information",
     "yourAccountDetails": "Your account details and settings",
-    "email": "Email"
+    "email": "Email",
+    "editProfile": "Edit Profile",
+    "saveChanges": "Save Changes",
+    "cancelEdit": "Cancel",
+    "updateSuccess": "Profile updated successfully",
+    "updateError": "Failed to update profile",
+    "nameRequired": "Name is required",
+    "emailRequired": "Email is required",
+    "invalidEmail": "Invalid email format"
   },
   "events": {
     "title": "Events",

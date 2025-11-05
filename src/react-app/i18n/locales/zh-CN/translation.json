@@ -75,7 +75,15 @@
     "manageYourProfile": "管理你的个人资料和信息",
     "profileInformation": "个人资料信息",
     "yourAccountDetails": "你的账户详情和设置",
-    "email": "邮箱"
+    "email": "邮箱",
+    "editProfile": "编辑资料",
+    "saveChanges": "保存更改",
+    "cancelEdit": "取消",
+    "updateSuccess": "资料更新成功",
+    "updateError": "资料更新失败",
+    "nameRequired": "姓名为必填项",
+    "emailRequired": "邮箱为必填项",
+    "invalidEmail": "邮箱格式无效"
   },
   "events": {
     "title": "活动",
