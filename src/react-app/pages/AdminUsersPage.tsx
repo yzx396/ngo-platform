@@ -26,11 +26,6 @@ export function AdminUsersPage() {
   const [total, setTotal] = useState(0);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
-  // Check if user is admin
-  if (!user || user.role !== UserRole.Admin) {
-    return <Navigate to="/" replace />;
-  }
-
   // Fetch users list
   useEffect(() => {
     const loadUsers = async () => {
@@ -72,6 +67,11 @@ export function AdminUsersPage() {
       setUpdatingUserId(null);
     }
   };
+
+  // Check if user is admin
+  if (!user || user.role !== UserRole.Admin) {
+    return <Navigate to="/" replace />;
+  }
 
   // Calculate pagination info
   const hasNextPage = offset + USERS_PER_PAGE < total;
