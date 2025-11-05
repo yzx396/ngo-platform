@@ -1,50 +1,32 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working with the Lead Forward Platform.
 
 ## Project Overview
 
-This is **Lead Forward Platform** - an NGO community website built as a full-stack application using React + Vite + Hono + Cloudflare Workers. The project uses a hybrid architecture where the React frontend and Hono backend are deployed together to Cloudflare's edge network.
-
-The platform is designed to support mentor-mentee matching and other community features for NGO members.
+**Lead Forward Platform** - An NGO community website built with React + Vite + Hono + Cloudflare Workers. Full-stack application deployed to Cloudflare's edge network, supporting mentor-mentee matching and community features.
 
 ## Development Commands
 
 ```bash
-# Core commands
-npm install                                    # Install dependencies
-npm run dev                                    # Start dev server
-npm run build                                  # Build for production
-npm run lint                                   # Run linter
-npm run deploy                                 # Deploy to Cloudflare
-
-# Quality checks (automated in Claude Code, or run manually)
-npm run quality-check                          # Lint (auto-fix) + test + build all-in-one
-npm run lint -- --fix                          # Auto-fix linting issues
-
-# Testing
-npm run test                                   # Run all tests
-npm run test:watch                             # Watch mode
-npm run test:watch -- --project=react          # React tests only
-npm run test:watch -- --project=worker         # Worker tests only
-
-# Database
-npm run db:migrate                             # Apply local migrations
-npm run db:schema                              # Show local schema
-npm run db:migrate:prod && npm run db:schema:prod  # Production migrations
-
-# Other
-npm run check                                  # Type-check & dry-run deploy
-npm run preview                                # Preview build locally
-npm run cf-typegen                             # Regenerate Cloudflare types
-npx wrangler tail                              # Monitor worker logs
+npm install                     # Install dependencies
+npm run dev                     # Start dev server with HMR
+npm run build                   # Build for production
+npm run test                    # Run all tests
+npm run test:watch             # Watch mode
+npm run lint -- --fix          # Auto-fix linting
+npm run quality-check          # Lint + test + build (all-in-one)
+npm run deploy                  # Deploy to Cloudflare
+npm run db:migrate             # Apply local migrations
+npm run db:schema              # Show local database schema
+npx wrangler tail              # Monitor production logs
 ```
 
-**Note**: When working in Claude Code, linting, type-checking, and tests run **automatically** via hooks configured in `.claude/settings.local.json`. See [Automated Quality Enforcement](#automated-quality-enforcement-with-claude-code-hooks) section for details.
+**Note:** When working in Claude Code, linting, type-checking, and tests run automatically via hooks (see docs/HOOKS.md for details).
 
 ## Test-Driven Development Workflow
 
-This project follows a Test-Driven Development (TDD) approach. **Always write tests before implementing features or fixing bugs.**
+This project follows Test-Driven Development (TDD): **Always write tests before implementing features or fixing bugs.**
 
 ### TDD Cycle: Red-Green-Refactor
 
@@ -52,58 +34,32 @@ This project follows a Test-Driven Development (TDD) approach. **Always write te
 2. **Green**: Write minimal code to make the test pass
 3. **Refactor**: Improve code while keeping tests green
 
-### When to Write Tests
-
-**Always write tests for:**
-- New features, bug fixes, refactoring, API changes, and new components
-
-**Tests are mandatory** - part of "done" definition for any task.
-
 ### Test Organization
 
 Tests are colocated with source files in `__tests__` directories:
 
 ```
-src/
-├── react-app/
-│   ├── __tests__/
-│   │   ├── App.test.tsx        # React component tests
-│   │   └── utils.test.ts       # Utility function tests
-│   ├── App.tsx
-│   └── main.tsx
-└── worker/
-    ├── __tests__/
-    │   ├── index.test.ts       # Hono API route tests
-    │   └── handlers.test.ts    # Request handler tests
-    └── index.ts
+src/react-app/__tests__/           # React component tests (jsdom environment)
+src/worker/__tests__/              # API route tests (node environment)
 ```
 
 **Test Environments:**
 
-The project uses Vitest with two separate test environments configured in `vitest.config.ts`:
+The project uses Vitest with two separate environments configured in `vitest.config.ts`:
 
-1. **React tests** (`--project=react`)
-   - Environment: `jsdom` (simulates browser DOM)
-   - Pattern: `src/react-app/**/*.test.{ts,tsx}`
-   - Use for: Component tests, browser API tests
-
-2. **Worker tests** (`--project=worker`)
-   - Environment: `node` (Node.js with Web APIs)
-   - Pattern: `src/worker/**/*.test.ts`
-   - Use for: API route tests, server-side logic
-
-This separation ensures tests run in the correct environment (DOM for React, Node for Workers).
+- **React tests** (`--project=react`): `jsdom` environment for component and browser API tests
+- **Worker tests** (`--project=worker`): `node` environment for API route and server-side logic tests
 
 ### Naming Conventions
 
 - Test files: `*.test.ts` or `*.test.tsx`
 - Test suites: Use `describe()` to group related tests
-- Test cases: Use `it()` or `test()` with clear, descriptive names
+- Test cases: Use `it()` with clear, descriptive names
 - Example: `it('should return 404 when resource not found')`
 
-### Testing Frontend (React Components)
+### Testing React Components
 
-Use React Testing Library. Test user-facing behavior, not implementation. Use semantic queries (getByRole, getByLabelText, getByText):
+Use React Testing Library. Test user-facing behavior, not implementation:
 
 ```typescript
 import { render, screen } from '@testing-library/react';
@@ -118,78 +74,28 @@ describe('MyComponent', () => {
 });
 ```
 
-### Testing Backend (Hono API Routes)
+### Testing API Routes
 
-Test all HTTP methods, error cases, validation, auth flows, and mock dependencies:
+Test all HTTP methods, error cases, validation, and auth flows:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
 import app from './index';
 
 describe('API Routes', () => {
-  it('GET /api/health returns 200', async () => {
-    const req = new Request('http://localhost/api/health');
+  it('GET /api/v1/health returns 200', async () => {
+    const req = new Request('http://localhost/api/v1/health');
     const res = await app.fetch(req);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ status: 'ok' });
   });
 });
 ```
 
-### Running Tests During Development
-
-1. Start test watcher: `npm run test:watch` (auto-reruns on changes)
-2. Write test first, implement feature, refactor while keeping tests green
-
 ### Before Committing
 
 ```bash
-npm run test              # All tests pass
-npm run lint              # No linting issues
-npm run build             # Build succeeds
+npm run quality-check   # Ensures lint, tests, and build all pass
 ```
-
-### Automated Quality Enforcement with Claude Code Hooks
-
-This project has automated quality checks configured in Claude Code that run automatically during development sessions:
-
-**How It Works:**
-
-When you work with Claude Code in this repository, quality checks run automatically:
-
-1. **After every file edit/write**: `npm run lint -- --fix` (auto-fixes formatting and linting issues)
-2. **After TypeScript file changes**: `npm run build` (type-checking and compilation)
-3. **When Claude finishes responding**: `npm run test` (full test suite)
-
-These hooks are configured in `.claude/settings.local.json` and provide real-time feedback without manual intervention.
-
-**Manual Quality Check:**
-
-If you want to manually run all quality checks at once:
-```bash
-npm run quality-check     # Lints with auto-fix, runs tests, and builds
-```
-
-**What Each Hook Does:**
-
-| Trigger | Command | Purpose |
-|---------|---------|---------|
-| After Edit/Write | `npm run lint -- --fix` | Auto-fix linting issues (formatting, simple fixes) |
-| After .ts/.tsx edit | `npm run build` | Type-check and compile (catches type errors) |
-| When Claude stops | `npm test` | Full test suite (ensures nothing broke) |
-
-**If a Hook Fails:**
-
-- Hook failures are reported in the Claude Code session
-- Fix the issues following the error messages
-- Hooks will re-run on your next file edit
-
-**Performance Tips:**
-
-- Hooks use reasonable timeouts (lint: 30s, build: 60s, test: 120s)
-- Linting is fast (only checks changed files)
-- Build type-checks all three TypeScript projects
-- Tests run full suite; consider `npm run test:watch` for iterative development
 
 ### Coverage Goals
 
@@ -197,222 +103,114 @@ npm run quality-check     # Lints with auto-fix, runs tests, and builds
 - **100% coverage** for business logic and API handlers
 - View report: `npm run test:coverage`
 
-Never deploy code without passing tests.
-
 ## Architecture
 
 ### Project Structure
 
-The codebase is split into three distinct TypeScript projects using TypeScript project references:
+Three distinct TypeScript projects using project references:
 
 1. **React App** (`src/react-app/`)
-   - Entry point: `src/react-app/main.tsx`
-   - Main component: `src/react-app/App.tsx`
+   - Entry: `src/react-app/main.tsx`
    - Config: `tsconfig.app.json`
-   - Target: ES2020 with DOM libraries
-   - Uses React 19 with StrictMode
+   - Target: ES2020 with DOM
 
 2. **Cloudflare Worker** (`src/worker/`)
-   - Entry point: `src/worker/index.ts`
-   - Config: `tsconfig.worker.json` (extends `tsconfig.node.json`)
-   - Uses Hono framework for routing
-   - Main file specified in `wrangler.json`
+   - Entry: `src/worker/index.ts`
+   - Framework: Hono
+   - Config: `tsconfig.worker.json`
 
-3. **Build Config** (`vite.config.ts`)
-   - Config: `tsconfig.node.json`
-   - Target: ES2022
+3. **Shared Types** (`src/types/`)
+   - Type definitions used by both frontend and backend
+   - Files: `user.ts`, `mentor.ts`, `match.ts`, `api.ts`, `points.ts`, `role.ts`
 
-4. **Shared Types** (`src/types/`)
-   - Contains type definitions shared between React and Worker
-   - Files: `user.ts`, `mentor.ts`, `match.ts`, `api.ts`
-   - These types are imported in both frontend and backend code
-   - Example: `MentoringLevel` enum and `MentorProfile` interface used across the codebase
+### Build and Deployment
 
-### Build and Deployment Flow
-
-1. **Development**: `npm run dev` starts Vite dev server with Cloudflare plugin, providing HMR for both frontend and worker
-2. **Build**: `tsc -b && vite build` compiles all TypeScript projects and bundles the app
-3. **Deploy**: Wrangler deploys the worker to Cloudflare's edge network
-   - Worker code: `src/worker/index.ts`
-   - Static assets: `dist/client/` (built React app)
-   - Configuration: `wrangler.json` defines worker name, compatibility date, and asset handling
+1. **Development**: `npm run dev` starts Vite with HMR for frontend and worker
+2. **Build**: `tsc -b && vite build` compiles all TypeScript projects
+3. **Deploy**: Wrangler publishes worker to Cloudflare's edge network
 
 ### Frontend-Backend Communication
 
 - Frontend makes API calls to `/api/*` routes
 - Backend (Hono) handles these routes in `src/worker/index.ts`
-- Both are served from the same Cloudflare Worker
-- Static assets configured with SPA fallback (`not_found_handling: "single-page-application"`)
+- Both served from same Cloudflare Worker
+- Static assets with SPA fallback routing
 
-**API Versioning Convention:**
+### API Versioning
 
-All API endpoints MUST be versioned using `/api/v1/` prefix:
-- ✅ Good: `/api/v1/users`, `/api/v1/mentors/profiles`, `/api/v1/matches`
+All API endpoints MUST use `/api/v1/` prefix:
+- ✅ Good: `/api/v1/users`, `/api/v1/mentors/profiles`
 - ❌ Bad: `/api/users`, `/api/mentors`
 
-This allows future API changes without breaking existing clients. When making breaking changes, create `/api/v2/` routes.
+This allows future API changes without breaking clients.
 
-**API Client Pattern:**
+### API Client Pattern
 
-The project uses a centralized, type-safe API client pattern:
 - `src/react-app/services/apiClient.ts`: Base API client with request/response handling
-- Service layer: `mentorService.ts`, `matchService.ts`, etc. wrap API calls with business logic
-- Benefits:
-  - Centralized error handling and request interceptors
-  - Type safety through shared types from `src/types/`
-  - Easy to mock in tests
-  - Single source of truth for API endpoints
+- Service layer: `mentorService.ts`, `matchService.ts`, etc. wrap API calls
+- Benefits: Centralized error handling, type safety, easy to mock, single source of truth
 
-Example service structure:
+Example:
 ```typescript
-// Service wraps API calls with type-safe methods
-import { apiClient } from './apiClient';
-import { MentorProfile } from '../types/mentor';
-
 export const mentorService = {
   async getProfile(userId: string): Promise<MentorProfile> {
     return apiClient.get(`/api/v1/mentors/profiles/${userId}`);
   },
-  // ... more methods
 };
-
-// Component uses the service
-const profile = await mentorService.getProfile(userId);
 ```
-
-### TypeScript Configuration
-
-Root `tsconfig.json` uses project references for three contexts: app (DOM), worker (Cloudflare), and node (build tools). All use strict mode.
-
-## Key Dependencies
-
-- **Hono**: Web framework for the Cloudflare Worker backend
-- **React 19**: UI library
-- **Vite**: Build tool and dev server
-- **@cloudflare/vite-plugin**: Integrates Cloudflare Workers with Vite
-- **Wrangler**: Cloudflare's CLI for Workers deployment
-
-## Cloudflare Configuration
-
-The `wrangler.json` file contains:
-- Worker name and main entry point
-- Compatibility date and flags (nodejs_compat enabled)
-- Observability enabled
-- Source map uploads enabled
-- Static assets directory and SPA routing configuration
-
-To modify worker bindings (KV, D1, R2, etc.), add them to `wrangler.json` and regenerate types with `npm run cf-typegen`.
 
 ## Database (Cloudflare D1)
 
 ### Configuration
 
-When adding database functionality:
+Local D1 database stored in `.wrangler/state/d1/` (used automatically with `npm run dev`).
 
-1. **Add D1 binding** to `wrangler.json`:
-   ```json
-   {
-     "d1_databases": [
-       {
-         "binding": "platform_db",
-         "database_name": "platform-db",
-         "database_id": "your-database-id"
-       }
-     ]
-   }
-   ```
+Add D1 bindings to `wrangler.json`:
+```json
+{
+  "d1_databases": [
+    {
+      "binding": "platform_db",
+      "database_name": "platform-db",
+      "database_id": "your-id"
+    }
+  ]
+}
+```
 
-2. **Local Development**: The `wrangler.json` includes an `env.local` configuration that uses a local D1 database stored in `.wrangler/state/d1/`. This is automatically used when running `npm run dev`.
+Regenerate types after changes: `npm run cf-typegen`
 
-3. **Regenerate types**: `npm run cf-typegen` to update `worker-configuration.d.ts` after modifying bindings
+### Migrations
 
-### Creating and Running Migrations
-
-This project uses **Cloudflare D1's native migration system** which automatically tracks applied migrations in a `d1_migrations` table. This prevents accidental re-runs of the same migration.
+This project uses **Cloudflare D1's native migration system** which tracks applied migrations in a `d1_migrations` table.
 
 **Migration Files:**
 - Located in `migrations/` directory
 - Name format: `0001_description.sql`, `0002_description.sql`, etc.
-- Example: `migrations/0001_create_users_table.sql`
-- All migrations are written in SQLite syntax with idempotent DDL (`IF NOT EXISTS`, `IF NOT EXISTS INDEX`, etc.)
+- All SQLite syntax with idempotent DDL (`IF NOT EXISTS`, etc.)
 
-**Creating New Migrations:**
+**Commands:**
 
-Create a new migration file manually:
 ```bash
-# Create migration file: migrations/0006_your_change.sql
-# Follow the existing naming convention and include descriptive comments
+npm run db:migrate              # Apply local migrations
+npm run db:schema               # Show local schema
+npm run db:migrate:prod         # Apply production migrations
+npm run db:schema:prod          # Show production schema
+npm run db:list                 # List applied migrations
 ```
 
-Or use Wrangler to create and apply:
+**Best Practices:**
+- ✅ Create new migrations for each schema change (never edit existing ones)
+- ✅ Write idempotent SQL using `IF NOT EXISTS`
+- ✅ Test migrations locally before production
+- ❌ Don't edit or delete migrations after they're applied
+- ⚠️ Always test locally first; production migrations impact live users
+
+**Reset Local Database (Development Only):**
 ```bash
-wrangler d1 migrations create platform-db "your change description"
-# Edit the generated file in migrations/ directory
-npm run db:migrate
+rm -rf .wrangler/state/d1/     # Delete local D1
+npm run db:migrate             # Re-run all migrations
 ```
-
-**Local Development:**
-
-Apply all pending migrations to local D1:
-```bash
-npm run db:migrate
-```
-
-List which migrations have been applied locally:
-```bash
-npm run db:list
-```
-
-View local database schema:
-```bash
-npm run db:schema
-```
-
-**Production:**
-
-Apply all pending migrations to production Cloudflare D1:
-```bash
-npm run db:migrate:prod
-```
-
-List which migrations have been applied in production:
-```bash
-npm run db:list:prod
-```
-
-View production database schema:
-```bash
-npm run db:schema:prod
-```
-
-**How It Works:**
-
-1. D1 creates a `d1_migrations` table in your database
-2. Each applied migration's name is recorded in this table
-3. The `wrangler d1 migrations apply` command only runs migrations that aren't in the table
-4. This ensures migrations are idempotent at the workflow level (never re-run the same migration)
-
-**Migration Best Practices:**
-
-- ✅ **DO**: Create new migrations for each schema change (never edit existing ones)
-- ✅ **DO**: Write idempotent SQL using `IF NOT EXISTS`, `IF NOT EXISTS INDEX`
-- ✅ **DO**: Test migrations locally with `npm run db:migrate` before production
-- ✅ **DO**: Use descriptive filenames and include comments explaining the change
-- ❌ **DON'T**: Edit or delete existing migration files after they've been applied
-- ❌ **DON'T**: Re-run `npm run db:migrate` expecting it to fail gracefully (D1 tracking prevents re-runs)
-
-**Resetting Local Database (Development Only):**
-
-If you need to start fresh locally:
-```bash
-# Delete local D1 database (be careful!)
-rm -rf .wrangler/state/d1/
-
-# Re-run all migrations
-npm run db:migrate
-```
-
-⚠️ **Important**: Always test migrations locally first before running against production. Production migrations should be done carefully as they may impact live users. Never delete or modify migrations that have been applied to production.
 
 ### Using Database in Worker Code
 
@@ -426,164 +224,91 @@ app.get('/api/v1/users', async (c) => {
 
 ### Testing with Database Mocks
 
-Mock the D1 database in tests:
 ```typescript
 const mockDb = {
-  prepare: vi.fn(() => ({
-    all: vi.fn(() => ({ results: [] }))
+  prepare: vi.fn((sql: string) => ({
+    bind: vi.fn().mockReturnThis(),
+    all: vi.fn(() => ({ success: true, results: [] })),
+    first: vi.fn(() => ({})),
+    run: vi.fn(() => ({ success: true })),
   }))
 };
 
-// Pass to test context
-const c = { env: { platform_db: mockDb } };
+const c = {
+  env: { platform_db: mockDb },
+  req: new Request('http://localhost/api/v1/users'),
+};
+
+const response = await app.fetch(c.req, c.env);
 ```
-
-**Important:**
-- D1 uses SQLite syntax. Refer to [Cloudflare D1 documentation](https://developers.cloudflare.com/d1/) for query syntax and limitations.
-- The binding name is `platform_db` (specified in `wrangler.json`), not `DB`.
-
-## Project-Specific Patterns
-
-### Bit Flags for Database Efficiency
-
-The mentor-mentee matching feature uses **bit flags** for storing multiple selections (mentoring levels, payment types) as integers:
-
-```typescript
-// Instead of storing arrays: ["entry", "senior"]
-// Store as integer: 3 (binary: 0011, which is 1 + 2)
-
-enum MentoringLevel {
-  Entry = 1,       // 2^0
-  Senior = 2,      // 2^1
-  Staff = 4,       // 2^2
-  Management = 8   // 2^3
-}
-
-// Check if has level: (levels & MentoringLevel.Senior) !== 0
-// Add level: levels | MentoringLevel.Staff
-// Remove level: levels & ~MentoringLevel.Entry
-```
-
-**Benefits:**
-- Faster database queries (integer bitwise operations vs JSON parsing)
-- Efficient indexing in SQLite
-- Smaller storage footprint
-
-**Implementation:** See `src/types/mentor.ts` for helper functions (`hasLevel`, `addLevel`, `getLevelNames`, etc.)
-
-### User-Driven Matching
-
-The platform uses a **mentee-initiated** matching system (not algorithm-based):
-- Mentees browse and search mentor profiles
-- Mentees send match requests (creates `pending` status)
-- Mentors accept or reject requests
-- Match progresses: `pending` → `accepted` → `active` → `completed`
-
-This keeps the UX simple and gives users full control over matching.
-
-### LinkedIn Profile Integration
-
-Mentors can optionally add their LinkedIn profile URL to their mentor profile, allowing mentees to review their professional background before requesting mentorship.
-
-**Key Features:**
-- Optional field in mentor profile setup/edit form
-- URL validation (must be valid LinkedIn profile URL: `https://www.linkedin.com/in/username` or `https://linkedin.com/in/username`)
-- Displayed prominently on mentor detail page with LinkedIn icon
-- Links open in new tab with proper security attributes (`target="_blank" rel="noopener noreferrer"`)
-
-**Implementation:**
-- Database: `linkedin_url` column in `mentor_profiles` table (TEXT, nullable)
-- Backend validation: Regex pattern in `src/worker/index.ts` validates LinkedIn URL format
-- Frontend form: Input field in `src/react-app/pages/MentorProfileSetup.tsx` with Zod validation
-- Display: Link component in `src/react-app/pages/MentorDetailPage.tsx` with SVG LinkedIn icon
-- i18n: Translations in both English and Chinese for labels and validation messages
-
-**Migration:** `migrations/0012_add_linkedin_url_to_mentor_profiles.sql`
 
 ## Authentication System
 
-### Overview
+The platform uses **Google OAuth 2.0** with **JWT tokens** for stateless, edge-compatible session management.
 
-The platform uses **Google OAuth 2.0** for user authentication with **JWT tokens** for session management. This approach is stateless and works well with Cloudflare's edge computing model.
+### Setup
 
-**Key Features:**
-- Single sign-on via Google OAuth 2.0
-- Stateless JWT-based authentication
-- No passwords stored in database
-- Automatic user account creation on first login
-- Email linking for returning users
-
-### Setup Guide
-
-See `GOOGLE_OAUTH_SETUP.md` for detailed step-by-step instructions to:
+See `GOOGLE_OAUTH_SETUP.md` for step-by-step instructions to:
 1. Create a Google Cloud Console project
 2. Set up OAuth credentials
-3. Configure redirect URIs for local and production environments
-4. Add environment variables to your development setup
+3. Configure redirect URIs for local and production
+4. Add environment variables
 
 ### Architecture
 
-**Backend (Cloudflare Worker):**
-- `src/worker/auth/jwt.ts` - JWT token creation and verification using `jose`
-- `src/worker/auth/middleware.ts` - Authentication middleware that extracts and validates JWT from Authorization header
-- `src/worker/auth/google.ts` - Google OAuth flow (login URL generation, code exchange, user profile fetch)
-- Routes:
-  - `GET /api/v1/auth/google/login` - Returns Google OAuth login URL
-  - `GET /api/v1/auth/google/callback` - Handles OAuth callback, exchanges code for token
-  - `GET /api/v1/auth/me` - Returns current authenticated user
-  - `POST /api/v1/auth/logout` - Logout endpoint (frontend clears token)
+**Backend** (`src/worker/auth/`):
+- `jwt.ts` - JWT token creation/verification using `jose`
+- `middleware.ts` - Auth middleware extracting and validating JWT
+- `google.ts` - Google OAuth flow (login URL, code exchange, profile fetch)
 
-**Frontend (React):**
-- `src/react-app/context/AuthContext.tsx` - Auth state management and hooks (`useAuth()`)
-- `src/react-app/pages/LoginPage.tsx` - Login page with "Sign in with Google" button
-- `src/react-app/pages/OAuthCallbackPage.tsx` - Handles OAuth redirect and token exchange
-- `src/react-app/components/ProtectedRoute.tsx` - Route wrapper that requires authentication
-- `src/react-app/services/apiClient.ts` - Automatically attaches JWT token to all API requests
+**Routes:**
+- `GET /api/v1/auth/google/login` - Returns Google OAuth login URL
+- `GET /api/v1/auth/google/callback` - Handles OAuth callback, exchanges code for token
+- `GET /api/v1/auth/me` - Returns current authenticated user
+- `POST /api/v1/auth/logout` - Logout endpoint (frontend clears token)
+
+**Frontend** (`src/react-app/`):
+- `context/AuthContext.tsx` - Auth state and `useAuth()` hook
+- `pages/LoginPage.tsx` - Login page with "Sign in with Google" button
+- `pages/OAuthCallbackPage.tsx` - Handles OAuth redirect
+- `components/ProtectedRoute.tsx` - Route wrapper requiring authentication
+- `services/apiClient.ts` - Automatically attaches JWT to API requests
 
 **Database:**
 - Users table includes `google_id` column (stores Google's user ID)
-- Enables account linking if user signs up with same email
-- See `migrations/0002_add_google_oauth.sql`
+- Enables account linking when signing up with same email
 
 ### JWT Token Format
 
-Tokens include the following claims:
 ```typescript
 {
-  userId: string;      // User ID from database
-  email: string;       // User email
-  name: string;        // User display name
+  userId: string;      // From database
+  email: string;
+  name: string;
   iat: number;         // Issued at (Unix timestamp)
-  exp: number;         // Expires at (Unix timestamp, default 7 days)
+  exp: number;         // Expires at (7 days default)
 }
 ```
 
-Token is stored in browser localStorage and automatically sent with all API requests in the `Authorization: Bearer <token>` header.
+Token stored in localStorage and sent with all API requests: `Authorization: Bearer <token>`
 
 ### Protected Routes
 
-**Protected Routes (authentication required):**
-- `GET /api/v1/mentors/search` - Search mentors (requires authentication)
-- `GET /api/v1/mentors/profiles/:id` - Get mentor profile by ID (requires authentication)
-- `GET /api/v1/mentors/profiles/by-user/:userId` - Get mentor profile by user ID (requires authentication)
-- `POST /api/v1/mentors/profiles` - Create mentor profile
-- `PUT /api/v1/mentors/profiles/:id` - Update mentor profile
-- `DELETE /api/v1/mentors/profiles/:id` - Delete mentor profile
-- `GET /api/v1/matches` - List user's matches
-- `POST /api/v1/matches` - Create match request
-- `POST /api/v1/matches/:id/respond` - Respond to match request
-- `PATCH /api/v1/matches/:id/complete` - Mark match as completed
-- `DELETE /api/v1/matches/:id` - Delete match
-- Frontend route `/mentors/browse` - Browse and search mentors (requires authentication)
-- Frontend route `/mentors/:id` - View mentor detail page (requires authentication)
-- Frontend route `/mentor/profile/setup` - Create mentor profile
-- Frontend route `/matches` - View matches
+**Protected API Routes (authentication required):**
+- All mentor profile routes: `GET/POST/PUT/DELETE /api/v1/mentors/profiles/*`
+- All match routes: `GET/POST/PATCH/DELETE /api/v1/matches*`
 
-Frontend enforces protection with `ProtectedRoute` wrapper component that redirects unauthenticated users to `/login`.
+**Protected Frontend Routes:**
+- `/mentors/browse` - Browse and search mentors
+- `/mentors/:id` - View mentor detail page
+- `/mentor/profile/setup` - Create mentor profile
+- `/matches` - View matches
+
+**Frontend Protection:** `ProtectedRoute` wrapper redirects unauthenticated users to `/login`
 
 ### Environment Variables
 
-**Local Development** (in `wrangler.json` env.local):
+**Local** (in `wrangler.json` env.local):
 ```json
 "vars": {
   "GOOGLE_CLIENT_ID": "your-client-id.apps.googleusercontent.com",
@@ -592,40 +317,16 @@ Frontend enforces protection with `ProtectedRoute` wrapper component that redire
 }
 ```
 
-**Production** (set via `wrangler secret put`):
+**Production** (via `wrangler secret put`):
 ```bash
 wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
 wrangler secret put JWT_SECRET
 ```
 
-### User Flow
+### Bootstrapping First Admin User
 
-1. **Login**
-   - User clicks "Sign In with Google" on `/login`
-   - Frontend calls `GET /api/v1/auth/google/login` to get OAuth URL
-   - User redirected to Google's consent screen
-   - Google redirects back to `/auth/google/callback?code=...`
-
-2. **Token Exchange**
-   - Frontend calls `GET /api/v1/auth/google/callback` with authorization code
-   - Backend exchanges code for access token with Google
-   - Backend fetches user profile from Google
-   - Backend creates or links user account (by google_id or email)
-   - Backend generates JWT token and returns to frontend
-
-3. **Session Management**
-   - Frontend stores JWT in localStorage
-   - Frontend sends token with all subsequent API requests
-   - Backend validates token with `authMiddleware`
-   - If token invalid or expired, user gets 401 response
-   - Frontend redirects to login
-
-4. **Logout**
-   - User clicks "Sign Out" button
-   - Frontend clears JWT from localStorage
-   - Frontend redirects to `/login`
-   - No server-side session to invalidate (stateless JWT)
+See docs/RBAC.md for detailed instructions on creating the first admin user using direct SQL commands.
 
 ### Security Considerations
 
@@ -634,185 +335,74 @@ wrangler secret put JWT_SECRET
 - OAuth credentials never exposed to frontend
 - JWT tokens are short-lived (7 days default)
 - Stateless design scales with edge computing
-- Email linking prevents duplicate accounts
 
 **Recommendations:**
-- Use HTTPS in production (enforced by Cloudflare)
-- Set strong JWT_SECRET (use `wrangler secret put`)
-- Rotate JWT_SECRET periodically for production deployments
+- Use HTTPS (enforced by Cloudflare)
+- Set strong JWT_SECRET via `wrangler secret put`
+- Rotate JWT_SECRET periodically for production
 - Monitor login attempts for suspicious patterns
 - Consider rate limiting on `/api/v1/auth/*` endpoints
-- Add email verification for security-sensitive operations
 
-### Testing
+## Project-Specific Patterns
 
-**Backend Auth Tests** (`src/worker/__tests__/auth.test.ts`):
-- JWT token creation and verification
-- OAuth code exchange
-- User auto-creation from Google profile
-- Protected route authorization checks
-- Token expiration handling
+### Bit Flags for Database Efficiency
 
-**Frontend Auth Tests** (`src/react-app/__tests__/auth.test.tsx`):
-- AuthContext state management
-- Login flow and token storage
-- Protected route redirects
-- API client JWT attachment
-- Logout functionality
-
-Run tests: `npm run test:watch -- --project=worker` or `npm run test:watch -- --project=react`
-
-### Bootstrapping First Admin User
-
-When setting up the platform, there's a chicken-and-egg problem: the `POST /api/v1/roles` endpoint requires admin privileges to assign roles, but there's no admin yet. Use direct SQL commands to create the first admin.
-
-**Prerequisites:**
-- User account must exist (created via Google OAuth login)
-- Know the user's ID from the database
-
-**Steps:**
-
-1. **Identify your user ID**:
-   ```bash
-   # Local database
-   wrangler d1 execute platform-db-local --local --command "SELECT id, email, name FROM users;"
-
-   # Production database
-   wrangler d1 execute platform-db --command "SELECT id, email, name FROM users;"
-   ```
-
-2. **Insert admin role** into `user_roles` table (replace `YOUR_USER_ID_HERE`):
-   ```bash
-   # Local database
-   wrangler d1 execute platform-db-local --local --command "INSERT INTO user_roles (id, user_id, role, created_at) VALUES ('admin-role-1', 'YOUR_USER_ID_HERE', 'admin', strftime('%s', 'now'));"
-
-   # Production database
-   wrangler d1 execute platform-db --command "INSERT INTO user_roles (id, user_id, role, created_at) VALUES ('admin-role-1', 'YOUR_USER_ID_HERE', 'admin', strftime('%s', 'now'));"
-   ```
-
-3. **Verify the role was assigned**:
-   ```bash
-   # Local
-   wrangler d1 execute platform-db-local --local --command "SELECT * FROM user_roles WHERE user_id = 'YOUR_USER_ID_HERE';"
-
-   # Production
-   wrangler d1 execute platform-db --command "SELECT * FROM user_roles WHERE user_id = 'YOUR_USER_ID_HERE';"
-   ```
-
-4. **Refresh authentication** - Log out and log back in so the JWT token gets updated with the admin role
-
-After the first admin is created, they can use the `POST /api/v1/roles` API endpoint to promote other users without needing direct database access.
-
-## Internationalization (i18n)
-
-The platform supports multiple languages with **Simplified Chinese (zh-CN) as the default** and **English as fallback**. The implementation uses `react-i18next` for flexible, type-safe translations.
-
-### How It Works
-
-- **Framework**: `i18next` with `react-i18next` hooks
-- **Language detection**: Browser language preference, localStorage, HTML lang attribute (in order)
-- **Default language**: Simplified Chinese (zh-CN)
-- **Fallback language**: English (en)
-- **Translation files**: JSON files in `src/react-app/i18n/locales/`
-
-### File Structure
-
-```
-src/react-app/i18n/
-├── index.ts                              # i18n configuration and initialization
-├── locales/
-│   ├── zh-CN/
-│   │   └── translation.json             # Simplified Chinese translations
-│   └── en/
-│       └── translation.json             # English translations
-```
-
-### Using Translations in Components
+Mentor-mentee matching uses bit flags for storing multiple selections as integers:
 
 ```typescript
-import { useTranslation } from 'react-i18next';
-
-export function MyComponent() {
-  const { t } = useTranslation();
-
-  return (
-    <div>
-      <h1>{t('common.appName')}</h1>
-      <p>{t('home.subtitle')}</p>
-      {/* With interpolation */}
-      <p>{t('common.signedInAs', { name: user.name })}</p>
-    </div>
-  );
+enum MentoringLevel {
+  Entry = 1,       // 2^0
+  Senior = 2,      // 2^1
+  Staff = 4,       // 2^2
+  Management = 8   // 2^3
 }
+
+// Use helper functions instead of manual bitwise operations:
+if (hasLevel(mentor.mentoring_levels, MentoringLevel.Senior)) { ... }
+const updated = addLevel(profile.mentoring_levels, MentoringLevel.Staff);
 ```
 
-### Translation Key Organization
+**Benefits:** Faster database queries, efficient indexing, smaller storage footprint
 
-Translations are organized by feature in the JSON namespace:
+**Implementation:** See `src/types/mentor.ts` for helpers: `hasLevel()`, `addLevel()`, `removeLevel()`, `getLevelNames()`
 
-- **common**: Generic UI elements (buttons, labels, navigation)
-- **home**: Home page content and features
-- **auth**: Authentication-related strings (login, OAuth)
-- **mentor**: Mentor profile and browsing related
-- **mentoringLevel**: Mentoring level enum values
-- **paymentType**: Payment method enum values
-- **matches**: Match/mentorship request related
-- **status**: Status labels (pending, accepted, etc.)
-- **errors**: Error messages and error states
-- **pagination**: Pagination controls
-- **language**: Language selector
+### User-Driven Matching
 
-### Adding New Translations
+The platform uses **mentee-initiated** matching (not algorithm-based):
+- Mentees browse and search mentor profiles
+- Mentees send match requests (creates `pending` status)
+- Mentors accept or reject
+- Match progresses: `pending` → `accepted` → `active` → `completed`
 
-When adding a new feature with user-facing text:
+This keeps UX simple and gives users full control.
 
-1. **Create translation keys** in both language files:
-   ```json
-   {
-     "myFeature": {
-       "title": "Feature Title",
-       "description": "Feature description",
-       "button": "Click me"
-     }
-   }
-   ```
+### LinkedIn Profile Integration
 
-2. **Use the keys in components**:
-   ```typescript
-   const { t } = useTranslation();
-   return <h1>{t('myFeature.title')}</h1>;
-   ```
+Mentors can optionally add LinkedIn profile URL to mentor profile.
 
-3. **Translation files to update**:
-   - `src/react-app/i18n/locales/zh-CN/translation.json`
-   - `src/react-app/i18n/locales/en/translation.json`
+**Features:**
+- Optional field in mentor profile setup/edit
+- URL validation (must match `https://(www.)?linkedin.com/in/username`)
+- Displayed on mentor detail page with LinkedIn icon
+- Links open in new tab with security attributes (`target="_blank" rel="noopener noreferrer"`)
 
-### Language Switcher
-
-**LanguageSwitcher** component in navbar. User preference saved to localStorage.
-
-### Testing with i18n
-
-Tests use English by default (configured in `vitest.setup.ts`). Use actual translated English text in tests.
-
-## Common Development Patterns
+**Implementation:**
+- Database: `linkedin_url` column in `mentor_profiles` (TEXT, nullable)
+- Backend validation: Regex pattern in `src/worker/index.ts`
+- Frontend: Input field in `src/react-app/pages/MentorProfileSetup.tsx`
+- Migration: `migrations/0012_add_linkedin_url_to_mentor_profiles.sql`
 
 ### Data Type Conversions
 
 **SQLite Boolean Normalization:**
 
-SQLite doesn't have a native boolean type—it stores booleans as INTEGER (0 or 1). When reading from the database, you need to convert these back to JavaScript booleans:
+SQLite stores booleans as INTEGER (0 or 1). Always convert after reading:
 
 ```typescript
-// Problem: Database returns { available: 0 } but TypeScript expects boolean
-// Solution: Normalize after reading from database
-
 function normalizeMentorProfile(profile: unknown): MentorProfile {
   const dbProfile = profile as Record<string, unknown>;
-
   return {
-    // ... other fields
-    available: Boolean(dbProfile.available),        // Converts 0/1 to false/true
+    available: Boolean(dbProfile.available),  // 0/1 → false/true
     accepting_new_mentees: Boolean(dbProfile.accepting_new_mentees),
   };
 }
@@ -820,16 +410,13 @@ function normalizeMentorProfile(profile: unknown): MentorProfile {
 
 **JSON Field Parsing:**
 
-Some fields (like `expertise_topics_custom`) are stored as JSON strings in SQLite. Always parse and validate:
+Some fields (like `expertise_topics_custom`) are stored as JSON strings. Always parse:
 
 ```typescript
-// In database: expertise_topics_custom = '["topic1", "topic2"]'
 const expertise_topics_custom: string[] = [];
 if (dbProfile.expertise_topics_custom) {
   try {
-    const parsed = typeof dbProfile.expertise_topics_custom === 'string'
-      ? JSON.parse(dbProfile.expertise_topics_custom as string)
-      : dbProfile.expertise_topics_custom;
+    const parsed = JSON.parse(dbProfile.expertise_topics_custom as string);
     expertise_topics_custom = Array.isArray(parsed) ? parsed : [];
   } catch {
     expertise_topics_custom = [];
@@ -837,63 +424,11 @@ if (dbProfile.expertise_topics_custom) {
 }
 ```
 
-See `src/worker/index.ts:normalizeMentorProfile()` for the full example.
-
-### Bit Flag Helpers
-
-When working with bit flags, use the helper functions instead of manual bitwise operations:
-
-```typescript
-import {
-  hasLevel,
-  addLevel,
-  removeLevel,
-  getLevelNames
-} from '../types/mentor';
-
-// Check if mentor accepts entry-level mentees
-if (hasLevel(mentor.mentoring_levels, MentoringLevel.Entry)) {
-  // ...
-}
-
-// Add a new level to profile
-profile.mentoring_levels = addLevel(
-  profile.mentoring_levels,
-  MentoringLevel.Senior
-);
-
-// Get human-readable names
-const levels = getLevelNames(mentor.mentoring_levels); // ['Entry', 'Senior']
-```
-
-See `src/types/mentor.ts` for all available helpers.
-
 ### Error Handling Pattern
 
-The API client automatically extracts error details from responses:
+API client automatically extracts error details:
 
 ```typescript
-// apiClient.ts handles error transformation
-export async function request<T>(
-  method: string,
-  path: string,
-  body?: unknown
-): Promise<T> {
-  const response = await fetch(path, { /* ... */ });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw {
-      status: response.status,
-      message: error.message || 'Unknown error',
-      code: error.code,
-    };
-  }
-
-  return response.json();
-}
-
-// In components:
 try {
   const profile = await mentorService.getProfile(userId);
 } catch (error) {
@@ -907,61 +442,21 @@ try {
 
 ### Service Layer Pattern
 
-All API interactions go through service layer for consistency:
+All API interactions go through service layer:
 
 ```typescript
-// ✅ Good: Use service layer (in mentorService.ts)
+// ✅ Good: Use service layer
 const profile = await mentorService.getProfile(userId);
 
 // ❌ Bad: Direct API calls scattered in components
 const response = await apiClient.get(`/api/v1/mentors/profiles/${userId}`);
 ```
 
-Benefits:
-- Centralized error handling
-- Reusable business logic
-- Easy to mock in tests
-- Single source of truth for API endpoints
-
-### Testing Database Queries
-
-When testing worker endpoints that use D1:
-
-```typescript
-// Mock the database binding
-const mockDb = {
-  prepare: vi.fn((sql: string) => ({
-    bind: vi.fn().mockReturnThis(),
-    all: vi.fn(() => ({
-      success: true,
-      results: [/* mock data */]
-    })),
-    first: vi.fn(() => ({ /* mock data */ })),
-    run: vi.fn(() => ({ success: true }),
-  }))
-};
-
-// Pass to Hono context
-const c = {
-  env: {
-    platform_db: mockDb,
-    GOOGLE_CLIENT_ID: 'test-client',
-    GOOGLE_CLIENT_SECRET: 'test-secret',
-    JWT_SECRET: 'test-secret',
-  },
-  req: new Request('http://localhost/api/v1/users'),
-  var: vi.fn(),
-};
-
-// Test the endpoint
-const response = await app.fetch(c.req, c.env);
-```
+Benefits: Centralized error handling, reusable business logic, easy to mock, single source of truth.
 
 ## Database Schema Quick Reference
 
-### Core Tables
-
-**users**
+**users** - User accounts
 ```sql
 id TEXT PRIMARY KEY
 email TEXT UNIQUE
@@ -971,7 +466,7 @@ created_at INTEGER
 updated_at INTEGER
 ```
 
-**mentor_profiles**
+**mentor_profiles** - Mentor information
 ```sql
 id TEXT PRIMARY KEY
 user_id TEXT UNIQUE (FOREIGN KEY)
@@ -983,13 +478,14 @@ availability TEXT (JSON)
 expertise_domain TEXT
 expertise_topics TEXT (JSON array)
 expertise_topics_custom TEXT (JSON array)
+linkedin_url TEXT
 available BOOLEAN
 accepting_new_mentees BOOLEAN
 created_at INTEGER
 updated_at INTEGER
 ```
 
-**matches**
+**matches** - Mentorship requests and relationships
 ```sql
 id TEXT PRIMARY KEY
 mentee_id TEXT (FOREIGN KEY to users)
@@ -1001,7 +497,7 @@ completed_at INTEGER
 notes TEXT
 ```
 
-**user_roles**
+**user_roles** - Role-based access control
 ```sql
 id TEXT PRIMARY KEY
 user_id TEXT UNIQUE (FOREIGN KEY)
@@ -1009,7 +505,7 @@ role TEXT (admin|member)
 created_at INTEGER
 ```
 
-**user_points**
+**user_points** - User points and rankings
 ```sql
 id TEXT PRIMARY KEY
 user_id TEXT UNIQUE (FOREIGN KEY)
@@ -1018,321 +514,95 @@ updated_at INTEGER
 ```
 
 **Query Tips:**
-- Use `WHERE status = 'accepted'` for active mentorships
-- Join users for mentee/mentor names: `SELECT m.*, u.name as mentee_name ...`
-- Check mentor availability: `WHERE available = 1 AND accepting_new_mentees = 1`
+- Active mentorships: `WHERE status = 'accepted'`
+- Join users for names: `SELECT m.*, u.name as mentee_name ...`
+- Check availability: `WHERE available = 1 AND accepting_new_mentees = 1`
 - Calculate rank: `SELECT RANK() OVER (ORDER BY points DESC) as rank FROM user_points`
-- Initialize points on first access: `INSERT OR IGNORE INTO user_points (id, user_id, points, updated_at) VALUES (...)`
 
----
+## Key Features
 
-## Points System
+### Points System & Gamification
 
-### Overview
+See **docs/POINTS_SYSTEM.md** for complete details on:
+- Point awards for content creation and engagement
+- Diminishing returns anti-spam system
+- Leaderboard rankings and UI components
+- Post engagement point tracking
 
-The Points System enables gamification by tracking user points and calculating leaderboard rankings. Points are awarded for various activities (completing challenges, publishing blogs, etc.) and displayed throughout the platform.
+### Role-Based Access Control
 
-**Key Design Decisions:**
-- **No Rank Column**: Rank is calculated on-the-fly using SQL window functions, avoiding expensive updates when points change
-- **Auto-initialization**: Points records are created automatically on first access (GET endpoint)
-- **Consistent Timestamps**: Uses Unix timestamps (seconds) for consistency with existing schema
-- **Type Safety**: Shared types between frontend and backend in `src/types/points.ts`
+See **docs/RBAC.md** for complete details on:
+- Two-tier permission model (Admin/Member)
+- Role assignment and checking
+- Protected routes and middleware
+- Bootstrapping first admin user
 
-### Database Schema
+### Internationalization (i18n)
 
-**user_points table:**
-- `id` (TEXT PRIMARY KEY): Unique identifier
-- `user_id` (TEXT UNIQUE FOREIGN KEY): Reference to users table
-- `points` (INTEGER DEFAULT 0): Current point balance
-- `updated_at` (INTEGER): Last update timestamp (Unix seconds)
+See **docs/I18N.md** for complete details on:
+- Multi-language support (Chinese/English)
+- Translation key organization
+- Adding new translations
+- Language switching and testing
 
-**Indexes:**
-- `idx_user_points_user_id`: Fast lookups by user
-- `idx_user_points_points DESC`: Efficient leaderboard sorting
+### Claude Code Hooks
 
-### API Endpoints
+See **docs/HOOKS.md** for details on automated quality checks:
+- Automatic linting, building, and testing during Claude Code sessions
+- Hook configuration and performance tips
+- Troubleshooting hook failures
 
-**GET /api/v1/users/:id/points** (Public)
-- Returns user points with calculated rank
-- Auto-creates points record (with 0 points) if doesn't exist
-- Response includes rank calculated on-the-fly
-```typescript
-{
-  id: string;
-  user_id: string;
-  points: number;
-  updated_at: number;
-  rank?: number; // Calculated position in leaderboard
-}
-```
+## Debugging & Support
 
-**PATCH /api/v1/users/:id/points** (Admin Only)
-- Updates user's total points
-- Requires authentication and admin role
-- Request body: `{ points: number }`
-- Returns updated points with recalculated rank
+See **docs/TROUBLESHOOTING.md** for:
+- Quick reference table of common issues
+- Detailed debugging techniques
+- Database inspection commands
+- Performance monitoring and optimization
+- Development workflow best practices
 
-### Frontend Components
+## Key Dependencies
 
-**UserPointsBadge** (`src/react-app/components/UserPointsBadge.tsx`)
-- Displays points with icon and optional rank
-- Props: `points`, `rank`, `showRank`, `variant` (sm|md|lg), `showBadge`
-- Color-coded based on points amount:
-  - Gray (< 100 points)
-  - Orange (100-499 points)
-  - Blue (500-999 points)
-  - Yellow (1000+ points)
-- Responsive design and accessible ARIA labels
+- **Hono**: Web framework for Cloudflare Worker backend
+- **React 19**: UI library
+- **Vite**: Build tool and dev server
+- **@cloudflare/vite-plugin**: Cloudflare Workers integration
+- **Wrangler**: Cloudflare's CLI for Workers deployment
+- **jose**: JWT token creation and verification
+- **react-i18next**: Internationalization framework
+- **Vitest**: Test framework with jsdom and node environments
 
-**Points Service** (`src/react-app/services/pointsService.ts`)
-- `getUserPoints(userId)`: Fetch user points with rank
-- `updateUserPoints(userId, points)`: Set points (admin only)
-- `addPointsToUser(userId, pointsToAdd)`: Increment points
-- `awardPointsForAction(userId, pointsToAward, action)`: Award with logging
+## Common Development Patterns
 
-### Helper Functions
+### Testing Database Queries (Worker Tests)
 
-Located in `src/types/points.ts`:
-- `normalizeUserPoints()`: Ensure proper typing from database
-- `formatPoints()`: Format with thousands separator (e.g., "1,000")
-- `formatRank()`: Format with ordinal suffix (e.g., "1st", "2nd", "3rd")
-- `getPointsColor()`: Get TailwindCSS color class for badge
-
-### Testing
-
-Test type normalization, formatting, storage, rank calculation, and authorization. Test component rendering, accessibility, and edge cases.
-
-### Integration Points
-
-Points integrated into User types and API response types.
-
-### Post Engagement Point System
-
-The platform automatically awards points for creating and engaging with community posts. This gamification system encourages quality content creation and community participation.
-
-**Point Values (Creation-Focused):**
-
-Content Creation:
-- Discussion posts: 15 points
-- General posts: 10 points
-- Announcement posts: 0 points (admin-only, no gamification)
-- Comments: 5 points
-
-Content Author Rewards (for receiving engagement):
-- Each like on their post: 2 points (to post author)
-- Each comment on their post: 3 points (to post author)
-
-**Anti-Spam: Diminishing Returns**
-
-All point awards use a rolling 1-hour window with diminishing returns to prevent spam:
-
-- **Likes received**: First 5 per hour = full points, next 10 = 50% points, then 0 points
-- **Comments created**: First 10 per hour = full points, next 10 = 40% points, then 0 points
-- **Posts created**: First 3 per hour = full points, next 2 = 50% points, then 0 points
-
-**How It Works:**
-
-1. **Post Creation**: When user creates a discussion/general post, they immediately receive points based on post type
-2. **Receiving Like**: When another user likes a post, the post author receives points (not the liker)
-3. **Creating Comment**: When user comments on a post, they receive points AND the post author receives points (unless commenter is the author)
-4. **Point Tracking**: All point awards are logged in `point_actions_log` table for audit and diminishing returns calculation
-
-**Database Schema (New Tables):**
-
-**point_actions_log table** (migration 0013):
-- `id` (TEXT PRIMARY KEY): Unique log entry
-- `user_id` (TEXT FOREIGN KEY): User receiving points
-- `action_type` (TEXT): `post_created`, `like_received`, `comment_created`, `comment_received`
-- `reference_id` (TEXT): ID of the post/comment/like
-- `points_awarded` (INTEGER): Actual points awarded (after diminishing returns)
-- `created_at` (INTEGER): Unix timestamp
-
-**Indexes:**
-- `idx_point_actions_user_time`: Fast lookups for diminishing returns calculations
-
-**Implementation Details:**
-
-Points awarding is handled silently - if point system fails, the post/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
-
-**Constants:** (defined in `src/types/points.ts`)
-```typescript
-POINTS_FOR_CREATE_DISCUSSION_POST = 15
-POINTS_FOR_CREATE_GENERAL_POST = 10
-POINTS_FOR_CREATE_COMMENT = 5
-POINTS_FOR_RECEIVING_LIKE = 2
-POINTS_FOR_RECEIVING_COMMENT = 3
-DIMINISHING_RETURNS_WINDOW_SECONDS = 3600
-```
-
-**Helper Function:** (in `src/worker/index.ts`)
-```typescript
-async function awardPointsForAction(
-  db: D1Database,
-  userId: string,
-  actionType: string,
-  referenceId: string,
-  basePoints: number
-): Promise<number>
-```
-- Calculates diminishing returns based on recent actions
-- Updates user_points table
-- Logs action in point_actions_log
-- Returns actual points awarded
-
-**Integration with Endpoints:**
-
-- `POST /api/v1/posts`: Awards creator points after post insertion
-- `POST /api/v1/posts/:id/like`: Awards post author points after like created
-- `POST /api/v1/posts/:id/comments`: Awards commenter AND post author points after comment created
-
----
-
-## Role-Based Access Control System
-
-### Overview
-
-The Role-Based Access Control (RBAC) system provides a simple two-tier permission model for the platform:
-- **Admin**: Full administrative access to manage users, content, and platform settings
-- **Member**: Regular user with basic access to community features (default role)
-
-This system enables feature-gating and allows administrators to manage user permissions without code changes.
-
-### Database Schema
-
-**user_roles table** (created in migration 0007):
-```sql
-id TEXT PRIMARY KEY
-user_id TEXT UNIQUE (FOREIGN KEY to users)
-role TEXT (admin|member) -- CHECK constraint ensures valid values
-created_at INTEGER
-```
-
-**Indexes:**
-- `idx_user_roles_user_id`: Fast lookup by user
-- `idx_user_roles_role`: Efficient role-based queries
-
-**Design Notes:**
-- One role per user (UNIQUE constraint on user_id)
-- Role is required and defaults to 'member'
-- Created timestamp for audit trail
-
-### Type Definitions
-
-Located in `src/types/role.ts`:
+When testing D1 database interactions, mock the D1 binding:
 
 ```typescript
-enum UserRole {
-  Admin = 'admin',
-  Member = 'member',
-}
+const mockDb = {
+  prepare: vi.fn((sql: string) => ({
+    bind: vi.fn().mockReturnThis(),
+    all: vi.fn(() => ({ success: true, results: [] })),
+  }))
+};
 
-interface UserRoleRecord {
-  id: string;
-  user_id: string;
-  role: UserRole;
-  created_at: number;
-}
-
-function isAdmin(role: UserRole | undefined): boolean
-function getRoleName(role: UserRole): string
-function normalizeUserRole(dbRole: unknown): UserRole
+const c = { env: { platform_db: mockDb }, var: vi.fn() };
+const response = await app.fetch(new Request('http://localhost/api/v1/users'), c.env);
 ```
 
-### Backend API & Middleware
+### Running Tests During Development
 
-**API Endpoints:**
-
-**POST /api/v1/roles** (Admin Only)
-- Assign a role to a user
-- Requires: Authentication + Admin role
-- Request body: `{ user_id: string, role: UserRole }`
-- Returns: Updated `UserRoleRecord`
-
-**GET /api/v1/users/:id/role** (Public)
-- Get user's role by user ID
-- Response: `{ role: UserRole }`
-
-**Middleware:**
-
-`src/worker/auth/middleware.ts` provides role-based access control:
-
-```typescript
-// Check if user is authenticated
-export const requireAuth = (c, next) => { ... }
-
-// Check if user has admin role (requires auth + role verification)
-export const requireAdmin = (c, next) => { ... }
-```
-
-**Usage in Routes:**
-
-```typescript
-// Admin-only route
-app.post("/api/v1/roles", requireAuth, requireAdmin, async (c) => {
-  // Admin-only endpoint code
-});
-
-// Public route that checks role internally
-app.get("/api/v1/users/:id/role", async (c) => {
-  // Fetch role from database
-});
-```
-
-### Frontend Components
-
-**UserRoleBadge** (`src/react-app/components/UserRoleBadge.tsx`) displays role as colored badge with translations.
-
-### Integration with Authentication
-
-Roles checked via: JWT payload after login, `requireAdmin` middleware on requests, and conditional UI rendering.
-
-First admin setup: See "Bootstrapping First Admin User" in Authentication System.
-
-### Testing
-
-Test role assignment, retrieval, unauthorized blocking, UI rendering, and authorization checks.
-
----
-
-## Navigation Layout & Sidebar
-
-Two-column layout: sidebar (fixed 256px, hidden on mobile) + scrollable main content.
-
-**Sidebar Sections:**
-1. **Feed**: Feed (/), Challenges (/challenges), Blogs (/blogs)
-2. **Member Area** (Auth only): My Profile, My Mentorships, My Challenges, My Blogs
-3. **Links**: Leaderboard, Browse Mentors
-
-**Components:**
-- `Layout` (`src/react-app/components/Layout.tsx`): Two-column flex layout
-- `Sidebar` (`src/react-app/components/Sidebar.tsx`): Auth-aware navigation with three sections
-- `NavSection`: Reusable section component with active state styling
-
-Desktop: Sidebar visible and fixed. Mobile: Sidebar hidden, full-width content.
-
-All labels are translatable via i18n.
-
-## Debugging and Monitoring
-
-**Local logging:** Use `console.log/error()` in Worker code (visible in terminal with `npm run dev`).
-
-**Production logging:** Stream logs with `npx wrangler tail` or `npx wrangler tail --status error`.
-
-**Database:** View schema with `npm run db:schema`. Execute queries with `wrangler d1 execute platform-db-local --local --command "..."`
-
-**Frontend:** Check AuthContext in React DevTools. Verify `localStorage.getItem('authToken')`. Check network tab for API requests.
-
-**Performance:** Select only needed columns (not `SELECT *`). Check indexes on queries. For bundle size, analyze `dist/` after build.
-
-**Common issues:** 401 errors = check token in localStorage. Components not updating = ensure useAuth hook called. For slow queries = check indexes and column selection.
+1. Start test watcher: `npm run test:watch`
+2. Write test first, implement feature, refactor while keeping tests green
+3. Run `npm run quality-check` before committing
 
 ## Quick Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `Cannot find module 'react'` | Run `npm install` to ensure all deps installed |
-| `D1 database not found` | Run `npm run db:migrate` to apply migrations |
-| Tests failing with "Cannot find X" | Check that test files import from correct path using `@/` alias |
-| API returning 401 | Check JWT token in localStorage, may be expired (7 day default) |
-| Component showing Chinese text instead of English | Set i18n language via LanguageSwitcher or check localStorage `i18nextLng` |
-| Type errors in TypeScript | Run `npm run build` to check all three tsconfig projects |
+For common issues and solutions, see **docs/TROUBLESHOOTING.md**. Key commands:
+
+```bash
+npm run build              # Type-check all three TypeScript projects
+npm run db:schema          # View local database schema
+npm run test               # Run full test suite
+npx wrangler tail          # Stream production logs
+```
