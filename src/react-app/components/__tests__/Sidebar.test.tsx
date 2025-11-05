@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, beforeEach } from 'vitest';
 import i18n from '../../i18n';
@@ -10,13 +10,13 @@ import { Sidebar } from '../Sidebar';
  * Test suite for Sidebar component
  */
 describe('Sidebar', () => {
-  const renderSidebar = () => {
+  const renderSidebar = (initialPath = '/') => {
     return render(
       <AuthProvider>
         <I18nextProvider i18n={i18n}>
-          <Router>
+          <MemoryRouter initialEntries={[initialPath]}>
             <Sidebar />
-          </Router>
+          </MemoryRouter>
         </I18nextProvider>
       </AuthProvider>
     );
@@ -73,9 +73,9 @@ describe('Sidebar', () => {
   });
 
   it('should set aria-current="page" for active links', () => {
-    renderSidebar();
+    renderSidebar('/feed');
 
-    // When on homepage, Feed button (child of link) should be active
+    // When on /feed path, Feed button (child of link) should be active
     const feedButton = screen.getByRole('button', { name: /feed/i });
     expect(feedButton).toHaveAttribute('aria-current', 'page');
   });
@@ -92,7 +92,7 @@ describe('Sidebar', () => {
   it('should render navigation links with proper href attributes', () => {
     renderSidebar();
 
-    expect(screen.getByRole('link', { name: /feed/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /feed/i })).toHaveAttribute('href', '/feed');
     expect(screen.getByRole('link', { name: /challenges/i })).toHaveAttribute('href', '/challenges');
     expect(screen.getByRole('link', { name: /blogs/i })).toHaveAttribute('href', '/blogs');
     expect(screen.getByRole('link', { name: /leaderboard/i })).toHaveAttribute('href', '/leaderboard');

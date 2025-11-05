@@ -23,6 +23,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: t('common.home') },
+    { href: '/feed', label: t('common.feed', 'Feed') },
     { href: '/events', label: t('events.title', 'Events') },
     { href: '/leaderboard', label: t('navigation.leaderboard', 'Leaderboard') },
   ];

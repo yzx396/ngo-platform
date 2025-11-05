@@ -418,5 +418,68 @@
       "removeMember": "降级为成员",
       "noUsers": "未找到用户"
     }
+  },
+  "about": {
+    "title": "关于 Lead Forward",
+    "subtitle": "构建一个致力于领导力发展和导师制的全球社区",
+    "mission": {
+      "title": "我们的使命",
+      "content": "在 Lead Forward，我们相信每个人都应该获得导师制和领导力发展的机会。我们的使命是创建一个全球社区，让个人能够通过有意义的导师关系和共享的学习经验联系、学习和共同成长。"
+    },
+    "whatWeDo": {
+      "title": "我们做什么",
+      "item1Title": "导师配对",
+      "item1Desc": "将学员与经验丰富的专业人士联系起来，提供个性化指导",
+      "item2Title": "学习资源",
+      "item2Desc": "访问精心策划的内容、文章和学习材料",
+      "item3Title": "社区挑战",
+      "item3Desc": "参加挑战来发展技能并获得认可",
+      "item4Title": "全球活动",
+      "item4Desc": "参加虚拟和面对面的活动，扩展您的网络"
+    },
+    "values": {
+      "title": "我们的价值观",
+      "qualityEducation": {
+        "title": "优质教育",
+        "description": "我们提供全面的教育资源和导师制"
+      },
+      "careerMentorship": {
+        "title": "职业导师制",
+        "description": "加速您职业发展的专家指导"
+      },
+      "communitySupport": {
+        "title": "社区支持",
+        "description": "学习者和专业人士的支持网络"
+      },
+      "sustainableAccess": {
+        "title": "可持续的机会获取",
+        "description": "让机会对所有人都可以获得"
+      }
+    },
+    "founders": {
+      "title": "我们的创始人",
+      "profiles": [
+        {
+          "name": "Claire Ding",
+          "title": "Intuit 高级经理"
+        },
+        {
+          "name": "Elaine Xiao",
+          "title": "Apple 经理"
+        },
+        {
+          "name": "Lily Li",
+          "title": "Amazon 高级经理"
+        },
+        {
+          "name": "Yang Zhao",
+          "title": "SAP 工程负责人"
+        }
+      ]
+    },
+    "joinUs": {
+      "title": "加入我们的社区",
+      "description": "无论您是想指导他人还是寻求指导，我们的社区中都有适合您的位置。立即与 Lead Forward 开始您的领导力之旅。"
+    }
   }
 }

@@ -13,7 +13,7 @@ describe('App', () => {
       render(<App />);
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { name: /Community Feed/i })
+          screen.getByRole('heading', { name: /About Lead Forward/i })
         ).toBeInTheDocument();
       }, { timeout: 3000 });
     });
@@ -87,9 +87,9 @@ describe('App', () => {
   describe('Page Content', () => {
     it('should display community features on home page', async () => {
       render(<App />);
-      // Wait for FeedPage to load and check for Community Feed heading
+      // Wait for AboutPage to load and check for About Lead Forward heading
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /Community Feed/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /About Lead Forward/i })).toBeInTheDocument();
       }, { timeout: 3000 });
     });
 

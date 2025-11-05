@@ -18,6 +18,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage').then(m => ({ default: m.OAuthCallbackPage })));
 const FeedPage = lazy(() => import('./pages/FeedPage').then(m => ({ default: m.FeedPage })));
 const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
 const MentorBrowse = lazy(() => import('./pages/MentorBrowse').then(m => ({ default: m.MentorBrowse })));
 const MentorDetailPage = lazy(() => import('./pages/MentorDetailPage').then(m => ({ default: m.MentorDetailPage })));
@@ -76,11 +77,17 @@ function AppContent() {
         {!isAuthPage && (
           <Layout>
             <Routes>
+              {/* About Page - Home/default page */}
+              <Route path="/" element={<AboutPage />} />
+
               {/* Feed Page - Main page showing community posts */}
-              <Route path="/" element={<FeedPage />} />
+              <Route path="/feed" element={<FeedPage />} />
 
               {/* Events Page - Upcoming community events */}
               <Route path="/events" element={<EventsPage />} />
+
+              {/* About Page - Community introduction and founders */}
+              <Route path="/about" element={<AboutPage />} />
 
               {/* Leaderboard Page - User rankings by points */}
               <Route path="/leaderboard" element={<LeaderboardPage />} />

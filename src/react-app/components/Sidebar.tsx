@@ -77,7 +77,7 @@ export function Sidebar() {
   // Feed section - always visible
   const feedLinks: NavLink[] = [
     {
-      href: '/',
+      href: '/feed',
       label: t('navigation.feed', 'Feed'),
       icon: '📰',
     },

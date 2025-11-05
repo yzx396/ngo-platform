@@ -418,5 +418,68 @@
       "removeMember": "Demote to Member",
       "noUsers": "No users found"
     }
+  },
+  "about": {
+    "title": "About Lead Forward",
+    "subtitle": "Building a global community dedicated to leadership development and mentorship",
+    "mission": {
+      "title": "Our Mission",
+      "content": "At Lead Forward, we believe that everyone deserves access to mentorship and leadership development. Our mission is to create a global community where individuals can connect, learn, and grow together through meaningful mentorship relationships and shared learning experiences."
+    },
+    "whatWeDo": {
+      "title": "What We Do",
+      "item1Title": "Mentor Matching",
+      "item1Desc": "Connect mentees with experienced professionals for personalized guidance",
+      "item2Title": "Learning Resources",
+      "item2Desc": "Access curated content, articles, and learning materials",
+      "item3Title": "Community Challenges",
+      "item3Desc": "Participate in challenges to develop skills and earn recognition",
+      "item4Title": "Global Events",
+      "item4Desc": "Attend virtual and in-person events to expand your network"
+    },
+    "values": {
+      "title": "Our Values",
+      "qualityEducation": {
+        "title": "Quality Education",
+        "description": "We provide comprehensive educational resources and mentorship"
+      },
+      "careerMentorship": {
+        "title": "Career Mentorship",
+        "description": "Expert guidance to accelerate your professional growth"
+      },
+      "communitySupport": {
+        "title": "Community Support",
+        "description": "A supportive network of learners and professionals"
+      },
+      "sustainableAccess": {
+        "title": "Sustainable Access",
+        "description": "Making opportunities accessible to everyone"
+      }
+    },
+    "founders": {
+      "title": "Our Founders",
+      "profiles": [
+        {
+          "name": "Claire Ding",
+          "title": "Senior Manager @ Intuit"
+        },
+        {
+          "name": "Elaine Xiao",
+          "title": "Manager @ Apple"
+        },
+        {
+          "name": "Lily Li",
+          "title": "Senior Manager @ Amazon"
+        },
+        {
+          "name": "Yang Zhao",
+          "title": "Eng Leader @ SAP"
+        }
+      ]
+    },
+    "joinUs": {
+      "title": "Join Our Community",
+      "description": "Whether you are looking to mentor others or seeking guidance, there is a place for you in our community. Start your leadership journey with Lead Forward today."
+    }
   }
 }
