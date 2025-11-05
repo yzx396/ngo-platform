@@ -64,6 +64,10 @@ function NavSection({
  * - Feed (public, always visible)
  * - Member Area (authenticated only)
  * - Links (public, always visible)
+ *
+ * Responsive behavior:
+ * - Hidden on mobile/tablet (<1024px)
+ * - Visible on desktop (1024px+)
  */
 export function Sidebar() {
   const location = useLocation();
@@ -146,7 +150,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 hidden md:flex flex-col overflow-y-auto">
+    <aside className="w-64 border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex-shrink-0 hidden lg:flex flex-col overflow-y-auto">
       <nav className="flex-1 space-y-4 px-2 py-4">
         {/* Feed Section */}
         <NavSection links={feedLinks} isActive={isActive} isAuthenticated={isAuthenticated} />
