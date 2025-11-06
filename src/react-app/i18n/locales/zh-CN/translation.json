@@ -251,7 +251,14 @@
     "downloadCv": "下载简历",
     "cvAvailable": "简历已提供",
     "cvNotAvailable": "未提供简历",
-    "downloadingCv": "下载中..."
+    "downloadingCv": "下载中...",
+    "created": "创建于",
+    "status": "状态",
+    "menteeEmail": "学员邮箱",
+    "mentorEmail": "导师邮箱",
+    "mentorLinkedIn": "导师 LinkedIn",
+    "introductionLabel": "个人介绍",
+    "preferredTimeLabel": "希望的辅导时间"
   },
   "status": {
     "pending": "待处理",
