@@ -421,39 +421,48 @@
   },
   "about": {
     "title": "About Lead Forward",
-    "subtitle": "Building a global community dedicated to leadership development and mentorship",
+    "subtitle": "Lead Forward was founded with a mission to empower individuals to discover and develop their leadership potential through regular practice and community support",
+    "vision": {
+      "title": "Our Vision",
+      "content": "Become the Leader You Aspire to Be."
+    },
     "mission": {
       "title": "Our Mission",
-      "content": "At Lead Forward, we believe that everyone deserves access to mentorship and leadership development. Our mission is to create a global community where individuals can connect, learn, and grow together through meaningful mentorship relationships and shared learning experiences."
+      "content": "To inspire people to be the best leaders they aspire to be by creating opportunities for practical leadership experience in a supportive environment."
     },
     "whatWeDo": {
       "title": "What We Do",
-      "item1Title": "Mentor Matching",
-      "item1Desc": "Connect mentees with experienced professionals for personalized guidance",
-      "item2Title": "Learning Resources",
-      "item2Desc": "Access curated content, articles, and learning materials",
-      "item3Title": "Community Challenges",
-      "item3Desc": "Participate in challenges to develop skills and earn recognition",
-      "item4Title": "Global Events",
-      "item4Desc": "Attend virtual and in-person events to expand your network"
+      "description": "Each month, we organize leadership activities designed to help members practice specific leadership skills, receive feedback, and grow as leaders. These activities are carefully structured to address different aspects of leadership in diverse settings.",
+      "item1Title": "Public Speaking",
+      "item1Desc": "Develop communication skills and confidence in presenting ideas to audiences",
+      "item2Title": "Decision Making",
+      "item2Desc": "Learn frameworks for analyzing information and making effective decisions",
+      "item3Title": "Team Building",
+      "item3Desc": "Practice building cohesive teams and fostering collaboration",
+      "item4Title": "Conflict Resolution",
+      "item4Desc": "Master techniques for navigating disagreements and finding solutions",
+      "item5Title": "Strategic Thinking",
+      "item5Desc": "Develop the ability to see the bigger picture and plan for long-term success",
+      "item6Title": "Emotional Intelligence",
+      "item6Desc": "Build self-awareness and empathy to lead with greater effectiveness"
     },
     "values": {
-      "title": "Our Values",
-      "qualityEducation": {
-        "title": "Quality Education",
-        "description": "We provide comprehensive educational resources and mentorship"
+      "title": "Our Core Values",
+      "growthMindset": {
+        "title": "Growth Mindset",
+        "description": "We believe everyone can develop leadership abilities through practice and persistence"
       },
-      "careerMentorship": {
-        "title": "Career Mentorship",
-        "description": "Expert guidance to accelerate your professional growth"
+      "authenticLeadership": {
+        "title": "Authentic Leadership",
+        "description": "Leading with integrity and staying true to your own leadership style and values"
       },
       "communitySupport": {
         "title": "Community Support",
-        "description": "A supportive network of learners and professionals"
+        "description": "Creating a safe, nurturing environment where leaders can take risks and learn"
       },
-      "sustainableAccess": {
-        "title": "Sustainable Access",
-        "description": "Making opportunities accessible to everyone"
+      "actionablePractice": {
+        "title": "Actionable Practice",
+        "description": "Focusing on practical exercises that translate to real-world leadership scenarios"
       }
     },
     "founders": {

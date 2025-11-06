@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { FounderCard } from '../components/FounderCard';
+import { Mic, Target, Users, Handshake, Lightbulb, Heart, TrendingUp, Star, HeartHandshake, Rocket } from 'lucide-react';
 
 /**
  * AboutPage Component
@@ -8,6 +9,46 @@ import { FounderCard } from '../components/FounderCard';
  */
 export function AboutPage() {
   const { t } = useTranslation();
+
+  // Leadership activities
+  const activities = [
+    {
+      id: 1,
+      icon: Mic,
+      title: t('about.whatWeDo.item1Title', 'Public Speaking'),
+      description: t('about.whatWeDo.item1Desc', 'Develop communication skills and confidence in presenting ideas to audiences'),
+    },
+    {
+      id: 2,
+      icon: Target,
+      title: t('about.whatWeDo.item2Title', 'Decision Making'),
+      description: t('about.whatWeDo.item2Desc', 'Learn frameworks for analyzing information and making effective decisions'),
+    },
+    {
+      id: 3,
+      icon: Users,
+      title: t('about.whatWeDo.item3Title', 'Team Building'),
+      description: t('about.whatWeDo.item3Desc', 'Practice building cohesive teams and fostering collaboration'),
+    },
+    {
+      id: 4,
+      icon: Handshake,
+      title: t('about.whatWeDo.item4Title', 'Conflict Resolution'),
+      description: t('about.whatWeDo.item4Desc', 'Master techniques for navigating disagreements and finding solutions'),
+    },
+    {
+      id: 5,
+      icon: Lightbulb,
+      title: t('about.whatWeDo.item5Title', 'Strategic Thinking'),
+      description: t('about.whatWeDo.item5Desc', 'Develop the ability to see the bigger picture and plan for long-term success'),
+    },
+    {
+      id: 6,
+      icon: Heart,
+      title: t('about.whatWeDo.item6Title', 'Emotional Intelligence'),
+      description: t('about.whatWeDo.item6Desc', 'Build self-awareness and empathy to lead with greater effectiveness'),
+    },
+  ];
 
   // Founder data - can be easily updated
   const founders = [
@@ -41,27 +82,27 @@ export function AboutPage() {
   const values = [
     {
       id: 1,
-      icon: '🎓',
-      title: t('about.values.qualityEducation.title', 'Quality Education'),
-      description: t('about.values.qualityEducation.description', 'We provide comprehensive educational resources and mentorship'),
+      icon: TrendingUp,
+      title: t('about.values.growthMindset.title', 'Growth Mindset'),
+      description: t('about.values.growthMindset.description', 'We believe everyone can develop leadership abilities through practice and persistence'),
     },
     {
       id: 2,
-      icon: '💼',
-      title: t('about.values.careerMentorship.title', 'Career Mentorship'),
-      description: t('about.values.careerMentorship.description', 'Expert guidance to accelerate your professional growth'),
+      icon: Star,
+      title: t('about.values.authenticLeadership.title', 'Authentic Leadership'),
+      description: t('about.values.authenticLeadership.description', 'Leading with integrity and staying true to your own leadership style and values'),
     },
     {
       id: 3,
-      icon: '🤝',
+      icon: HeartHandshake,
       title: t('about.values.communitySupport.title', 'Community Support'),
-      description: t('about.values.communitySupport.description', 'A supportive network of learners and professionals'),
+      description: t('about.values.communitySupport.description', 'Creating a safe, nurturing environment where leaders can take risks and learn'),
     },
     {
       id: 4,
-      icon: '♿',
-      title: t('about.values.sustainableAccess.title', 'Sustainable Access'),
-      description: t('about.values.sustainableAccess.description', 'Making opportunities accessible to everyone'),
+      icon: Rocket,
+      title: t('about.values.actionablePractice.title', 'Actionable Practice'),
+      description: t('about.values.actionablePractice.description', 'Focusing on practical exercises that translate to real-world leadership scenarios'),
     },
   ];
 
@@ -77,6 +118,14 @@ export function AboutPage() {
         </p>
       </div>
 
+      {/* Our Vision Section */}
+      <div className="space-y-4">
+        <h2 className="text-3xl font-bold">{t('about.vision.title', 'Our Vision')}</h2>
+        <p className="text-muted-foreground leading-relaxed max-w-3xl">
+          {t('about.vision.content', 'Become the Leader You Aspire to Be.')}
+        </p>
+      </div>
+
       {/* Our Mission Section */}
       <div className="space-y-4">
         <h2 className="text-3xl font-bold">{t('about.mission.title', 'Our Mission')}</h2>
@@ -88,60 +137,43 @@ export function AboutPage() {
       {/* What We Do Section */}
       <div className="space-y-4">
         <h2 className="text-3xl font-bold">{t('about.whatWeDo.title', 'What We Do')}</h2>
+        <p className="text-muted-foreground max-w-3xl leading-relaxed">
+          {t('about.whatWeDo.description', 'Each month, we organize leadership activities designed to help members practice specific leadership skills, receive feedback, and grow as leaders. These activities are carefully structured to address different aspects of leadership in diverse settings.')}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">🎯</span>
-            <div>
-              <h3 className="font-semibold mb-1">{t('about.whatWeDo.item1Title', 'Mentor Matching')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t('about.whatWeDo.item1Desc', 'Connect mentees with experienced professionals for personalized guidance')}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">📚</span>
-            <div>
-              <h3 className="font-semibold mb-1">{t('about.whatWeDo.item2Title', 'Learning Resources')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t('about.whatWeDo.item2Desc', 'Access curated content, articles, and learning materials')}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">🏆</span>
-            <div>
-              <h3 className="font-semibold mb-1">{t('about.whatWeDo.item3Title', 'Community Challenges')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t('about.whatWeDo.item3Desc', 'Participate in challenges to develop skills and earn recognition')}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">🌍</span>
-            <div>
-              <h3 className="font-semibold mb-1">{t('about.whatWeDo.item4Title', 'Global Events')}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t('about.whatWeDo.item4Desc', 'Attend virtual and in-person events to expand your network')}
-              </p>
-            </div>
-          </div>
+          {activities.map((activity) => {
+            const IconComponent = activity.icon;
+            return (
+              <div
+                key={activity.id}
+                className="bg-card border rounded-lg p-6 space-y-3 hover:shadow-md transition-shadow"
+              >
+                <IconComponent className="h-8 w-8 text-primary" />
+                <h3 className="font-semibold text-lg">{activity.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{activity.description}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Values Section */}
       <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.values.title', 'Our Values')}</h2>
+        <h2 className="text-3xl font-bold">{t('about.values.title', 'Our Core Values')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {values.map((value) => (
-            <div
-              key={value.id}
-              className="bg-card border rounded-lg p-6 space-y-3 hover:shadow-md transition-shadow"
-            >
-              <div className="text-3xl">{value.icon}</div>
-              <h3 className="font-semibold text-lg">{value.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{value.description}</p>
-            </div>
-          ))}
+          {values.map((value) => {
+            const IconComponent = value.icon;
+            return (
+              <div
+                key={value.id}
+                className="bg-card border rounded-lg p-6 space-y-3 hover:shadow-md transition-shadow"
+              >
+                <IconComponent className="h-8 w-8 text-primary" />
+                <h3 className="font-semibold text-lg">{value.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{value.description}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
