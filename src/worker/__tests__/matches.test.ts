@@ -188,6 +188,7 @@ const createMockDb = () => {
           }
 
           if (query.includes('INSERT INTO mentor_profiles')) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at] = params;
             mockProfiles.set(id, { id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, allow_reviews, allow_recording, linkedin_url, created_at, updated_at });
             return { success: true, meta: { changes: 1 } };
