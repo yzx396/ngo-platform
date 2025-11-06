@@ -42,7 +42,7 @@ This guide walks you through setting up Google OAuth credentials for the Lead Fo
 2. **App logo:** (optional, skip for now)
 
 3. **Authorized domains:**
-   - Add your domain if deployed (e.g., `leadforward.example.com`)
+   - Add your domain if deployed (e.g., `leadfwd.org`)
    - For local development, you can skip this
 
 4. **Developer contact information:**
@@ -66,12 +66,12 @@ Back on the Credentials page:
 4. Under **Authorized JavaScript origins**, add:
    - `http://localhost:5173` (local development)
    - `http://localhost:3000` (alternative port)
-   - Your production domain (e.g., `https://leadforward.example.com`)
+   - Your production domain: `https://leadfwd.org`
 
 5. Under **Authorized redirect URIs**, add:
    - `http://localhost:5173/auth/google/callback` (local development)
    - `http://localhost:3000/auth/google/callback` (alternative port)
-   - Your production callback URL (e.g., `https://leadforward.example.com/auth/google/callback`)
+   - Your production callback URL: `https://leadfwd.org/auth/google/callback`
 
 6. Click **CREATE**
 

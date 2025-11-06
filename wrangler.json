@@ -77,6 +77,16 @@
 		"not_found_handling": "single-page-application"
 	},
 	/**
+	 * Custom Domain Configuration
+	 * https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+	 */
+	"routes": [
+		{
+			"pattern": "leadfwd.org/*",
+			"custom_domain": true
+		}
+	],
+	/**
 	 * Local Development Environment
 	 * Uses local D1 database for development (stored in .wrangler/state/d1/)
 	 * Run: npm run dev (or wrangler dev --env local)
