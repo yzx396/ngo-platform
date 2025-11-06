@@ -409,7 +409,7 @@ function MatchCard({
         {match.status === 'pending' && role === 'mentor' && onRespond && (
           <>
             {/* Show CV button if CV is included */}
-            {match.cv_included && (
+            {!!match.cv_included && (
               <Button
                 size="sm"
                 variant="outline"
@@ -441,7 +441,7 @@ function MatchCard({
         {(match.status === 'active' || match.status === 'accepted') && onComplete && (
           <>
             {/* Show CV button if CV is included */}
-            {match.cv_included && (
+            {!!match.cv_included && (
               <Button
                 size="sm"
                 variant="outline"
@@ -465,7 +465,7 @@ function MatchCard({
         {match.status === 'completed' && (
           <>
             {/* Show CV button if CV is included */}
-            {match.cv_included && (
+            {!!match.cv_included && (
               <Button
                 size="sm"
                 variant="outline"
