@@ -325,7 +325,7 @@ function MatchCard({
       <CardContent className="flex-1 space-y-4">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.status')}</p>
-          <p className="text-sm capitalize">{match.status}</p>
+          <p className="text-sm">{t(`status.${match.status}`)}</p>
         </div>
 
         {/* Show contact information for active and completed matches */}
