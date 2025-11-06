@@ -32,6 +32,20 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get points for post type (matching POINTS_SYSTEM.md)
+  const getPointsForPostType = (type: PostType): number => {
+    switch (type) {
+      case PostType.Discussion:
+        return 15;
+      case PostType.General:
+        return 10;
+      case PostType.Announcement:
+        return 0; // No points for announcements
+      default:
+        return 10;
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,8 +74,21 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
       setLoading(true);
       await createPost(content.trim(), postType);
 
-      // Success
+      // Success - show base success toast
       toast.success(t('posts.createSuccess'));
+
+      // Show points earned toast (unless it's an announcement with 0 points)
+      const points = getPointsForPostType(postType);
+      if (points > 0) {
+        // Determine which notification key to use based on post type
+        let notificationKey = 'points.notifications.postCreated';
+        if (postType === PostType.Discussion) {
+          notificationKey = 'points.notifications.discussionCreated';
+        }
+
+        toast.success(t(notificationKey, { points: points.toString() }));
+      }
+
       setContent('');
       setPostType(PostType.General);
 

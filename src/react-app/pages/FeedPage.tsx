@@ -4,11 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { PostCard } from '../components/PostCard';
 import { EditPostDialog } from '../components/EditPostDialog';
 import { FeedControls } from '../components/FeedControls';
+import { PointsInfoDialog } from '../components/PointsInfoDialog';
 import { Button } from '../components/ui/button';
 import { getPosts, deletePost } from '../services/postService';
 import type { Post, PostType } from '../../types/post';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
+import { X, Lightbulb } from 'lucide-react';
 
 const POSTS_PER_PAGE = 20;
 
@@ -30,6 +32,12 @@ export function FeedPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
   const [refetchTrigger, setRefetchTrigger] = useState(0);
+  const [pointsInfoDialogOpen, setPointsInfoDialogOpen] = useState(false);
+  const [showPointsBanner, setShowPointsBanner] = useState(() => {
+    // Check localStorage to see if user has dismissed the banner
+    const dismissed = localStorage.getItem('pointsBannerDismissed');
+    return !dismissed;
+  });
 
   // Fetch posts when offset, filter, or refetch trigger changes
   useEffect(() => {
@@ -197,6 +205,12 @@ export function FeedPage() {
     );
   }
 
+  // Handle banner dismissal
+  const handleDismissBanner = () => {
+    setShowPointsBanner(false);
+    localStorage.setItem('pointsBannerDismissed', 'true');
+  };
+
   // Render feed
   return (
     <div className="space-y-6">
@@ -207,6 +221,34 @@ export function FeedPage() {
           {t('posts.subtitle', 'See what the community is sharing')}
         </p>
       </div>
+
+      {/* Points Info Banner */}
+      {showPointsBanner && user && (
+        <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+              {t('points.earnPoints', 'Earn Points')}
+            </p>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              {t('posts.description', 'Create posts and comments to earn points and climb the leaderboard!')}{' '}
+              <button
+                onClick={() => setPointsInfoDialogOpen(true)}
+                className="font-semibold underline hover:no-underline cursor-pointer"
+              >
+                {t('points.howToEarn', 'Learn how')}
+              </button>
+            </p>
+          </div>
+          <button
+            onClick={handleDismissBanner}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 flex-shrink-0"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
 
       <FeedControls
         selectedType={selectedType}
@@ -238,6 +280,12 @@ export function FeedPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onPostUpdated={handlePostUpdated}
+      />
+
+      {/* Points Info Dialog */}
+      <PointsInfoDialog
+        open={pointsInfoDialogOpen}
+        onOpenChange={setPointsInfoDialogOpen}
       />
 
       {/* Pagination Controls */}

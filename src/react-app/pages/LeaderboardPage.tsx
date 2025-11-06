@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { UserPointsBadge } from '../components/UserPointsBadge';
+import { PointsInfoDialog } from '../components/PointsInfoDialog';
 import { getLeaderboard } from '../services/pointsService';
 import type { LeaderboardEntry } from '../../types/api';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
+import { HelpCircle } from 'lucide-react';
 
 const USERS_PER_PAGE = 50;
 
@@ -23,6 +25,7 @@ export function LeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   // Fetch leaderboard
   useEffect(() => {
@@ -110,12 +113,25 @@ export function LeaderboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">{t('leaderboard.title', 'Leaderboard')}</h1>
-        <p className="text-muted-foreground">
-          {t('leaderboard.subtitle', 'Top contributors in our community')}
-        </p>
+      {/* Header with Info Button */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 flex-1">
+          <h1 className="text-3xl font-bold">{t('leaderboard.title', 'Leaderboard')}</h1>
+          <p className="text-muted-foreground">
+            {t('leaderboard.subtitle', 'Top contributors in our community')}
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDialogOpen(true)}
+          className="mt-1"
+          title={t('points.howToEarn')}
+          aria-label={t('points.howToEarn')}
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          {t('points.howToEarn')}
+        </Button>
       </div>
 
       {/* User's rank info (if logged in and on leaderboard) */}
@@ -219,6 +235,9 @@ export function LeaderboardPage() {
           </div>
         </div>
       )}
+
+      {/* Points Info Dialog */}
+      <PointsInfoDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

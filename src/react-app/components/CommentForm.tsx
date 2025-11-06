@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { createComment } from '../services/postService';
 import { handleApiError } from '../services/apiClient';
+import { toast } from 'sonner';
 
 interface CommentFormProps {
   postId: string;
@@ -54,6 +55,10 @@ export function CommentForm({
 
         // Clear form on success
         setContent('');
+
+        // Show points notification (comments earn 5 points)
+        const COMMENT_POINTS = 5;
+        toast.success(t('points.notifications.commentCreated', { points: COMMENT_POINTS.toString() }));
 
         // Notify parent component
         onCommentCreated?.(content.trim());
