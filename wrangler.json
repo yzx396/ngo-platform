@@ -82,7 +82,7 @@
 	 */
 	"routes": [
 		{
-			"pattern": "leadfwd.org/*",
+			"pattern": "leadfwd.org",
 			"custom_domain": true
 		}
 	],

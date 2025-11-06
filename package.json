@@ -6,8 +6,8 @@
 	"scripts": {
 		"build": "tsc -b && vite build",
 		"cf-typegen": "wrangler types",
-		"check": "tsc && vite build && wrangler deploy --dry-run",
-		"deploy": "wrangler deploy && npm run db:migrate:prod",
+		"check": "tsc && vite build && wrangler deploy --dry-run --env=\"\"",
+		"deploy": "wrangler deploy --env=\"\" && npm run db:migrate:prod",
 		"dev": "vite dev",
 		"db:migrate": "wrangler d1 migrations apply platform-db --local",
 		"db:migrate:prod": "wrangler d1 migrations apply platform-db --remote",
