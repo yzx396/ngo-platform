@@ -152,8 +152,9 @@ describe('MatchesList', () => {
       // Verify getMentorProfileByUserId was called
       expect(mentorService.getMentorProfileByUserId).toHaveBeenCalledWith('user-123');
 
-      // Verify the service was called with mentor role
-      expect(matchService.getMatches).toHaveBeenCalledWith({ role: 'mentor' });
+      // Verify the service was last called with mentor role
+      // Note: getMatches is called twice - first with default 'mentee', then with 'mentor' after status is determined
+      expect(matchService.getMatches).toHaveBeenLastCalledWith({ role: 'mentor' });
     });
 
     it('should handle error when checking mentor status gracefully', async () => {

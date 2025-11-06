@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { findOrCreateUserFromGoogle } from '../auth/google';
+import { findOrCreateUserFromGoogle, getGoogleLoginUrl } from '../auth/google';
 import type { User } from '../../types/user';
 
 // ============================================================================
@@ -316,5 +316,58 @@ describe('findOrCreateUserFromGoogle', () => {
         findOrCreateUserFromGoogle(invalidProfile, mockDb as unknown as D1Database)
       ).rejects.toThrow('Google profile missing required field');
     });
+  });
+});
+
+// ============================================================================
+// Google OAuth URL Generation Tests
+// ============================================================================
+
+describe('getGoogleLoginUrl', () => {
+  it('should generate valid OAuth URL with all required parameters', () => {
+    const clientId = 'test-client-id.apps.googleusercontent.com';
+    const redirectUri = 'http://localhost:5173/auth/callback';
+
+    const url = getGoogleLoginUrl(clientId, redirectUri);
+
+    // Parse the URL
+    const parsedUrl = new URL(url);
+    const params = parsedUrl.searchParams;
+
+    // Verify base URL
+    expect(parsedUrl.origin).toBe('https://accounts.google.com');
+    expect(parsedUrl.pathname).toBe('/o/oauth2/v2/auth');
+
+    // Verify required parameters
+    expect(params.get('client_id')).toBe(clientId);
+    expect(params.get('redirect_uri')).toBe(redirectUri);
+    expect(params.get('response_type')).toBe('code');
+    expect(params.get('scope')).toBe('openid email profile');
+    expect(params.get('access_type')).toBe('offline');
+  });
+
+  it('should include prompt=select_account to force account picker', () => {
+    const clientId = 'test-client-id.apps.googleusercontent.com';
+    const redirectUri = 'http://localhost:5173/auth/callback';
+
+    const url = getGoogleLoginUrl(clientId, redirectUri);
+    const parsedUrl = new URL(url);
+    const params = parsedUrl.searchParams;
+
+    // Verify prompt parameter is set to select_account
+    // This ensures users can choose which Gmail account to use
+    expect(params.get('prompt')).toBe('select_account');
+  });
+
+  it('should properly encode redirect URI with special characters', () => {
+    const clientId = 'test-client-id.apps.googleusercontent.com';
+    const redirectUri = 'https://example.com/auth/callback?foo=bar&baz=qux';
+
+    const url = getGoogleLoginUrl(clientId, redirectUri);
+    const parsedUrl = new URL(url);
+    const params = parsedUrl.searchParams;
+
+    // URLSearchParams should properly encode the redirect_uri
+    expect(params.get('redirect_uri')).toBe(redirectUri);
   });
 });
