@@ -29,13 +29,11 @@ describe('App', () => {
       render(<App />);
       // Check for Lead Forward branding logo (Home - clicking logo goes to home)
       expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
-      // Check for new navigation links in navbar: Events, Leaderboard
+      // Check for navigation links in navbar: Events
       // (Home is represented by the logo, not a button)
-      // These buttons appear in both navbar and sidebar, so check for multiple
+      // Note: Leaderboard is hidden when feature flag is disabled (default in tests)
       const eventsButtons = screen.getAllByRole('button', { name: /Events/i });
-      const leaderboardButtons = screen.getAllByRole('button', { name: /Leaderboard/i });
       expect(eventsButtons.length).toBeGreaterThan(0);
-      expect(leaderboardButtons.length).toBeGreaterThan(0);
     });
 
     it('should display public navigation links on home page', async () => {
@@ -45,9 +43,9 @@ describe('App', () => {
         // Check for Feed link in sidebar (public)
         const feedLinks = screen.getAllByRole('link', { name: /Feed/i });
         expect(feedLinks.length).toBeGreaterThan(0);
-        // Check for Leaderboard link (public)
+        // Note: Leaderboard is hidden when feature flag is disabled (default in tests)
         const leaderboardLinks = screen.queryAllByRole('link', { name: /Leaderboard/i });
-        expect(leaderboardLinks.length).toBeGreaterThan(0);
+        expect(leaderboardLinks.length).toBe(0);
       }, { timeout: 3000 });
     });
   });
