@@ -58,6 +58,8 @@ function decodeJwt(token: string): GoogleIdTokenPayload | null {
 
 /**
  * Generates Google OAuth login URL
+ * Uses prompt=select_account to always show account picker, allowing users to choose
+ * which Google account to use (enables logging in with different Gmail accounts)
  */
 export function getGoogleLoginUrl(clientId: string, redirectUri: string): string {
   const params = new URLSearchParams({
@@ -66,6 +68,7 @@ export function getGoogleLoginUrl(clientId: string, redirectUri: string): string
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
+    prompt: 'select_account', // Always show account picker
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
