@@ -45,6 +45,7 @@ interface MockMentorProfile {
   payment_types: number;
   allow_reviews: boolean;
   allow_recording: boolean;
+  linkedin_url?: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -103,7 +104,33 @@ const createMockDb = () => {
               results = results.filter(m => m.status === status);
             }
 
-            return { results };
+            // Enhance results with user emails and mentor LinkedIn if query includes those fields
+            const enhancedResults = results.map(match => {
+              const enhancedMatch: any = { ...match };
+
+              // Add mentor and mentee names (always included)
+              const mentorUser = mockUsers.get(match.mentor_id);
+              const menteeUser = mockUsers.get(match.mentee_id);
+              if (mentorUser) enhancedMatch.mentor_name = mentorUser.name;
+              if (menteeUser) enhancedMatch.mentee_name = menteeUser.name;
+
+              // Add emails and LinkedIn for active/completed matches
+              if (match.status === 'active' || match.status === 'completed') {
+                if (mentorUser) enhancedMatch.mentor_email = mentorUser.email;
+                if (menteeUser) enhancedMatch.mentee_email = menteeUser.email;
+
+                // Add mentor LinkedIn URL if exists
+                for (const profile of mockProfiles.values()) {
+                  if (profile.user_id === match.mentor_id && profile.linkedin_url) {
+                    enhancedMatch.mentor_linkedin_url = profile.linkedin_url;
+                  }
+                }
+              }
+
+              return enhancedMatch;
+            });
+
+            return { results: enhancedResults };
           }
 
           return { results: [] };
@@ -171,6 +198,25 @@ const createMockDb = () => {
               updated.updated_at = params[params.length - 2];
               mockMatches.set(id, updated);
               return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          }
+
+          if (query.includes('UPDATE mentor_profiles')) {
+            const id = params[params.length - 1];
+            for (const [profileId, profile] of mockProfiles.entries()) {
+              if (profileId === id) {
+                const updated = { ...profile };
+                let paramIndex = 0;
+
+                if (query.includes('linkedin_url = ?')) {
+                  updated.linkedin_url = params[paramIndex++] as string | null;
+                }
+
+                updated.updated_at = params[params.length - 2] as number;
+                mockProfiles.set(profileId, updated);
+                return { success: true, meta: { changes: 1 } };
+              }
             }
             return { success: true, meta: { changes: 0 } };
           }
@@ -822,6 +868,193 @@ describe('Match Management API', () => {
       expect(res.status).toBe(404);
       const data = await res.json();
       expect(data).toHaveProperty('error');
+    });
+  });
+
+  // ==========================================================================
+  // Contact Information Sharing Tests
+  // ==========================================================================
+
+  describe('GET /api/v1/matches - Contact information sharing', () => {
+    let menteeToken: string;
+    let mentorToken: string;
+    let testMatch: MockMatch;
+
+    beforeEach(async () => {
+      menteeToken = await createTestToken(mentee.id, mentee.email, mentee.name);
+      mentorToken = await createTestToken(mentor.id, mentor.email, mentor.name);
+
+      // Create a match
+      const createReq = new Request('http://localhost/api/v1/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${menteeToken}`,
+        },
+        body: JSON.stringify({
+          mentor_id: mentorProfile.user_id,
+          introduction: 'Test introduction for contact info',
+          preferred_time: 'Weekday evenings',
+        }),
+      });
+      const createRes = await app.fetch(createReq, mockEnv);
+      testMatch = await createRes.json();
+    });
+
+    it('should NOT include email addresses for pending matches', async () => {
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${menteeToken}` },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      const match = data.matches.find((m: any) => m.id === testMatch.id);
+
+      expect(match).toBeDefined();
+      expect(match.status).toBe('pending');
+      expect(match).not.toHaveProperty('mentor_email');
+      expect(match).not.toHaveProperty('mentee_email');
+      expect(match).not.toHaveProperty('mentor_linkedin_url');
+    });
+
+    it('should include email addresses for accepted (active) matches', async () => {
+      // Accept the match first
+      const acceptReq = new Request(`http://localhost/api/v1/matches/${testMatch.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      await app.fetch(acceptReq, mockEnv);
+
+      // Fetch matches as mentee
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${menteeToken}` },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      const match = data.matches.find((m: any) => m.id === testMatch.id);
+
+      expect(match).toBeDefined();
+      expect(match.status).toBe('active');
+      expect(match.mentor_email).toBe(mentor.email);
+      expect(match.mentee_email).toBe(mentee.email);
+    });
+
+    it('should include email addresses for completed matches', async () => {
+      // Accept and complete the match
+      const acceptReq = new Request(`http://localhost/api/v1/matches/${testMatch.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      await app.fetch(acceptReq, mockEnv);
+
+      const completeReq = new Request(`http://localhost/api/v1/matches/${testMatch.id}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+      await app.fetch(completeReq, mockEnv);
+
+      // Fetch matches
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${menteeToken}` },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      const match = data.matches.find((m: any) => m.id === testMatch.id);
+
+      expect(match).toBeDefined();
+      expect(match.status).toBe('completed');
+      expect(match.mentor_email).toBe(mentor.email);
+      expect(match.mentee_email).toBe(mentee.email);
+    });
+
+    it('should NOT include email addresses for rejected matches', async () => {
+      // Reject the match
+      const rejectReq = new Request(`http://localhost/api/v1/matches/${testMatch.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({ action: 'reject' }),
+      });
+      await app.fetch(rejectReq, mockEnv);
+
+      // Fetch matches
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${menteeToken}` },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      const match = data.matches.find((m: any) => m.id === testMatch.id);
+
+      expect(match).toBeDefined();
+      expect(match.status).toBe('rejected');
+      expect(match).not.toHaveProperty('mentor_email');
+      expect(match).not.toHaveProperty('mentee_email');
+    });
+
+    it('should include LinkedIn URL for active matches when mentor has one', async () => {
+      // Update mentor profile to include LinkedIn URL
+      const updateReq = new Request(`http://localhost/api/v1/mentors/profiles/${mentorProfile.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({
+          linkedin_url: 'https://www.linkedin.com/in/testmentor',
+        }),
+      });
+      await app.fetch(updateReq, mockEnv);
+
+      // Accept the match
+      const acceptReq = new Request(`http://localhost/api/v1/matches/${testMatch.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${mentorToken}`,
+        },
+        body: JSON.stringify({ action: 'accept' }),
+      });
+      await app.fetch(acceptReq, mockEnv);
+
+      // Fetch matches as mentee
+      const req = new Request('http://localhost/api/v1/matches', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${menteeToken}` },
+      });
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      const match = data.matches.find((m: any) => m.id === testMatch.id);
+
+      expect(match).toBeDefined();
+      expect(match.status).toBe('active');
+      expect(match.mentor_linkedin_url).toBe('https://www.linkedin.com/in/testmentor');
     });
   });
 

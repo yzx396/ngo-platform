@@ -328,6 +328,51 @@ function MatchCard({
           <p className="text-sm capitalize">{match.status}</p>
         </div>
 
+        {/* Show contact information for active and completed matches */}
+        {(match.status === 'active' || match.status === 'accepted' || match.status === 'completed') && (
+          <>
+            {/* Show other person's email */}
+            {role === 'mentor' && match.mentee_email && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Mentee Email</p>
+                <a
+                  href={`mailto:${match.mentee_email}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {match.mentee_email}
+                </a>
+              </div>
+            )}
+            {role === 'mentee' && match.mentor_email && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Mentor Email</p>
+                <a
+                  href={`mailto:${match.mentor_email}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {match.mentor_email}
+                </a>
+              </div>
+            )}
+
+            {/* Show mentor LinkedIn URL if available (for mentees) */}
+            {role === 'mentee' && match.mentor_linkedin_url && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Mentor LinkedIn</p>
+                <a
+                  href={match.mentor_linkedin_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary hover:underline"
+                  aria-label="LinkedIn Profile"
+                >
+                  {match.mentor_linkedin_url}
+                </a>
+              </div>
+            )}
+          </>
+        )}
+
         {/* Show introduction and preferred_time for mentors viewing pending requests */}
         {match.status === 'pending' && role === 'mentor' && (
           <>
