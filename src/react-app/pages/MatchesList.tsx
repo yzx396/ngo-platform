@@ -315,7 +315,7 @@ function MatchCard({
             </Avatar>
             <div className="flex-1">
               <h3 className="font-semibold text-lg leading-tight">{displayName}</h3>
-              <p className="text-sm text-muted-foreground">Created {createdDate}</p>
+              <p className="text-sm text-muted-foreground">{t('matches.created')} {createdDate}</p>
             </div>
           </div>
           <StatusBadge status={match.status} size="sm" />
@@ -324,7 +324,7 @@ function MatchCard({
 
       <CardContent className="flex-1 space-y-4">
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-1">Status</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.status')}</p>
           <p className="text-sm capitalize">{match.status}</p>
         </div>
 
@@ -334,7 +334,7 @@ function MatchCard({
             {/* Show other person's email */}
             {role === 'mentor' && match.mentee_email && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Mentee Email</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.menteeEmail')}</p>
                 <a
                   href={`mailto:${match.mentee_email}`}
                   className="text-sm text-primary hover:underline"
@@ -345,7 +345,7 @@ function MatchCard({
             )}
             {role === 'mentee' && match.mentor_email && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Mentor Email</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.mentorEmail')}</p>
                 <a
                   href={`mailto:${match.mentor_email}`}
                   className="text-sm text-primary hover:underline"
@@ -358,7 +358,7 @@ function MatchCard({
             {/* Show mentor LinkedIn URL if available (for mentees) */}
             {role === 'mentee' && match.mentor_linkedin_url && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Mentor LinkedIn</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.mentorLinkedIn')}</p>
                 <a
                   href={match.mentor_linkedin_url}
                   target="_blank"
@@ -378,13 +378,13 @@ function MatchCard({
           <>
             {match.introduction && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Introduction</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.introductionLabel')}</p>
                 <p className="text-sm line-clamp-3 text-foreground">{match.introduction}</p>
               </div>
             )}
             {match.preferred_time && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Preferred Time</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t('matches.preferredTimeLabel')}</p>
                 <p className="text-sm text-foreground">{match.preferred_time}</p>
               </div>
             )}

@@ -252,7 +252,14 @@
     "downloadCv": "Download CV",
     "cvAvailable": "CV available",
     "cvNotAvailable": "No CV",
-    "downloadingCv": "Downloading..."
+    "downloadingCv": "Downloading...",
+    "created": "Created",
+    "status": "Status",
+    "menteeEmail": "Mentee Email",
+    "mentorEmail": "Mentor Email",
+    "mentorLinkedIn": "Mentor LinkedIn",
+    "introductionLabel": "Introduction",
+    "preferredTimeLabel": "Preferred Time"
   },
   "status": {
     "pending": "Pending",
