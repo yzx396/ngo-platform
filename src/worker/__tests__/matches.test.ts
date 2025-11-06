@@ -62,6 +62,14 @@ interface MockMatch {
   updated_at: number;
 }
 
+interface EnrichedMatch extends MockMatch {
+  mentor_name?: string;
+  mentee_name?: string;
+  mentor_email?: string;
+  mentee_email?: string;
+  mentor_linkedin_url?: string;
+}
+
 const createMockDb = () => {
   const mockUsers = new Map<string, MockUser>();
   const mockProfiles = new Map<string, MockMentorProfile>();
@@ -106,7 +114,7 @@ const createMockDb = () => {
 
             // Enhance results with user emails and mentor LinkedIn if query includes those fields
             const enhancedResults = results.map(match => {
-              const enhancedMatch: any = { ...match };
+              const enhancedMatch: EnrichedMatch = { ...match };
 
               // Add mentor and mentee names (always included)
               const mentorUser = mockUsers.get(match.mentor_id);
@@ -119,10 +127,13 @@ const createMockDb = () => {
                 if (mentorUser) enhancedMatch.mentor_email = mentorUser.email;
                 if (menteeUser) enhancedMatch.mentee_email = menteeUser.email;
 
-                // Add mentor LinkedIn URL if exists
+                // Add mentor LinkedIn URL if exists - find profile by user_id
                 for (const profile of mockProfiles.values()) {
-                  if (profile.user_id === match.mentor_id && profile.linkedin_url) {
-                    enhancedMatch.mentor_linkedin_url = profile.linkedin_url;
+                  if (profile.user_id === match.mentor_id) {
+                    if (profile.linkedin_url) {
+                      enhancedMatch.mentor_linkedin_url = profile.linkedin_url;
+                    }
+                    break; // Found the profile, no need to continue
                   }
                 }
               }
@@ -139,6 +150,10 @@ const createMockDb = () => {
           if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
             const userId = params[0];
             return mockUsers.get(userId) || null;
+          }
+          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE id = ?')) {
+            const profileId = params[0];
+            return mockProfiles.get(profileId) || null;
           }
           if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE user_id = ?')) {
             const userId = params[0];
@@ -173,8 +188,8 @@ const createMockDb = () => {
           }
 
           if (query.includes('INSERT INTO mentor_profiles')) {
-            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, allow_reviews, allow_recording, created_at, updated_at] = params;
-            mockProfiles.set(id, { id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, allow_reviews, allow_recording, created_at, updated_at });
+            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at] = params;
+            mockProfiles.set(id, { id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, allow_reviews, allow_recording, linkedin_url, created_at, updated_at });
             return { success: true, meta: { changes: 1 } };
           }
 
@@ -203,20 +218,62 @@ const createMockDb = () => {
           }
 
           if (query.includes('UPDATE mentor_profiles')) {
-            const id = params[params.length - 1];
-            for (const [profileId, profile] of mockProfiles.entries()) {
-              if (profileId === id) {
-                const updated = { ...profile };
-                let paramIndex = 0;
-
-                if (query.includes('linkedin_url = ?')) {
-                  updated.linkedin_url = params[paramIndex++] as string | null;
+            const id = params[params.length - 1] as string;
+            // Try to find profile by id first
+            let profile = mockProfiles.get(id);
+            
+            // If not found by id, try to find by user_id (fallback)
+            if (!profile) {
+              for (const [, p] of mockProfiles.entries()) {
+                if (p.user_id === id) {
+                  profile = p;
+                  break;
                 }
-
-                updated.updated_at = params[params.length - 2] as number;
-                mockProfiles.set(profileId, updated);
-                return { success: true, meta: { changes: 1 } };
               }
+            }
+            
+            if (profile) {
+              const updated = { ...profile };
+              // Parse SET clause to determine parameter order
+              // The query format is: UPDATE mentor_profiles SET field1 = ?, field2 = ?, ... WHERE id = ?
+              // Parameters are in the same order as fields appear in SET clause, with id as last param
+              const setClauseMatch = query.match(/SET\s+(.+?)\s+WHERE/i);
+              if (setClauseMatch && setClauseMatch[1]) {
+                const setClause = setClauseMatch[1];
+                const fields = setClause.split(',').map(f => f.trim().split('=')[0].trim());
+                let paramIndex = 0;
+                
+                for (const field of fields) {
+                  if (field === 'linkedin_url') {
+                    updated.linkedin_url = params[paramIndex++] as string | null;
+                  } else if (field === 'updated_at') {
+                    updated.updated_at = params[paramIndex++] as number;
+                  } else if (field === 'nick_name') {
+                    updated.nick_name = params[paramIndex++] as string;
+                  } else if (field === 'bio') {
+                    updated.bio = params[paramIndex++] as string;
+                  } else if (field === 'mentoring_levels') {
+                    updated.mentoring_levels = params[paramIndex++] as number;
+                  } else if (field === 'availability') {
+                    updated.availability = params[paramIndex++] as string;
+                  } else if (field === 'hourly_rate') {
+                    updated.hourly_rate = params[paramIndex++] as number;
+                  } else if (field === 'payment_types') {
+                    updated.payment_types = params[paramIndex++] as number;
+                  } else if (field === 'allow_reviews') {
+                    updated.allow_reviews = Boolean(params[paramIndex++]);
+                  } else if (field === 'allow_recording') {
+                    updated.allow_recording = Boolean(params[paramIndex++]);
+                  } else {
+                    // Unknown field, skip parameter
+                    paramIndex++;
+                  }
+                }
+              }
+
+              // Update the profile in the map using the original id (not user_id)
+              mockProfiles.set(profile.id, updated);
+              return { success: true, meta: { changes: 1 } };
             }
             return { success: true, meta: { changes: 0 } };
           }
@@ -910,7 +967,7 @@ describe('Match Management API', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      const match = data.matches.find((m: any) => m.id === testMatch.id);
+      const match = data.matches.find((m: EnrichedMatch) => m.id === testMatch.id);
 
       expect(match).toBeDefined();
       expect(match.status).toBe('pending');
@@ -940,7 +997,7 @@ describe('Match Management API', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      const match = data.matches.find((m: any) => m.id === testMatch.id);
+      const match = data.matches.find((m: EnrichedMatch) => m.id === testMatch.id);
 
       expect(match).toBeDefined();
       expect(match.status).toBe('active');
@@ -979,7 +1036,7 @@ describe('Match Management API', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      const match = data.matches.find((m: any) => m.id === testMatch.id);
+      const match = data.matches.find((m: EnrichedMatch) => m.id === testMatch.id);
 
       expect(match).toBeDefined();
       expect(match.status).toBe('completed');
@@ -1008,7 +1065,7 @@ describe('Match Management API', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      const match = data.matches.find((m: any) => m.id === testMatch.id);
+      const match = data.matches.find((m: EnrichedMatch) => m.id === testMatch.id);
 
       expect(match).toBeDefined();
       expect(match.status).toBe('rejected');
@@ -1050,7 +1107,7 @@ describe('Match Management API', () => {
 
       expect(res.status).toBe(200);
       const data = await res.json();
-      const match = data.matches.find((m: any) => m.id === testMatch.id);
+      const match = data.matches.find((m: EnrichedMatch) => m.id === testMatch.id);
 
       expect(match).toBeDefined();
       expect(match.status).toBe('active');

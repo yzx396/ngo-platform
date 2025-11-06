@@ -41,7 +41,6 @@ const mockMatches: Match[] = [
     mentor_id: 'mentor-1',
     mentee_id: 'mentee-1',
     mentor_name: 'John Mentor',
-    mentee_name: 'Jane Mentee',
     status: 'pending',
     introduction: 'I would like mentorship',
     preferred_time: 'Weekends',
@@ -53,7 +52,6 @@ const mockMatches: Match[] = [
     mentor_id: 'mentor-1',
     mentee_id: 'mentee-2',
     mentor_name: 'John Mentor',
-    mentee_name: 'Bob Mentee',
     mentor_email: 'mentor@example.com',
     mentee_email: 'mentee2@example.com',
     status: 'active',
@@ -67,7 +65,6 @@ const mockMatches: Match[] = [
     mentor_id: 'mentor-1',
     mentee_id: 'mentee-3',
     mentor_name: 'John Mentor',
-    mentee_name: 'Alice Mentee',
     mentor_email: 'mentor@example.com',
     mentee_email: 'mentee3@example.com',
     mentor_linkedin_url: 'https://www.linkedin.com/in/johnmentor',
@@ -373,16 +370,18 @@ describe('MatchesList', () => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for matches to be displayed
+      // Wait for matches to be displayed and role to be set to mentor
       await waitFor(() => {
         expect(screen.getByText(/Bob Mentee/i)).toBeInTheDocument();
       });
 
-      // Email addresses should be visible
+      // Since user is a mentor, should see mentee email
       await waitFor(() => {
-        expect(screen.getByText('mentor@example.com')).toBeInTheDocument();
         expect(screen.getByText('mentee2@example.com')).toBeInTheDocument();
       });
+      
+      // Mentor email should not be visible when viewing as mentor
+      expect(screen.queryByText('mentor@example.com')).not.toBeInTheDocument();
     });
 
     it('should display email addresses for completed matches', async () => {
@@ -412,16 +411,18 @@ describe('MatchesList', () => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for matches to be displayed
+      // Wait for matches to be displayed and role to be set to mentor
       await waitFor(() => {
         expect(screen.getByText(/Alice Mentee/i)).toBeInTheDocument();
       });
 
-      // Email addresses should be visible
+      // Since user is a mentor, should see mentee email
       await waitFor(() => {
-        expect(screen.getByText('mentor@example.com')).toBeInTheDocument();
         expect(screen.getByText('mentee3@example.com')).toBeInTheDocument();
       });
+      
+      // Mentor email should not be visible when viewing as mentor
+      expect(screen.queryByText('mentor@example.com')).not.toBeInTheDocument();
     });
 
     it('should display LinkedIn URL for active matches when mentor has one', async () => {
@@ -443,7 +444,8 @@ describe('MatchesList', () => {
         },
       ];
 
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      // Don't mock mentor profile so user defaults to mentee role
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
       vi.mocked(matchService.getMatches).mockResolvedValue(activeMatchesWithLinkedIn);
 
       renderWithAuth(mockUser, 'test-token');
@@ -452,12 +454,12 @@ describe('MatchesList', () => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for matches to be displayed
+      // Wait for matches to be displayed (viewing as mentee)
       await waitFor(() => {
-        expect(screen.getByText(/Bob Mentee/i)).toBeInTheDocument();
+        expect(screen.getByText(/John Mentor/i)).toBeInTheDocument();
       });
 
-      // LinkedIn URL should be visible as a link
+      // LinkedIn URL should be visible as a link (when viewing as mentee)
       await waitFor(() => {
         const linkedInLink = screen.getByRole('link', { name: /linkedin profile/i });
         expect(linkedInLink).toBeInTheDocument();

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { MentorBrowse } from '../pages/MentorBrowse';
 import { AuthProvider } from '../context/AuthContext';
 import * as mentorService from '../services/mentorService';
+import * as matchService from '../services/matchService';
 import type { MentorProfile } from '../../types/mentor';
 import { MentoringLevel, PaymentType } from '../../types/mentor';
 import type { User } from '../../types/user';
@@ -62,6 +63,8 @@ describe('MentorBrowse', () => {
       mentors: [mockMentor],
       total: 1,
     });
+    // Mock getMatches to return empty array by default
+    vi.mocked(matchService.getMatches).mockResolvedValue([]);
   });
 
   afterEach(() => {

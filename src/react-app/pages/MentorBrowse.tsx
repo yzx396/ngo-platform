@@ -61,12 +61,15 @@ export function MentorBrowse() {
       try {
         const matches = await getMatches({ role: 'mentee' });
         // Build set of mentor IDs that have pending or active matches
-        const mentorIds = new Set(
-          matches
-            .filter(m => m.status === 'pending' || m.status === 'accepted' || m.status === 'active')
-            .map(m => m.mentor_id)
-        );
-        setRequestedMentorIds(mentorIds);
+        // Handle case where matches might be undefined or null
+        if (matches && Array.isArray(matches)) {
+          const mentorIds = new Set(
+            matches
+              .filter(m => m.status === 'pending' || m.status === 'accepted' || m.status === 'active')
+              .map(m => m.mentor_id)
+          );
+          setRequestedMentorIds(mentorIds);
+        }
       } catch (error) {
         // Silently fail - don't show error for this background operation
         console.error('Failed to load existing matches:', error);
