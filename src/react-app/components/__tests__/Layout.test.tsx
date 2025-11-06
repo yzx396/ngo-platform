@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect } from 'vitest';
 import i18n from '../../i18n';
 import { AuthProvider } from '../../context/AuthContext';
+import { FeatureProvider } from '../../context/FeatureContext';
 import { Layout } from '../Layout';
 
 /**
@@ -13,11 +14,13 @@ describe('Layout', () => {
   const renderLayout = (children = 'Test Content') => {
     return render(
       <AuthProvider>
-        <I18nextProvider i18n={i18n}>
-          <Router>
-            <Layout>{children}</Layout>
-          </Router>
-        </I18nextProvider>
+        <FeatureProvider>
+          <I18nextProvider i18n={i18n}>
+            <Router>
+              <Layout>{children}</Layout>
+            </Router>
+          </I18nextProvider>
+        </FeatureProvider>
       </AuthProvider>
     );
   };

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { useAuth } from '../context/AuthContext';
+import { useFeatures } from '../context/FeatureContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { UserRoleBadge } from './UserRoleBadge';
 
@@ -16,6 +17,7 @@ export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { isFeatureEnabled } = useFeatures();
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -25,7 +27,9 @@ export function Navbar() {
     { href: '/', label: t('common.home') },
     { href: '/feed', label: t('navigation.feed') },
     { href: '/events', label: t('events.title', 'Events') },
-    { href: '/leaderboard', label: t('navigation.leaderboard', 'Leaderboard') },
+    ...(isFeatureEnabled('leaderboard')
+      ? [{ href: '/leaderboard', label: t('navigation.leaderboard', 'Leaderboard') }]
+      : []),
   ];
 
   const handleLogout = () => {

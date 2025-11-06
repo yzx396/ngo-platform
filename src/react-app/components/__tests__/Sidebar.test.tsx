@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, beforeEach } from 'vitest';
 import i18n from '../../i18n';
 import { AuthProvider } from '../../context/AuthContext';
+import { FeatureProvider } from '../../context/FeatureContext';
 import { Sidebar } from '../Sidebar';
 
 /**
@@ -13,11 +14,13 @@ describe('Sidebar', () => {
   const renderSidebar = (initialPath = '/') => {
     return render(
       <AuthProvider>
-        <I18nextProvider i18n={i18n}>
-          <MemoryRouter initialEntries={[initialPath]}>
-            <Sidebar />
-          </MemoryRouter>
-        </I18nextProvider>
+        <FeatureProvider>
+          <I18nextProvider i18n={i18n}>
+            <MemoryRouter initialEntries={[initialPath]}>
+              <Sidebar />
+            </MemoryRouter>
+          </I18nextProvider>
+        </FeatureProvider>
       </AuthProvider>
     );
   };
@@ -33,12 +36,15 @@ describe('Sidebar', () => {
     expect(feedLink).toBeInTheDocument();
   });
 
-  it('should render Feed, Challenges, and Blogs links', () => {
+  it('should render Feed link (challenges and blogs hidden when features disabled)', () => {
     renderSidebar();
 
+    // Feed is always visible
     expect(screen.getByRole('link', { name: /feed/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /challenges/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /blogs/i })).toBeInTheDocument();
+
+    // Challenges and blogs are hidden when feature flags are disabled (default in tests)
+    expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
   });
 
   it('should not render Browse Mentors link when not authenticated', () => {
@@ -50,8 +56,8 @@ describe('Sidebar', () => {
     const browseMentorsLinks = screen.queryAllByRole('link', { name: /browse mentors/i });
     expect(browseMentorsLinks).toHaveLength(0);
 
-    // But Leaderboard link should be visible (it's public)
-    expect(screen.getByRole('link', { name: /leaderboard/i })).toBeInTheDocument();
+    // Leaderboard is also hidden when feature flag is disabled (default in tests)
+    expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
   });
 
   it('should conditionally show Member Area section based on auth state', () => {
@@ -92,9 +98,12 @@ describe('Sidebar', () => {
   it('should render navigation links with proper href attributes', () => {
     renderSidebar();
 
+    // Feed is always visible
     expect(screen.getByRole('link', { name: /feed/i })).toHaveAttribute('href', '/feed');
-    expect(screen.getByRole('link', { name: /challenges/i })).toHaveAttribute('href', '/challenges');
-    expect(screen.getByRole('link', { name: /blogs/i })).toHaveAttribute('href', '/blogs');
-    expect(screen.getByRole('link', { name: /leaderboard/i })).toHaveAttribute('href', '/leaderboard');
+
+    // Challenges, blogs, and leaderboard are hidden when feature flags are disabled (default in tests)
+    expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
   });
 });

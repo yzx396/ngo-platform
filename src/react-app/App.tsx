@@ -9,6 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { FeatureRoute } from './components/FeatureRoute';
 import { AuthProvider } from './context/AuthContext';
 import { FeatureProvider } from './context/FeatureContext';
 
@@ -93,24 +94,35 @@ function AppContent() {
               {/* About Page - Community introduction and founders */}
               <Route path="/about" element={<AboutPage />} />
 
-              {/* Leaderboard Page - User rankings by points */}
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
+              {/* Leaderboard Page - User rankings by points (feature-gated) */}
+              <Route
+                path="/leaderboard"
+                element={
+                  <FeatureRoute featureKey="leaderboard">
+                    <LeaderboardPage />
+                  </FeatureRoute>
+                }
+              />
 
-              {/* Protected mentor browsing - requires authentication */}
+              {/* Protected mentor browsing - requires authentication and mentor_search feature */}
               <Route
                 path="/mentors/browse"
                 element={
-                  <ProtectedRoute>
-                    <MentorBrowse />
-                  </ProtectedRoute>
+                  <FeatureRoute featureKey="mentor_search">
+                    <ProtectedRoute>
+                      <MentorBrowse />
+                    </ProtectedRoute>
+                  </FeatureRoute>
                 }
               />
               <Route
                 path="/mentors/:id"
                 element={
-                  <ProtectedRoute>
-                    <MentorDetailPage />
-                  </ProtectedRoute>
+                  <FeatureRoute featureKey="mentor_search">
+                    <ProtectedRoute>
+                      <MentorDetailPage />
+                    </ProtectedRoute>
+                  </FeatureRoute>
                 }
               />
 
@@ -126,17 +138,21 @@ function AppContent() {
               <Route
                 path="/mentor/profile/setup"
                 element={
-                  <ProtectedRoute>
-                    <MentorProfileSetup />
-                  </ProtectedRoute>
+                  <FeatureRoute featureKey="mentor_search">
+                    <ProtectedRoute>
+                      <MentorProfileSetup />
+                    </ProtectedRoute>
+                  </FeatureRoute>
                 }
               />
               <Route
                 path="/matches"
                 element={
-                  <ProtectedRoute>
-                    <MatchesList />
-                  </ProtectedRoute>
+                  <FeatureRoute featureKey="match_requests">
+                    <ProtectedRoute>
+                      <MatchesList />
+                    </ProtectedRoute>
+                  </FeatureRoute>
                 }
               />
 

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { useFeatures } from '../context/FeatureContext';
 import { Button } from './ui/button';
 import { UserRole } from '../../types/role';
 
@@ -69,31 +70,40 @@ function NavSection({
 export function Sidebar() {
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  const { isFeatureEnabled } = useFeatures();
   const { t } = useTranslation();
 
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = user?.role === UserRole.Admin;
 
-  // Feed section - always visible
+  // Feed section - filtered by feature flags
   const feedLinks: NavLink[] = [
     {
       href: '/feed',
       label: t('navigation.feed', 'Feed'),
       icon: '📰',
     },
-    {
-      href: '/challenges',
-      label: t('navigation.challenges', 'Challenges'),
-      icon: '🎯',
-    },
-    {
-      href: '/blogs',
-      label: t('navigation.blogs', 'Blogs'),
-      icon: '📝',
-    },
+    ...(isFeatureEnabled('challenges')
+      ? [
+          {
+            href: '/challenges',
+            label: t('navigation.challenges', 'Challenges'),
+            icon: '🎯',
+          },
+        ]
+      : []),
+    ...(isFeatureEnabled('blogs')
+      ? [
+          {
+            href: '/blogs',
+            label: t('navigation.blogs', 'Blogs'),
+            icon: '📝',
+          },
+        ]
+      : []),
   ];
 
-  // Member Area section - authenticated only
+  // Member Area section - filtered by feature flags
   const memberAreaLinks: NavLink[] = [
     {
       href: '/profile/edit',
@@ -101,36 +111,52 @@ export function Sidebar() {
       icon: '👥',
       requiresAuth: true,
     },
-    {
-      href: '/mentors/browse',
-      label: t('common.browseMentors', 'Browse Mentors'),
-      icon: '🔍',
-      requiresAuth: true,
-    },
-    {
-      href: '/mentor/profile/setup',
-      label: t('navigation.becomeMentor', 'Become a Mentor'),
-      icon: '👤',
-      requiresAuth: true,
-    },
-    {
-      href: '/matches',
-      label: t('navigation.mentorshipRequests', 'Mentorship Requests'),
-      icon: '🤝',
-      requiresAuth: true,
-    },
-    {
-      href: '/my-challenges',
-      label: t('navigation.myChallenges', 'My Challenges'),
-      icon: '✅',
-      requiresAuth: true,
-    },
-    {
-      href: '/my-blogs',
-      label: t('navigation.myBlogs', 'My Blogs'),
-      icon: '✍️',
-      requiresAuth: true,
-    },
+    ...(isFeatureEnabled('mentor_search')
+      ? [
+          {
+            href: '/mentors/browse',
+            label: t('common.browseMentors', 'Browse Mentors'),
+            icon: '🔍',
+            requiresAuth: true,
+          },
+          {
+            href: '/mentor/profile/setup',
+            label: t('navigation.becomeMentor', 'Become a Mentor'),
+            icon: '👤',
+            requiresAuth: true,
+          },
+        ]
+      : []),
+    ...(isFeatureEnabled('match_requests')
+      ? [
+          {
+            href: '/matches',
+            label: t('navigation.mentorshipRequests', 'Mentorship Requests'),
+            icon: '🤝',
+            requiresAuth: true,
+          },
+        ]
+      : []),
+    ...(isFeatureEnabled('challenges')
+      ? [
+          {
+            href: '/my-challenges',
+            label: t('navigation.myChallenges', 'My Challenges'),
+            icon: '✅',
+            requiresAuth: true,
+          },
+        ]
+      : []),
+    ...(isFeatureEnabled('blogs')
+      ? [
+          {
+            href: '/my-blogs',
+            label: t('navigation.myBlogs', 'My Blogs'),
+            icon: '✍️',
+            requiresAuth: true,
+          },
+        ]
+      : []),
   ];
 
   // Admin section - admin only
@@ -149,18 +175,22 @@ export function Sidebar() {
     },
   ];
 
-  // Links section - always visible
+  // Links section - filtered by feature flags
   const linksSection: NavLink[] = [
     {
       href: '/events',
       label: t('navigation.events', 'Events'),
       icon: '📅',
     },
-    {
-      href: '/leaderboard',
-      label: t('navigation.leaderboard', 'Leaderboard'),
-      icon: '🏆',
-    },
+    ...(isFeatureEnabled('leaderboard')
+      ? [
+          {
+            href: '/leaderboard',
+            label: t('navigation.leaderboard', 'Leaderboard'),
+            icon: '🏆',
+          },
+        ]
+      : []),
   ];
 
   return (
