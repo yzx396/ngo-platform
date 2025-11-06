@@ -40,7 +40,11 @@ const mockMatches: Match[] = [
     id: 'match-1',
     mentor_id: 'mentor-1',
     mentee_id: 'mentee-1',
+    mentor_name: 'John Mentor',
+    mentee_name: 'Jane Mentee',
     status: 'pending',
+    introduction: 'I would like mentorship',
+    preferred_time: 'Weekends',
     created_at: 1000,
     updated_at: 2000,
   },
@@ -48,7 +52,28 @@ const mockMatches: Match[] = [
     id: 'match-2',
     mentor_id: 'mentor-1',
     mentee_id: 'mentee-2',
+    mentor_name: 'John Mentor',
+    mentee_name: 'Bob Mentee',
+    mentor_email: 'mentor@example.com',
+    mentee_email: 'mentee2@example.com',
     status: 'active',
+    introduction: 'Looking forward to learning',
+    preferred_time: 'Weekdays',
+    created_at: 1000,
+    updated_at: 2000,
+  },
+  {
+    id: 'match-3',
+    mentor_id: 'mentor-1',
+    mentee_id: 'mentee-3',
+    mentor_name: 'John Mentor',
+    mentee_name: 'Alice Mentee',
+    mentor_email: 'mentor@example.com',
+    mentee_email: 'mentee3@example.com',
+    mentor_linkedin_url: 'https://www.linkedin.com/in/johnmentor',
+    status: 'completed',
+    introduction: 'Thank you for mentorship',
+    preferred_time: 'Anytime',
     created_at: 1000,
     updated_at: 2000,
   },
@@ -282,6 +307,198 @@ describe('MatchesList', () => {
       });
 
       expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Contact Information Display', () => {
+    it('should NOT display email addresses for pending matches', async () => {
+      const pendingMatches: Match[] = [
+        {
+          id: 'match-pending',
+          mentor_id: 'mentor-1',
+          mentee_id: 'mentee-1',
+          mentor_name: 'John Mentor',
+          mentee_name: 'Jane Mentee',
+          status: 'pending',
+          introduction: 'Looking for mentorship',
+          preferred_time: 'Weekends',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      vi.mocked(matchService.getMatches).mockResolvedValue(pendingMatches);
+
+      renderWithAuth(mockUser, 'test-token');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Wait for matches to be displayed
+      await waitFor(() => {
+        expect(screen.getByText(/Jane Mentee/i)).toBeInTheDocument();
+      });
+
+      // Email addresses should NOT be visible
+      expect(screen.queryByText('mentor@example.com')).not.toBeInTheDocument();
+      expect(screen.queryByText('mentee@example.com')).not.toBeInTheDocument();
+    });
+
+    it('should display email addresses for active matches', async () => {
+      const activeMatches: Match[] = [
+        {
+          id: 'match-active',
+          mentor_id: 'mentor-1',
+          mentee_id: 'mentee-2',
+          mentor_name: 'John Mentor',
+          mentee_name: 'Bob Mentee',
+          mentor_email: 'mentor@example.com',
+          mentee_email: 'mentee2@example.com',
+          status: 'active',
+          introduction: 'Looking forward to learning',
+          preferred_time: 'Weekdays',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      vi.mocked(matchService.getMatches).mockResolvedValue(activeMatches);
+
+      renderWithAuth(mockUser, 'test-token');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Wait for matches to be displayed
+      await waitFor(() => {
+        expect(screen.getByText(/Bob Mentee/i)).toBeInTheDocument();
+      });
+
+      // Email addresses should be visible
+      await waitFor(() => {
+        expect(screen.getByText('mentor@example.com')).toBeInTheDocument();
+        expect(screen.getByText('mentee2@example.com')).toBeInTheDocument();
+      });
+    });
+
+    it('should display email addresses for completed matches', async () => {
+      const completedMatches: Match[] = [
+        {
+          id: 'match-completed',
+          mentor_id: 'mentor-1',
+          mentee_id: 'mentee-3',
+          mentor_name: 'John Mentor',
+          mentee_name: 'Alice Mentee',
+          mentor_email: 'mentor@example.com',
+          mentee_email: 'mentee3@example.com',
+          status: 'completed',
+          introduction: 'Thank you for mentorship',
+          preferred_time: 'Anytime',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      vi.mocked(matchService.getMatches).mockResolvedValue(completedMatches);
+
+      renderWithAuth(mockUser, 'test-token');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Wait for matches to be displayed
+      await waitFor(() => {
+        expect(screen.getByText(/Alice Mentee/i)).toBeInTheDocument();
+      });
+
+      // Email addresses should be visible
+      await waitFor(() => {
+        expect(screen.getByText('mentor@example.com')).toBeInTheDocument();
+        expect(screen.getByText('mentee3@example.com')).toBeInTheDocument();
+      });
+    });
+
+    it('should display LinkedIn URL for active matches when mentor has one', async () => {
+      const activeMatchesWithLinkedIn: Match[] = [
+        {
+          id: 'match-linkedin',
+          mentor_id: 'mentor-1',
+          mentee_id: 'mentee-2',
+          mentor_name: 'John Mentor',
+          mentee_name: 'Bob Mentee',
+          mentor_email: 'mentor@example.com',
+          mentee_email: 'mentee2@example.com',
+          mentor_linkedin_url: 'https://www.linkedin.com/in/johnmentor',
+          status: 'active',
+          introduction: 'Looking forward to learning',
+          preferred_time: 'Weekdays',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      vi.mocked(matchService.getMatches).mockResolvedValue(activeMatchesWithLinkedIn);
+
+      renderWithAuth(mockUser, 'test-token');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Wait for matches to be displayed
+      await waitFor(() => {
+        expect(screen.getByText(/Bob Mentee/i)).toBeInTheDocument();
+      });
+
+      // LinkedIn URL should be visible as a link
+      await waitFor(() => {
+        const linkedInLink = screen.getByRole('link', { name: /linkedin profile/i });
+        expect(linkedInLink).toBeInTheDocument();
+        expect(linkedInLink).toHaveAttribute('href', 'https://www.linkedin.com/in/johnmentor');
+        expect(linkedInLink).toHaveAttribute('target', '_blank');
+        expect(linkedInLink).toHaveAttribute('rel', 'noopener noreferrer');
+      });
+    });
+
+    it('should NOT display LinkedIn URL for pending matches', async () => {
+      const pendingMatches: Match[] = [
+        {
+          id: 'match-pending-no-linkedin',
+          mentor_id: 'mentor-1',
+          mentee_id: 'mentee-1',
+          mentor_name: 'John Mentor',
+          mentee_name: 'Jane Mentee',
+          status: 'pending',
+          introduction: 'Looking for mentorship',
+          preferred_time: 'Weekends',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
+      vi.mocked(matchService.getMatches).mockResolvedValue(pendingMatches);
+
+      renderWithAuth(mockUser, 'test-token');
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Wait for matches to be displayed
+      await waitFor(() => {
+        expect(screen.getByText(/Jane Mentee/i)).toBeInTheDocument();
+      });
+
+      // LinkedIn link should NOT be visible
+      expect(screen.queryByRole('link', { name: /linkedin profile/i })).not.toBeInTheDocument();
     });
   });
 });

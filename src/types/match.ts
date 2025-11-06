@@ -7,6 +7,9 @@ export interface Match {
   mentee_id: string;
   mentor_name?: string;  // Optional for backward compatibility, populated by API
   mentee_name?: string;  // Optional for backward compatibility, populated by API
+  mentor_email?: string;  // Only populated for active/completed matches
+  mentee_email?: string;  // Only populated for active/completed matches
+  mentor_linkedin_url?: string;  // Only populated for active/completed matches if mentor has LinkedIn profile
   status: MatchStatus;
   introduction: string;
   preferred_time: string;

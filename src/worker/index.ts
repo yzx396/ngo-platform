@@ -1608,6 +1608,7 @@ app.get("/api/v1/matches", requireAuth, async (c) => {
     const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
     // Get matches with mentor and mentee names via JOIN
+    // For active/completed matches, also include email addresses and mentor LinkedIn URL
     const sql = `
       SELECT
         matches.id,
@@ -1615,6 +1616,18 @@ app.get("/api/v1/matches", requireAuth, async (c) => {
         matches.mentee_id,
         mentor_users.name as mentor_name,
         mentee_users.name as mentee_name,
+        CASE
+          WHEN matches.status IN ('active', 'completed') THEN mentor_users.email
+          ELSE NULL
+        END as mentor_email,
+        CASE
+          WHEN matches.status IN ('active', 'completed') THEN mentee_users.email
+          ELSE NULL
+        END as mentee_email,
+        CASE
+          WHEN matches.status IN ('active', 'completed') THEN mentor_profiles.linkedin_url
+          ELSE NULL
+        END as mentor_linkedin_url,
         matches.status,
         matches.introduction,
         matches.preferred_time,
@@ -1624,6 +1637,7 @@ app.get("/api/v1/matches", requireAuth, async (c) => {
       FROM matches
       LEFT JOIN users as mentor_users ON matches.mentor_id = mentor_users.id
       LEFT JOIN users as mentee_users ON matches.mentee_id = mentee_users.id
+      LEFT JOIN mentor_profiles ON matches.mentor_id = mentor_profiles.user_id
       ${whereClause}
       ORDER BY matches.created_at DESC
     `;
