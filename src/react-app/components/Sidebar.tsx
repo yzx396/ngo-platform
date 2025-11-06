@@ -141,6 +141,12 @@ export function Sidebar() {
       icon: '👥',
       requiresAuth: true,
     },
+    {
+      href: '/admin/features',
+      label: t('navigation.admin.features', 'Feature Toggles'),
+      icon: '⚙️',
+      requiresAuth: true,
+    },
   ];
 
   // Links section - always visible

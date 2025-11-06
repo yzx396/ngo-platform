@@ -15,6 +15,12 @@ import type {
   UpdateUserPointsRequest,
   GetPostsResponse
 } from "../types/api";
+import type {
+  FeatureFlagCreateRequest,
+  FeatureFlagUpdateRequest,
+  EnabledFeatures,
+} from "../types/features";
+import { normalizeFeatureFlag, isValidFeatureKey } from "../types/features";
 import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import type { Post } from "../types/post";
@@ -453,6 +459,186 @@ app.get("/api/v1/users/:id/role", async (c) => {
   } catch (err) {
     console.error("Error fetching user role:", err);
     return c.json({ error: "Failed to fetch user role" }, 500);
+  }
+});
+
+// ============================================================================
+// Feature Flags API (/api/v1/admin/features and /api/v1/features/enabled)
+// ============================================================================
+
+/**
+ * GET /api/v1/admin/features - List all feature flags (admin only)
+ */
+app.get("/api/v1/admin/features", requireAuth, requireAdmin, async (c) => {
+  try {
+    const result = await c.env.platform_db
+      .prepare("SELECT * FROM feature_flags ORDER BY created_at DESC")
+      .all();
+
+    const features = result.results.map((row) => normalizeFeatureFlag(row));
+
+    return c.json(features);
+  } catch (err) {
+    console.error("Error fetching feature flags:", err);
+    return c.json({ error: "Failed to fetch feature flags" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/admin/features - Create new feature flag (admin only)
+ */
+app.post("/api/v1/admin/features", requireAuth, requireAdmin, async (c) => {
+  try {
+    const body = await c.req.json<FeatureFlagCreateRequest>();
+
+    // Validation: Required fields
+    if (!body.feature_key || !body.display_name) {
+      return c.json({ error: "feature_key and display_name are required" }, 400);
+    }
+
+    // Validation: Feature key format (lowercase alphanumeric with underscores)
+    if (!isValidFeatureKey(body.feature_key)) {
+      return c.json(
+        { error: "feature_key must contain only lowercase letters, numbers, and underscores" },
+        400
+      );
+    }
+
+    // Check if feature_key already exists
+    const existing = await c.env.platform_db
+      .prepare("SELECT id FROM feature_flags WHERE feature_key = ?")
+      .bind(body.feature_key)
+      .first();
+
+    if (existing) {
+      return c.json({ error: "Feature key already exists" }, 409);
+    }
+
+    const id = generateId();
+    const timestamp = getTimestamp();
+    const enabled = body.enabled !== undefined ? (body.enabled ? 1 : 0) : 0;
+
+    await c.env.platform_db
+      .prepare(
+        "INSERT INTO feature_flags (id, feature_key, display_name, description, enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(
+        id,
+        body.feature_key,
+        body.display_name,
+        body.description || null,
+        enabled,
+        timestamp,
+        timestamp
+      )
+      .run();
+
+    // Fetch the created feature
+    const created = await c.env.platform_db
+      .prepare("SELECT * FROM feature_flags WHERE id = ?")
+      .bind(id)
+      .first();
+
+    return c.json(normalizeFeatureFlag(created), 201);
+  } catch (err) {
+    console.error("Error creating feature flag:", err);
+    return c.json({ error: "Failed to create feature flag" }, 500);
+  }
+});
+
+/**
+ * PATCH /api/v1/admin/features/:id - Toggle feature flag (admin only)
+ */
+app.patch("/api/v1/admin/features/:id", requireAuth, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+    const body = await c.req.json<FeatureFlagUpdateRequest>();
+
+    // Validation: Required field
+    if (body.enabled === undefined) {
+      return c.json({ error: "enabled field is required" }, 400);
+    }
+
+    // Check if feature exists
+    const existing = await c.env.platform_db
+      .prepare("SELECT * FROM feature_flags WHERE id = ?")
+      .bind(id)
+      .first();
+
+    if (!existing) {
+      return c.json({ error: "Feature flag not found" }, 404);
+    }
+
+    const timestamp = getTimestamp();
+    const enabled = body.enabled ? 1 : 0;
+
+    await c.env.platform_db
+      .prepare("UPDATE feature_flags SET enabled = ?, updated_at = ? WHERE id = ?")
+      .bind(enabled, timestamp, id)
+      .run();
+
+    // Fetch the updated feature
+    const updated = await c.env.platform_db
+      .prepare("SELECT * FROM feature_flags WHERE id = ?")
+      .bind(id)
+      .first();
+
+    return c.json(normalizeFeatureFlag(updated));
+  } catch (err) {
+    console.error("Error updating feature flag:", err);
+    return c.json({ error: "Failed to update feature flag" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/admin/features/:id - Delete feature flag (admin only)
+ */
+app.delete("/api/v1/admin/features/:id", requireAuth, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+
+    // Check if feature exists
+    const existing = await c.env.platform_db
+      .prepare("SELECT id FROM feature_flags WHERE id = ?")
+      .bind(id)
+      .first();
+
+    if (!existing) {
+      return c.json({ error: "Feature flag not found" }, 404);
+    }
+
+    await c.env.platform_db
+      .prepare("DELETE FROM feature_flags WHERE id = ?")
+      .bind(id)
+      .run();
+
+    return c.body(null, 204);
+  } catch (err) {
+    console.error("Error deleting feature flag:", err);
+    return c.json({ error: "Failed to delete feature flag" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/features/enabled - Get enabled features (public endpoint)
+ * Returns a map of feature keys to boolean values
+ */
+app.get("/api/v1/features/enabled", async (c) => {
+  try {
+    const result = await c.env.platform_db
+      .prepare("SELECT feature_key FROM feature_flags WHERE enabled = 1")
+      .all();
+
+    const enabledFeatures: EnabledFeatures = {};
+    for (const row of result.results) {
+      const featureKey = (row as { feature_key: string }).feature_key;
+      enabledFeatures[featureKey] = true;
+    }
+
+    return c.json(enabledFeatures);
+  } catch (err) {
+    console.error("Error fetching enabled features:", err);
+    return c.json({ error: "Failed to fetch enabled features" }, 500);
   }
 });
 

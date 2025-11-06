@@ -10,6 +10,7 @@ import { Navbar } from './components/Navbar';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { FeatureProvider } from './context/FeatureContext';
 
 // Lazy load pages for route-based code splitting
 // Each page loads only when the user navigates to that route
@@ -26,6 +27,7 @@ const MentorProfileSetup = lazy(() => import('./pages/MentorProfileSetup').then(
 const UserProfileEdit = lazy(() => import('./pages/UserProfileEdit').then(m => ({ default: m.UserProfileEdit })));
 const MatchesList = lazy(() => import('./pages/MatchesList').then(m => ({ default: m.MatchesList })));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
+const AdminFeatureTogglePage = lazy(() => import('./pages/AdminFeatureTogglePage').then(m => ({ default: m.AdminFeatureTogglePage })));
 
 /**
  * Loading fallback component for Suspense
@@ -53,9 +55,11 @@ function App() {
     <ErrorBoundary>
       <I18nextProvider i18n={i18n}>
         <AuthProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <FeatureProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </FeatureProvider>
         </AuthProvider>
       </I18nextProvider>
     </ErrorBoundary>
@@ -142,6 +146,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <AdminUsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/features"
+                element={
+                  <ProtectedRoute>
+                    <AdminFeatureTogglePage />
                   </ProtectedRoute>
                 }
               />
