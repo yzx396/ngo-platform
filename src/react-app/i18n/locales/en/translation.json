@@ -49,7 +49,8 @@
     "leaderboard": "Leaderboard",
     "admin": {
       "title": "Admin",
-      "users": "User Management"
+      "users": "User Management",
+      "features": "Feature Toggles"
     }
   },
   "home": {
@@ -460,6 +461,32 @@
       "makeAdmin": "Make Admin",
       "removeMember": "Demote to Member",
       "noUsers": "No users found"
+    },
+    "features": {
+      "title": "Feature Toggles",
+      "description": "Manage feature flags for the platform",
+      "addFeature": "Add Feature",
+      "createNew": "Create New Feature",
+      "featureKey": "Feature Key",
+      "displayName": "Display Name",
+      "keyHint": "Lowercase letters, numbers, and underscores only",
+      "enabledOnCreate": "Enable immediately",
+      "table": {
+        "name": "Feature Name",
+        "key": "Key",
+        "description": "Description",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enable": "Enable",
+      "disable": "Disable",
+      "toggleSuccess": "Feature toggled successfully",
+      "createSuccess": "Feature created successfully",
+      "deleteSuccess": "Feature deleted successfully",
+      "confirmDelete": "Are you sure you want to delete this feature?",
+      "empty": "No feature flags yet. Create one to get started."
     }
   },
   "about": {
