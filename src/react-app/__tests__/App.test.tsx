@@ -13,7 +13,7 @@ describe('App', () => {
       render(<App />);
       await waitFor(() => {
         expect(
-          screen.getByRole('heading', { name: /About Lead Forward/i })
+          screen.getByRole('heading', { name: /Lead Forward/i, level: 1 })
         ).toBeInTheDocument();
       }, { timeout: 3000 });
     });
@@ -85,16 +85,18 @@ describe('App', () => {
   describe('Page Content', () => {
     it('should display community features on home page', async () => {
       render(<App />);
-      // Wait for AboutPage to load and check for About Lead Forward heading
+      // Wait for HomePage to load and check for Lead Forward heading on About page section
       await waitFor(() => {
-        expect(screen.getByRole('heading', { name: /About Lead Forward/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /Lead Forward/i, level: 1 })).toBeInTheDocument();
       }, { timeout: 3000 });
     });
 
     it('should have auth button in navbar', () => {
       render(<App />);
       // When not authenticated, should show "Sign In" button
-      expect(screen.getByRole('button', { name: /Sign In/i })).toBeInTheDocument();
+      // Get all Sign In buttons and ensure at least one exists (could be in navbar, sidebar, etc)
+      const signInButtons = screen.getAllByRole('button', { name: /Sign In/i });
+      expect(signInButtons.length).toBeGreaterThan(0);
     });
   });
 });

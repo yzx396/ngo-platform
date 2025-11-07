@@ -31,7 +31,8 @@
     "add": "Add",
     "you": "You",
     "name": "Name",
-    "email": "Email"
+    "email": "Email",
+    "startExploring": "Start Exploring Mentors"
   },
   "navigation": {
     "feed": "Feed",
@@ -497,7 +498,7 @@
     }
   },
   "about": {
-    "title": "About Lead Forward",
+    "title": "Lead Forward",
     "subtitle": "Lead Forward was founded with a mission to empower individuals to discover and develop their leadership potential through regular practice and community support",
     "vision": {
       "title": "Our Vision",
@@ -512,8 +513,8 @@
       "description": "Each month, we organize leadership activities designed to help members practice specific leadership skills, receive feedback, and grow as leaders. These activities are carefully structured to address different aspects of leadership in diverse settings.",
       "item1Title": "Public Speaking",
       "item1Desc": "Develop communication skills and confidence in presenting ideas to audiences",
-      "item2Title": "Decision Making",
-      "item2Desc": "Learn frameworks for analyzing information and making effective decisions",
+      "item2Title": "Become AI Builder",
+      "item2Desc": "Explore how to leverage AI tools and technologies in leadership and innovation",
       "item3Title": "Team Building",
       "item3Desc": "Practice building cohesive teams and fostering collaboration",
       "item4Title": "Conflict Resolution",

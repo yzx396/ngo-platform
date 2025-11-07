@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { FounderCard } from '../components/FounderCard';
-import { Mic, Target, Users, Handshake, Lightbulb, Heart, TrendingUp, Star, HeartHandshake, Rocket } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Mic, Users, Handshake, Lightbulb, Heart, TrendingUp, Star, HeartHandshake, Rocket } from 'lucide-react';
 
 /**
  * AboutPage Component
@@ -20,9 +22,9 @@ export function AboutPage() {
     },
     {
       id: 2,
-      icon: Target,
-      title: t('about.whatWeDo.item2Title', 'Decision Making'),
-      description: t('about.whatWeDo.item2Desc', 'Learn frameworks for analyzing information and making effective decisions'),
+      icon: Rocket,
+      title: t('about.whatWeDo.item2Title', 'Become AI Builder'),
+      description: t('about.whatWeDo.item2Desc', 'Explore how to leverage AI tools and technologies in leadership and innovation'),
     },
     {
       id: 3,
@@ -155,6 +157,13 @@ export function AboutPage() {
             );
           })}
         </div>
+        <div className="pt-4">
+          <Link to="/login">
+            <Button>
+              {t('common.startExploring', 'Start Exploring Mentors')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Values Section */}
@@ -198,6 +207,13 @@ export function AboutPage() {
         <p className="text-muted-foreground max-w-3xl">
           {t('about.joinUs.description', 'Whether you are looking to mentor others or seeking guidance, there is a place for you in our community. Start your leadership journey with Lead Forward today.')}
         </p>
+        <div className="pt-4">
+          <Link to="/login">
+            <Button size="lg">
+              {t('common.signIn')}
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

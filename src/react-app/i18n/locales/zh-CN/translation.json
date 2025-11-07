@@ -31,7 +31,8 @@
     "add": "添加",
     "you": "你",
     "name": "名字",
-    "email": "邮箱"
+    "email": "邮箱",
+    "startExploring": "开始寻找导师"
   },
   "navigation": {
     "feed": "动态",
@@ -498,8 +499,8 @@
     }
   },
   "about": {
-    "title": "关于 Lead Forward",
-    "subtitle": "Lead Forward 的创立旨在通过定期实践和社区支持，赋能个人发现和开发他们的领导潜力",
+    "title": "Lead Forward",
+    "subtitle": "Lead Forward的创立旨在通过定期实践和社区支持，赋能个人发现和开发他们的领导潜力",
     "vision": {
       "title": "我们的愿景",
       "content": "成为你渴望成为的领导者。"
@@ -513,8 +514,8 @@
       "description": "每个月，我们组织精心设计的领导力活动，帮助成员练习特定的领导力技能，获得反馈并不断成长。这些活动针对多样化环境中的领导力不同方面进行了精心结构设计。",
       "item1Title": "公众演讲",
       "item1Desc": "提高沟通技能和在众人面前呈现想法的信心",
-      "item2Title": "决策制定",
-      "item2Desc": "学习分析信息和做出有效决策的框架",
+      "item2Title": "成为AI Builder",
+      "item2Desc": "探索如何在领导力和创新中利用AI工具和技术",
       "item3Title": "团队建设",
       "item3Desc": "练习建立凝聚力强的团队和促进协作",
       "item4Title": "冲突解决",
