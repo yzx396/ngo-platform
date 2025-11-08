@@ -13,7 +13,13 @@ import type {
   GetUserRoleResponse,
   GetUserPointsResponse,
   UpdateUserPointsRequest,
-  GetPostsResponse
+  GetPostsResponse,
+  GetBlogsResponse,
+  CreateBlogRequest,
+  UpdateBlogRequest,
+  FeatureBlogRequest,
+  GetBlogCommentsResponse,
+  CreateBlogCommentRequest
 } from "../types/api";
 import type {
   FeatureFlagCreateRequest,
@@ -25,6 +31,8 @@ import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import type { Post } from "../types/post";
 import { normalizePost, normalizePostCommentWithAuthor } from "../types/post";
+import type { Blog, BlogWithLikeStatus } from "../types/blog";
+import { normalizeBlog, normalizeBlogCommentWithAuthor } from "../types/blog";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -44,6 +52,8 @@ import {
   POINTS_FOR_CREATE_GENERAL_POST,
   POINTS_FOR_CREATE_ANNOUNCEMENT_POST,
   POINTS_FOR_CREATE_COMMENT,
+  POINTS_FOR_CREATE_BLOG,
+  POINTS_FOR_BLOG_FEATURED,
   POINTS_FOR_RECEIVING_LIKE,
   POINTS_FOR_RECEIVING_COMMENT,
   LIKES_RECEIVED_FULL_POINTS_THRESHOLD,
@@ -2974,6 +2984,755 @@ app.delete("/api/v1/comments/:id", requireAuth, async (c) => {
   } catch (err) {
     console.error("Error deleting comment:", err);
     return c.json({ error: "Failed to delete comment" }, 500);
+  }
+});
+
+// ============================================================================
+// Blogs API (/api/v1/blogs)
+// ============================================================================
+
+/**
+ * GET /api/v1/blogs - List blogs with pagination
+ * Public endpoint - no authentication required
+ * Supports filtering by featured status
+ */
+app.get("/api/v1/blogs", async (c) => {
+  try {
+    const limitParam = c.req.query("limit");
+    const offsetParam = c.req.query("offset");
+    const featuredParam = c.req.query("featured");
+
+    // Validation: Parse and validate limit and offset
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 20; // Default 20, max 100
+    const offset = offsetParam ? Math.max(parseInt(offsetParam, 10), 0) : 0; // Default 0
+
+    // Build query - filter by featured if provided
+    let query = "SELECT * FROM blogs";
+    const bindings: unknown[] = [];
+
+    if (featuredParam !== undefined) {
+      const featured = featuredParam === "true" ? 1 : 0;
+      query += " WHERE featured = ?";
+      bindings.push(featured);
+    }
+
+    // Count total blogs (matching filter if applied)
+    const countQuery = featuredParam !== undefined
+      ? "SELECT COUNT(*) as count FROM blogs WHERE featured = ?"
+      : "SELECT COUNT(*) as count FROM blogs";
+    const countResult = await c.env.platform_db
+      .prepare(countQuery)
+      .bind(...bindings)
+      .first<{ count: number }>();
+    const total = countResult?.count || 0;
+
+    // Fetch blogs - ordered by created_at DESC (newest first)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    bindings.push(limit, offset);
+
+    const results = await c.env.platform_db
+      .prepare(query)
+      .bind(...bindings)
+      .all<Record<string, unknown>>();
+
+    // Normalize blogs and attach author info and user like status
+    const user = c.get('user') as AuthPayload | undefined;
+    const blogsWithAuthorsAndLikes = await Promise.all(
+      results.results.map(async (blog) => {
+        // Fetch author name
+        const author = await c.env.platform_db
+          .prepare("SELECT name, email FROM users WHERE id = ?")
+          .bind(blog.user_id)
+          .first<{ name: string; email: string }>();
+
+        // Check if current user has liked this blog
+        let userHasLiked = false;
+        if (user) {
+          const likeRecord = await c.env.platform_db
+            .prepare("SELECT 1 FROM blog_likes WHERE blog_id = ? AND user_id = ? LIMIT 1")
+            .bind(blog.id, user.userId)
+            .first();
+          userHasLiked = !!likeRecord;
+        }
+
+        return {
+          ...blog,
+          author_name: author?.name || "Unknown User",
+          author_email: author?.email || "",
+          liked_by_user: userHasLiked,
+        };
+      })
+    );
+
+    const response: GetBlogsResponse = {
+      blogs: blogsWithAuthorsAndLikes as unknown as BlogWithLikeStatus[],
+      total,
+      limit,
+      offset,
+    };
+
+    return c.json<GetBlogsResponse>(response);
+  } catch (err) {
+    console.error("Error fetching blogs:", err);
+    return c.json({ error: "Failed to fetch blogs" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/blogs/:id - Get single blog by ID
+ * Public endpoint - no authentication required
+ */
+app.get("/api/v1/blogs/:id", async (c) => {
+  try {
+    const blogId = c.req.param("id");
+
+    // Fetch blog
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Fetch author name and email
+    const author = await c.env.platform_db
+      .prepare("SELECT name, email FROM users WHERE id = ?")
+      .bind(blog.user_id)
+      .first<{ name: string; email: string }>();
+
+    const blogWithAuthor = {
+      ...blog,
+      author_name: author?.name || "Unknown User",
+      author_email: author?.email || "",
+    };
+
+    return c.json<Blog>(blogWithAuthor as unknown as Blog);
+  } catch (err) {
+    console.error("Error fetching blog:", err);
+    return c.json({ error: "Failed to fetch blog" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/blogs - Create a new blog
+ * Authenticated endpoint - requires valid JWT token
+ * Awards +10 points to the author
+ */
+app.post("/api/v1/blogs", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = authPayload.userId;
+
+    // Parse request body
+    const body = await c.req.json<CreateBlogRequest>();
+
+    // Validation
+    if (!body.title || body.title.trim() === "") {
+      return c.json({ error: "Title is required" }, 400);
+    }
+
+    if (!body.content || body.content.trim() === "") {
+      return c.json({ error: "Content is required" }, 400);
+    }
+
+    // Generate blog ID and timestamps
+    const blogId = `blog-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    // Insert blog into database
+    const insertResult = await c.env.platform_db
+      .prepare(
+        "INSERT INTO blogs (id, user_id, title, content, likes_count, comments_count, featured, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(blogId, userId, body.title.trim(), body.content.trim(), 0, 0, 0, now, now)
+      .run();
+
+    if (!insertResult.success) {
+      throw new Error("Failed to create blog");
+    }
+
+    // Award +10 points for creating a blog
+    const pointsResult = await c.env.platform_db
+      .prepare("SELECT points FROM user_points WHERE user_id = ?")
+      .bind(userId)
+      .first<{ points: number }>();
+
+    const currentPoints = pointsResult?.points || 0;
+    const newPoints = currentPoints + POINTS_FOR_CREATE_BLOG;
+
+    await c.env.platform_db
+      .prepare(
+        "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = ?, updated_at = ?"
+      )
+      .bind(`points-${userId}`, userId, newPoints, now, newPoints, now)
+      .run();
+
+    // Fetch the created blog
+    const createdBlog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    const normalizedBlog = normalizeBlog(createdBlog);
+
+    return c.json<Blog>(normalizedBlog, 201);
+  } catch (err) {
+    console.error("Error creating blog:", err);
+    return c.json({ error: "Failed to create blog" }, 500);
+  }
+});
+
+/**
+ * PUT /api/v1/blogs/:id - Update a blog
+ * Authenticated endpoint - requires valid JWT token
+ * Only the author can update their blog
+ */
+app.put("/api/v1/blogs/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const blogId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the blog
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Check authorization (only author can update)
+    if (blog.user_id !== userId) {
+      return c.json({ error: "Not authorized to update this blog" }, 403);
+    }
+
+    // Parse request body
+    const body = await c.req.json<UpdateBlogRequest>();
+
+    // At least one field must be provided
+    if (!body.title && !body.content) {
+      return c.json({ error: "At least one field (title or content) must be provided" }, 400);
+    }
+
+    // Update blog
+    const now = Math.floor(Date.now() / 1000);
+    const title = body.title?.trim() || blog.title;
+    const content = body.content?.trim() || blog.content;
+
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE blogs SET title = ?, content = ?, updated_at = ? WHERE id = ?")
+      .bind(title, content, now, blogId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update blog");
+    }
+
+    // Fetch updated blog
+    const updatedBlog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    const normalizedBlog = normalizeBlog(updatedBlog);
+
+    return c.json<Blog>(normalizedBlog);
+  } catch (err) {
+    console.error("Error updating blog:", err);
+    return c.json({ error: "Failed to update blog" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/blogs/:id - Delete a blog
+ * Authenticated endpoint - requires valid JWT token
+ * Author or admin can delete a blog
+ */
+app.delete("/api/v1/blogs/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const blogId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the blog
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Check authorization (author or admin)
+    const isAuthor = blog.user_id === userId;
+    const userRole = authPayload.role || "member";
+    const isAdmin = userRole === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      return c.json({ error: "Not authorized to delete this blog" }, 403);
+    }
+
+    // Delete blog
+    const deleteResult = await c.env.platform_db
+      .prepare("DELETE FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .run();
+
+    if (!deleteResult.success) {
+      throw new Error("Failed to delete blog");
+    }
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting blog:", err);
+    return c.json({ error: "Failed to delete blog" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/blogs/:id/like - Like a blog
+ * Authenticated endpoint - requires valid JWT token
+ * User can only like a blog once
+ * Increments likes_count on the blog
+ */
+app.post("/api/v1/blogs/:id/like", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const blogId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Check if blog exists
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Check if user already liked this blog
+    const existingLike = await c.env.platform_db
+      .prepare("SELECT * FROM blog_likes WHERE blog_id = ? AND user_id = ?")
+      .bind(blogId, userId)
+      .first();
+
+    if (existingLike) {
+      return c.json({ error: "You already liked this blog" }, 400);
+    }
+
+    // Create like record
+    const likeId = `like-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    const insertResult = await c.env.platform_db
+      .prepare("INSERT INTO blog_likes (id, blog_id, user_id, created_at) VALUES (?, ?, ?, ?)")
+      .bind(likeId, blogId, userId, now)
+      .run();
+
+    if (!insertResult.success) {
+      throw new Error("Failed to create like");
+    }
+
+    // Increment likes_count on blog
+    const newLikesCount = (blog.likes_count as number) + 1;
+    await c.env.platform_db
+      .prepare("UPDATE blogs SET likes_count = ? WHERE id = ?")
+      .bind(newLikesCount, blogId)
+      .run();
+
+    // Fetch updated blog
+    const updatedBlog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    const normalizedBlog = normalizeBlog(updatedBlog);
+
+    return c.json({
+      blog: normalizedBlog,
+      user_has_liked: true,
+    });
+  } catch (err) {
+    console.error("Error liking blog:", err);
+    return c.json({ error: "Failed to like blog" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/blogs/:id/like - Unlike a blog
+ * Authenticated endpoint - requires valid JWT token
+ * Decrements likes_count on the blog
+ */
+app.delete("/api/v1/blogs/:id/like", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const blogId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Check if blog exists
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Check if user has liked this blog
+    const existingLike = await c.env.platform_db
+      .prepare("SELECT * FROM blog_likes WHERE blog_id = ? AND user_id = ?")
+      .bind(blogId, userId)
+      .first();
+
+    if (!existingLike) {
+      return c.json({ error: "You have not liked this blog" }, 400);
+    }
+
+    // Delete like record
+    const deleteResult = await c.env.platform_db
+      .prepare("DELETE FROM blog_likes WHERE blog_id = ? AND user_id = ?")
+      .bind(blogId, userId)
+      .run();
+
+    if (!deleteResult.success) {
+      throw new Error("Failed to delete like");
+    }
+
+    // Decrement likes_count on blog
+    const newLikesCount = Math.max((blog.likes_count as number) - 1, 0);
+    await c.env.platform_db
+      .prepare("UPDATE blogs SET likes_count = ? WHERE id = ?")
+      .bind(newLikesCount, blogId)
+      .run();
+
+    // Fetch updated blog
+    const updatedBlog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    const normalizedBlog = normalizeBlog(updatedBlog);
+
+    return c.json({
+      blog: normalizedBlog,
+      user_has_liked: false,
+    });
+  } catch (err) {
+    console.error("Error unliking blog:", err);
+    return c.json({ error: "Failed to unlike blog" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/blogs/:id/comments - Add a comment to a blog
+ * Authenticated endpoint - requires valid JWT token
+ * Increments comments_count on the blog
+ */
+app.post("/api/v1/blogs/:id/comments", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const blogId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Parse request body
+    const body = await c.req.json<CreateBlogCommentRequest>();
+
+    // Validation
+    if (!body.content || body.content.trim() === "") {
+      return c.json({ error: "Comment content is required" }, 400);
+    }
+
+    // Check if blog exists
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Validate parent comment if provided
+    if (body.parent_comment_id) {
+      const parentComment = await c.env.platform_db
+        .prepare("SELECT * FROM blog_comments WHERE id = ? AND blog_id = ?")
+        .bind(body.parent_comment_id, blogId)
+        .first();
+
+      if (!parentComment) {
+        return c.json({ error: "Parent comment not found" }, 400);
+      }
+    }
+
+    // Create comment
+    const commentId = `comment-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    const insertResult = await c.env.platform_db
+      .prepare(
+        "INSERT INTO blog_comments (id, blog_id, user_id, content, parent_comment_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      )
+      .bind(commentId, blogId, userId, body.content.trim(), body.parent_comment_id || null, now, now)
+      .run();
+
+    if (!insertResult.success) {
+      throw new Error("Failed to create comment");
+    }
+
+    // Increment comments_count on blog
+    const newCommentsCount = (blog.comments_count as number) + 1;
+    await c.env.platform_db
+      .prepare("UPDATE blogs SET comments_count = ? WHERE id = ?")
+      .bind(newCommentsCount, blogId)
+      .run();
+
+    // Fetch created comment with author info
+    const comment = await c.env.platform_db
+      .prepare("SELECT * FROM blog_comments WHERE id = ?")
+      .bind(commentId)
+      .first<Record<string, unknown>>();
+
+    const user = await c.env.platform_db
+      .prepare("SELECT name, email FROM users WHERE id = ?")
+      .bind(userId)
+      .first<{ name: string; email: string }>();
+
+    const commentWithAuthor = normalizeBlogCommentWithAuthor({
+      ...comment,
+      author_name: user?.name || "Unknown User",
+      author_email: user?.email || "",
+    });
+
+    return c.json(commentWithAuthor, 201);
+  } catch (err) {
+    console.error("Error creating comment:", err);
+    return c.json({ error: "Failed to create comment" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/blogs/:id/comments - Get all comments for a blog
+ * Public endpoint - no authentication required
+ * Supports pagination
+ */
+app.get("/api/v1/blogs/:id/comments", async (c) => {
+  try {
+    const blogId = c.req.param("id");
+
+    // Check if blog exists
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    // Parse pagination parameters
+    const limitParam = c.req.query("limit");
+    const offsetParam = c.req.query("offset");
+
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 20;
+    const offset = offsetParam ? Math.max(parseInt(offsetParam, 10), 0) : 0;
+
+    // Count total comments
+    const countResult = await c.env.platform_db
+      .prepare("SELECT COUNT(*) as count FROM blog_comments WHERE blog_id = ?")
+      .bind(blogId)
+      .first<{ count: number }>();
+    const total = countResult?.count || 0;
+
+    // Fetch comments with author info
+    const comments = await c.env.platform_db
+      .prepare(
+        "SELECT bc.*, u.name as author_name, u.email as author_email FROM blog_comments bc JOIN users u ON bc.user_id = u.id WHERE bc.blog_id = ? ORDER BY bc.created_at ASC LIMIT ? OFFSET ?"
+      )
+      .bind(blogId, limit, offset)
+      .all<Record<string, unknown>>();
+
+    const normalizedComments = (comments.results || []).map((comment) =>
+      normalizeBlogCommentWithAuthor({
+        ...comment,
+        author_name: comment.author_name as string,
+        author_email: comment.author_email as string,
+      })
+    );
+
+    return c.json<GetBlogCommentsResponse>({
+      comments: normalizedComments,
+      total,
+      limit,
+      offset,
+    });
+  } catch (err) {
+    console.error("Error fetching comments:", err);
+    return c.json({ error: "Failed to fetch comments" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/blog-comments/:id - Delete a comment (soft delete)
+ * Authenticated endpoint
+ * Author or admin can delete a comment
+ * Performs soft delete by setting content to '[deleted]' and preserving thread structure
+ */
+app.delete("/api/v1/blog-comments/:id", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const commentId = c.req.param("id");
+    const userId = authPayload.userId;
+
+    // Fetch the comment
+    const comment = await c.env.platform_db
+      .prepare("SELECT * FROM blog_comments WHERE id = ?")
+      .bind(commentId)
+      .first<Record<string, unknown>>();
+
+    if (!comment) {
+      return c.json({ error: "Comment not found" }, 404);
+    }
+
+    // Check authorization (author or admin)
+    const isAuthor = comment.user_id === userId;
+    const userRole = authPayload.role || "member";
+    const isAdmin = userRole === "admin";
+
+    if (!isAuthor && !isAdmin) {
+      return c.json({ error: "Not authorized to delete this comment" }, 403);
+    }
+
+    // Soft delete: set content to '[deleted]'
+    const now = Math.floor(Date.now() / 1000);
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE blog_comments SET content = '[deleted]', updated_at = ? WHERE id = ?")
+      .bind(now, commentId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to delete comment");
+    }
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    return c.json({ error: "Failed to delete comment" }, 500);
+  }
+});
+
+/**
+ * PATCH /api/v1/blogs/:id/feature - Feature or unfeature a blog (admin only)
+ * Authenticated endpoint - requires admin role
+ * Awards +50 bonus points to author when blog is featured
+ */
+app.patch("/api/v1/blogs/:id/feature", requireAuth, requireAdmin, async (c) => {
+  try {
+    const blogId = c.req.param("id");
+
+    // Parse request body
+    const body = await c.req.json<FeatureBlogRequest>();
+
+    if (typeof body.featured !== "boolean") {
+      return c.json({ error: "Featured field must be a boolean" }, 400);
+    }
+
+    // Check if blog exists
+    const blog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    if (!blog) {
+      return c.json({ error: "Blog not found" }, 404);
+    }
+
+    const wasFeatured = Boolean(blog.featured);
+    const willBeFeatured = body.featured;
+
+    // Update featured status
+    const now = Math.floor(Date.now() / 1000);
+    const updateResult = await c.env.platform_db
+      .prepare("UPDATE blogs SET featured = ?, updated_at = ? WHERE id = ?")
+      .bind(willBeFeatured ? 1 : 0, now, blogId)
+      .run();
+
+    if (!updateResult.success) {
+      throw new Error("Failed to update blog featured status");
+    }
+
+    // Award bonus points if blog is being featured (not if already featured)
+    let pointsAwarded = 0;
+    if (willBeFeatured && !wasFeatured) {
+      const authorId = blog.user_id as string;
+
+      const pointsResult = await c.env.platform_db
+        .prepare("SELECT points FROM user_points WHERE user_id = ?")
+        .bind(authorId)
+        .first<{ points: number }>();
+
+      const currentPoints = pointsResult?.points || 0;
+      const newPoints = currentPoints + POINTS_FOR_BLOG_FEATURED;
+
+      await c.env.platform_db
+        .prepare(
+          "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = ?, updated_at = ?"
+        )
+        .bind(`points-${authorId}`, authorId, newPoints, now, newPoints, now)
+        .run();
+
+      pointsAwarded = POINTS_FOR_BLOG_FEATURED;
+    }
+
+    // Fetch updated blog
+    const updatedBlog = await c.env.platform_db
+      .prepare("SELECT * FROM blogs WHERE id = ?")
+      .bind(blogId)
+      .first<Record<string, unknown>>();
+
+    const normalizedBlog = normalizeBlog(updatedBlog);
+
+    return c.json({
+      blog: normalizedBlog,
+      points_awarded: pointsAwarded,
+    });
+  } catch (err) {
+    console.error("Error featuring blog:", err);
+    return c.json({ error: "Failed to feature blog" }, 500);
   }
 });
 

@@ -29,6 +29,9 @@ const UserProfileEdit = lazy(() => import('./pages/UserProfileEdit').then(m => (
 const MatchesList = lazy(() => import('./pages/MatchesList').then(m => ({ default: m.MatchesList })));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })));
 const AdminFeatureTogglePage = lazy(() => import('./pages/AdminFeatureTogglePage').then(m => ({ default: m.AdminFeatureTogglePage })));
+const BlogsPage = lazy(() => import('./pages/BlogsPage').then(m => ({ default: m.BlogsPage })));
+const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage').then(m => ({ default: m.BlogDetailPage })));
+const CreateBlogPage = lazy(() => import('./pages/CreateBlogPage').then(m => ({ default: m.CreateBlogPage })));
 
 /**
  * Loading fallback component for Suspense
@@ -173,10 +176,29 @@ function AppContent() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* Blogs Routes */}
+              <Route path="/blogs" element={<BlogsPage />} />
+              <Route path="/blogs/:id" element={<BlogDetailPage />} />
+              <Route
+                path="/blogs/create"
+                element={
+                  <ProtectedRoute>
+                    <CreateBlogPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/blogs/:id/edit"
+                element={
+                  <ProtectedRoute>
+                    <CreateBlogPage />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* TODO: Add more routes:
-                - /feed
                 - /challenges
-                - /blogs
               */}
             </Routes>
           </Layout>
