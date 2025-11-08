@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Star } from 'lucide-react';
+import { Heart, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader } from './ui/card';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 import type { BlogWithLikeStatus } from '../../types/blog';
 
 interface BlogCardProps {
@@ -29,66 +32,75 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
   const formattedDate = new Date(blog.created_at * 1000).toLocaleDateString();
 
   return (
-    <div className="border rounded-lg p-6 hover:shadow-md transition-shadow bg-white">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
+    <Card className="flex flex-col h-full hover:shadow-md transition-shadow">
+      {/* Header: Title and Featured Badge */}
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
           <Link
             to={`/blogs/${blog.id}`}
-            className="text-2xl font-bold hover:text-blue-600 transition-colors"
+            className="text-lg font-semibold hover:text-primary transition-colors flex-1"
           >
             {blog.title}
           </Link>
           {blog.featured && (
-            <span className="inline-flex items-center gap-1 ml-3 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
+            <Badge variant="secondary" className="flex-shrink-0 gap-1">
               <Star className="w-3 h-3 fill-current" />
               {t('blogs.featured')}
-            </span>
+            </Badge>
           )}
         </div>
-      </div>
-
-      {/* Author and Date */}
-      <div className="text-sm text-gray-600 mb-3">
-        <span className="font-medium">{blog.author_name}</span>
-        <span className="mx-2">•</span>
-        <span>{formattedDate}</span>
-      </div>
+        {/* Author and Date */}
+        <div className="text-xs text-muted-foreground mt-2">
+          <span className="font-medium">{blog.author_name}</span>
+          <span className="mx-2">•</span>
+          <span>{formattedDate}</span>
+        </div>
+      </CardHeader>
 
       {/* Content Preview */}
-      <p className="text-gray-700 mb-4 whitespace-pre-wrap">{previewContent}</p>
+      <CardContent className="flex-1 pb-3">
+        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+          {previewContent}
+        </p>
+      </CardContent>
 
-      {/* Actions */}
+      {/* Footer: Engagement Actions and Counts */}
       {showActions && (
-        <div className="flex items-center gap-6 text-sm text-gray-600">
-          {/* Like Button */}
-          <button
-            onClick={handleLikeClick}
-            className={`flex items-center gap-1 hover:text-red-600 transition-colors ${
-              blog.liked_by_user ? 'text-red-600' : ''
-            }`}
-          >
-            <Heart
-              className={`w-4 h-4 ${blog.liked_by_user ? 'fill-current' : ''}`}
-            />
-            <span>{blog.likes_count}</span>
-          </button>
-
-          {/* Comments */}
-          <div className="flex items-center gap-1">
-            <MessageCircle className="w-4 h-4" />
-            <span>{blog.comments_count}</span>
+        <div className="px-6 py-3 border-t bg-muted/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLikeClick}
+              className="h-8 px-2 text-xs"
+              title={blog.liked_by_user ? t('blogs.unlike', 'Unlike') : t('blogs.like', 'Like')}
+            >
+              <Heart
+                className={`h-4 w-4 mr-1 ${
+                  blog.liked_by_user ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                }`}
+              />
+              {t('blogs.like', 'Like')}
+            </Button>
           </div>
 
-          {/* Read More Link */}
-          <Link
-            to={`/blogs/${blog.id}`}
-            className="ml-auto text-blue-600 hover:text-blue-800 font-medium"
-          >
-            {t('blogs.readMore')} →
-          </Link>
+          {/* Engagement counts and read more */}
+          <div className="text-xs text-muted-foreground flex gap-4">
+            <span>
+              {t('blogs.likes', { defaultValue: '{{count}} likes', count: blog.likes_count })}
+            </span>
+            <span>
+              {t('blogs.comments', { defaultValue: '{{count}} comments', count: blog.comments_count })}
+            </span>
+            <Link
+              to={`/blogs/${blog.id}`}
+              className="text-primary hover:underline ml-auto"
+            >
+              {t('blogs.readMore', 'Read More')} →
+            </Link>
+          </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Loader2, ArrowLeft, Star, Edit, Trash2 } from 'lucide-react';
+import { Heart, Loader2, ArrowLeft, Star, Edit, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
 import {
   getBlogById,
   likeBlog,
@@ -124,17 +127,21 @@ export function BlogDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !blog) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error || t('blogs.notFound')}
-        </div>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error || t('blogs.notFound')}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -146,145 +153,171 @@ export function BlogDetailPage() {
   const canFeature = isAdmin;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="space-y-6">
       {/* Back Button */}
-      <button
+      <Button
+        variant="ghost"
         onClick={() => navigate('/blogs')}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+        className="flex items-center gap-2"
       >
         <ArrowLeft className="w-4 h-4" />
         {t('blogs.backToBlogs')}
-      </button>
+      </Button>
 
-      {/* Blog Content */}
-      <article className="bg-white rounded-lg shadow-md p-8 mb-8">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-start justify-between">
-            <h1 className="text-3xl font-bold mb-2">{blog.title}</h1>
+      {/* Blog Content Card */}
+      <Card className="flex flex-col hover:shadow-md transition-shadow">
+        {/* Header: Title and Featured Badge */}
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-3xl font-bold">{blog.title}</h1>
             {blog.featured && (
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded">
-                <Star className="w-4 h-4 fill-current" />
+              <Badge variant="secondary" className="flex-shrink-0 gap-1">
+                <Star className="w-3 h-3 fill-current" />
                 {t('blogs.featured')}
-              </span>
+              </Badge>
             )}
           </div>
-          <div className="text-sm text-gray-600">
+          {/* Author and Date */}
+          <div className="text-xs text-muted-foreground mt-2">
             <span className="font-medium">{blog.author_name}</span>
             <span className="mx-2">•</span>
             <span>{new Date(blog.created_at * 1000).toLocaleDateString()}</span>
           </div>
-        </div>
+        </CardHeader>
 
         {/* Content */}
-        <div className="prose max-w-none mb-6 whitespace-pre-wrap">
-          {blog.content}
-        </div>
+        <CardContent className="flex-1 pb-3">
+          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+            {blog.content}
+          </p>
+        </CardContent>
 
-        {/* Actions */}
-        <div className="flex items-center gap-6 pt-6 border-t">
-          {/* Like Button */}
-          {user && (
-            <button
-              onClick={userHasLiked ? handleUnlike : handleLike}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                userHasLiked
-                  ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${userHasLiked ? 'fill-current' : ''}`} />
-              <span>{blog.likes_count}</span>
-            </button>
-          )}
-          {!user && (
-            <div className="flex items-center gap-2 text-gray-600">
-              <Heart className="w-5 h-5" />
-              <span>{blog.likes_count}</span>
+        {/* Footer: Engagement Actions and Admin Controls */}
+        <div className="px-6 py-3 border-t bg-muted/50 space-y-4">
+          {/* Like Button and Counts */}
+          <div className="flex items-center gap-2">
+            {user && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={userHasLiked ? handleUnlike : handleLike}
+                className="h-8 px-2 text-xs"
+                title={userHasLiked ? t('blogs.unlike', 'Unlike') : t('blogs.like', 'Like')}
+              >
+                <Heart
+                  className={`h-4 w-4 mr-1 ${
+                    userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                  }`}
+                />
+                {t('blogs.like', 'Like')}
+              </Button>
+            )}
+            {!user && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Heart className="h-4 w-4" />
+                <span>{blog.likes_count}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Engagement Counts */}
+          <div className="text-xs text-muted-foreground flex gap-4">
+            <span>
+              {t('blogs.likes', { defaultValue: '{{count}} likes', count: blog.likes_count })}
+            </span>
+            <span>
+              {t('blogs.comments', { defaultValue: '{{count}} comments', count: blog.comments_count })}
+            </span>
+          </div>
+
+          {/* Admin Controls */}
+          {(canEdit || canDelete || canFeature) && (
+            <div className="flex items-center gap-2 pt-2 border-t">
+              {canFeature && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFeature}
+                >
+                  {blog.featured ? t('blogs.unfeature') : t('blogs.feature')}
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/blogs/${id}/edit`)}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  {t('blogs.edit')}
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {t('blogs.delete')}
+                </Button>
+              )}
             </div>
           )}
-
-          {/* Comments Count */}
-          <div className="flex items-center gap-2 text-gray-600">
-            <MessageCircle className="w-5 h-5" />
-            <span>{blog.comments_count}</span>
-          </div>
-
-          {/* Edit/Delete/Feature Buttons */}
-          <div className="ml-auto flex items-center gap-2">
-            {canFeature && (
-              <button
-                onClick={handleFeature}
-                className="px-4 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors"
-              >
-                {blog.featured ? t('blogs.unfeature') : t('blogs.feature')}
-              </button>
-            )}
-            {canEdit && (
-              <button
-                onClick={() => navigate(`/blogs/${id}/edit`)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                {t('blogs.edit')}
-              </button>
-            )}
-            {canDelete && (
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                {t('blogs.delete')}
-              </button>
-            )}
-          </div>
         </div>
-      </article>
+      </Card>
 
       {/* Comments Section */}
-      <div className="bg-white rounded-lg shadow-md p-8">
-        <h2 className="text-2xl font-bold mb-6">
-          {t('blogs.comments')} ({comments.length})
-        </h2>
+      <Card className="flex flex-col">
+        <CardHeader className="pb-3">
+          <h2 className="text-2xl font-bold">
+            {t('blogs.comments')} ({comments.length})
+          </h2>
+        </CardHeader>
 
-        {/* Comment Form */}
-        {user && (
-          <form onSubmit={handleSubmitComment} className="mb-8">
-            <textarea
-              value={commentContent}
-              onChange={(e) => setCommentContent(e.target.value)}
-              placeholder={t('blogs.addComment')}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={3}
-            />
-            <button
-              type="submit"
-              disabled={submittingComment || !commentContent.trim()}
-              className="mt-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {submittingComment ? t('blogs.submitting') : t('blogs.submit')}
-            </button>
-          </form>
-        )}
-
-        {/* Comments List */}
-        <div className="space-y-4">
-          {comments.map((comment) => (
-            <div key={comment.id} className="border-l-4 border-gray-200 pl-4 py-2">
-              <div className="text-sm text-gray-600 mb-1">
-                <span className="font-medium">{comment.author_name}</span>
-                <span className="mx-2">•</span>
-                <span>{new Date(comment.created_at * 1000).toLocaleDateString()}</span>
-              </div>
-              <p className="text-gray-800 whitespace-pre-wrap">{comment.content}</p>
-            </div>
-          ))}
-          {comments.length === 0 && (
-            <p className="text-gray-600 text-center py-8">{t('blogs.noComments')}</p>
+        <CardContent className="flex-1 space-y-6">
+          {/* Comment Form */}
+          {user && (
+            <form onSubmit={handleSubmitComment} className="space-y-2">
+              <textarea
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value)}
+                placeholder={t('blogs.addComment')}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                rows={3}
+              />
+              <Button
+                type="submit"
+                disabled={submittingComment || !commentContent.trim()}
+                size="sm"
+              >
+                {submittingComment ? t('blogs.submitting') : t('blogs.submit')}
+              </Button>
+            </form>
           )}
-        </div>
-      </div>
+
+          {/* Comments List */}
+          <div className="space-y-4">
+            {comments.map((comment) => (
+              <div key={comment.id} className="border-l-4 border-muted pl-4 py-2">
+                <div className="text-xs text-muted-foreground mb-1">
+                  <span className="font-medium">{comment.author_name}</span>
+                  <span className="mx-2">•</span>
+                  <span>{new Date(comment.created_at * 1000).toLocaleDateString()}</span>
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap">
+                  {comment.content}
+                </p>
+              </div>
+            ))}
+            {comments.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                {t('blogs.noComments')}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -3057,6 +3057,8 @@ app.get("/api/v1/blogs", async (c) => {
 
         return {
           ...blog,
+          // Normalize SQLite boolean fields (stored as 0/1)
+          featured: Boolean(blog.featured),
           author_name: author?.name || "Unknown User",
           author_email: author?.email || "",
           liked_by_user: userHasLiked,
@@ -3104,6 +3106,8 @@ app.get("/api/v1/blogs/:id", async (c) => {
 
     const blogWithAuthor = {
       ...blog,
+      // Normalize SQLite boolean fields (stored as 0/1)
+      featured: Boolean(blog.featured),
       author_name: author?.name || "Unknown User",
       author_email: author?.email || "",
     };

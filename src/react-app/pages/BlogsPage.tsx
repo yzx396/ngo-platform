@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { BlogCard } from '../components/BlogCard';
+import { BlogControls } from '../components/BlogControls';
 import { useAuth } from '../context/AuthContext';
 import { getBlogs, likeBlog, unlikeBlog } from '../services/blogService';
 import type { BlogWithLikeStatus } from '../../types/blog';
@@ -68,55 +69,30 @@ export function BlogsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold">{t('blogs.title')}</h1>
-        {user && (
-          <Link
-            to="/blogs/create"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            {t('blogs.create')}
-          </Link>
-        )}
+        <p className="text-muted-foreground">{t('blogs.subtitle', 'Read and share blogs from the community')}</p>
       </div>
 
-      {/* Filter */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          {t('blogs.allBlogs')}
-        </button>
-        <button
-          onClick={() => setFilter('featured')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            filter === 'featured'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          {t('blogs.featuredBlogs')}
-        </button>
-      </div>
+      {/* Blog Controls: Filter and Create Button */}
+      <BlogControls
+        selectedFilter={filter}
+        onFilterChange={setFilter}
+        isAuthenticated={Boolean(user)}
+      />
 
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -124,14 +100,13 @@ export function BlogsPage() {
       {/* Empty State */}
       {!loading && !error && blogs.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-600 mb-4">{t('blogs.noBlogsFound')}</p>
+          <p className="text-muted-foreground mb-4">{t('blogs.noBlogsFound')}</p>
           {user && (
             <Link
               to="/blogs/create"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-block text-primary hover:underline font-medium"
             >
-              <Plus className="w-4 h-4" />
-              {t('blogs.createFirst')}
+              {t('blogs.createFirst', 'Create the first blog')} →
             </Link>
           )}
         </div>
@@ -139,7 +114,7 @@ export function BlogsPage() {
 
       {/* Blogs List */}
       {!loading && !error && blogs.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {blogs.map((blog) => (
             <BlogCard
               key={blog.id}
