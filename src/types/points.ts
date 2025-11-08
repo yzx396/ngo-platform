@@ -124,6 +124,8 @@ export const POINTS_FOR_CREATE_DISCUSSION_POST = 15; // Creating discussion post
 export const POINTS_FOR_CREATE_GENERAL_POST = 10; // Creating general post
 export const POINTS_FOR_CREATE_ANNOUNCEMENT_POST = 0; // Admin-only, shouldn't game system
 export const POINTS_FOR_CREATE_COMMENT = 5; // Creating comment
+export const POINTS_FOR_CREATE_BLOG = 10; // Creating blog post
+export const POINTS_FOR_BLOG_FEATURED = 50; // Bonus when admin features a blog
 
 // Points awarded to content authors for receiving engagement
 export const POINTS_FOR_RECEIVING_LIKE = 2; // Post author receives when someone likes their post

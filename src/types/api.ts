@@ -3,6 +3,7 @@ import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
 import { UserPointsWithRank } from './points';
 import { Post, PostType, PostCommentWithAuthor, PostWithLikeStatus } from './post';
+import { Blog, BlogWithAuthor, BlogWithLikeStatus, BlogCommentWithAuthor } from './blog';
 
 // User API
 export interface CreateUserRequest {
@@ -207,4 +208,77 @@ export type CreateCommentResponse = PostCommentWithAuthor;
 
 export interface DeleteCommentResponse {
   success: boolean;
+}
+
+// Blogs API
+export interface GetBlogsRequest {
+  limit?: number; // Default: 20
+  offset?: number; // Default: 0
+  featured?: boolean; // Optional: filter by featured status
+}
+
+export interface GetBlogsResponse {
+  blogs: BlogWithLikeStatus[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export type GetBlogByIdResponse = BlogWithAuthor;
+
+export interface CreateBlogRequest {
+  title: string; // Blog title (required)
+  content: string; // Blog content (required)
+}
+
+export interface UpdateBlogRequest {
+  title?: string;
+  content?: string;
+}
+
+export type CreateBlogResponse = Blog;
+export type UpdateBlogResponse = Blog;
+
+// Blog Likes API
+export type LikeBlogRequest = Record<string, never>; // No request body needed
+
+export interface LikeBlogResponse {
+  blog: Blog;
+  user_has_liked: boolean; // Whether current user has liked the blog
+}
+
+export type UnlikeBlogResponse = LikeBlogResponse;
+
+// Blog Comments API
+export interface CreateBlogCommentRequest {
+  content: string; // Comment content (required)
+  parent_comment_id?: string; // Optional: for replying to another comment
+}
+
+export interface GetBlogCommentsRequest {
+  limit?: number; // Default: 20
+  offset?: number; // Default: 0
+}
+
+export interface GetBlogCommentsResponse {
+  comments: BlogCommentWithAuthor[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export type CreateBlogCommentResponse = BlogCommentWithAuthor;
+
+export interface DeleteBlogCommentResponse {
+  success: boolean;
+}
+
+// Featured Blogs API
+export interface FeatureBlogRequest {
+  featured: boolean; // true to feature, false to unfeature
+}
+
+export interface FeatureBlogResponse {
+  blog: Blog;
+  points_awarded: number; // Bonus points awarded (50 if featured)
 }
