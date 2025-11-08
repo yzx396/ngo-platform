@@ -9,179 +9,13 @@
  * - DELETE /api/v1/mentors/profiles/:id - Delete mentor profile
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import app from '../index';
 import { MentoringLevel, PaymentType } from '../../types/mentor';
-import { createToken } from '../auth/jwt';
-import type { AuthPayload } from '../../types/user';
-
-interface Env {
-  platform_db: D1Database;
-  JWT_SECRET: string;
-}
-
-const JWT_SECRET = 'test-jwt-secret';
-
-/**
- * Create a JWT token for testing
- */
-async function createTestToken(userId: string, email: string, name: string): Promise<string> {
-  const payload: AuthPayload = { userId, email, name };
-  return createToken(payload, JWT_SECRET);
-}
-
-// ============================================================================
-// Mock D1 Database
-// ============================================================================
-
-const createMockDb = () => {
-  const mockUsers = new Map<string, Record<string, unknown>>();
-  const mockProfiles = new Map<string, Record<string, unknown>>();
-
-  return {
-    prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: unknown[]) => ({
-        all: vi.fn(async () => {
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE id = ?')) {
-            const profileId = params[0];
-            const profile = mockProfiles.get(profileId);
-            return { results: profile ? [profile] : [] };
-          }
-          if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
-            const userId = params[0];
-            const user = mockUsers.get(userId);
-            return { results: user ? [user] : [] };
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE nick_name = ?')) {
-            const nickname = params[0];
-            for (const [, profile] of mockProfiles.entries()) {
-              if (profile.nick_name === nickname) {
-                return { results: [profile] };
-              }
-            }
-            return { results: [] };
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE user_id = ?')) {
-            const userId = params[0];
-            for (const [, profile] of mockProfiles.entries()) {
-              if (profile.user_id === userId) {
-                return { results: [profile] };
-              }
-            }
-            return { results: [] };
-          }
-          return { results: [] };
-        }),
-        first: vi.fn(async () => {
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE id = ?')) {
-            const profileId = params[0];
-            return mockProfiles.get(profileId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
-            const userId = params[0];
-            return mockUsers.get(userId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE nick_name = ?')) {
-            const nickname = params[0];
-            for (const [, profile] of mockProfiles.entries()) {
-              if (profile.nick_name === nickname) {
-                return profile;
-              }
-            }
-            return null;
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE user_id = ?')) {
-            const userId = params[0];
-            for (const [, profile] of mockProfiles.entries()) {
-              if (profile.user_id === userId) {
-                return profile;
-              }
-            }
-            return null;
-          }
-          return null;
-        }),
-        run: vi.fn(async () => {
-          if (query.includes('INSERT INTO users')) {
-            const [id, email, name, created_at, updated_at] = params;
-            mockUsers.set(id, { id, email, name, created_at, updated_at });
-            return { success: true, meta: { changes: 1 } };
-          }
-          if (query.includes('INSERT INTO mentor_profiles')) {
-            // Extract all fields from params (now includes expertise fields and linkedin_url)
-            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at] = params;
-            const profile = {
-              id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types,
-              expertise_domains, expertise_topics_preset, expertise_topics_custom,
-              allow_reviews, allow_recording, linkedin_url, created_at, updated_at
-            };
-            mockProfiles.set(id, profile);
-            return { success: true, meta: { changes: 1 } };
-          }
-          if (query.includes('UPDATE mentor_profiles')) {
-            const id = params[params.length - 1];
-            const existing = mockProfiles.get(id);
-            if (existing) {
-              const updated = { ...existing };
-              let paramIndex = 0;
-
-              // Update fields based on what's in the query
-              if (query.includes('nick_name =')) updated.nick_name = params[paramIndex++];
-              if (query.includes('bio =') && !query.includes('nick_name =')) {
-                updated.bio = params[paramIndex++];
-              } else if (query.includes('bio =')) {
-                updated.bio = params[paramIndex++];
-              }
-              if (query.includes('mentoring_levels =')) {
-                const field = query.includes('nick_name =') || query.includes('bio =') ? params[paramIndex++] : params[0];
-                updated.mentoring_levels = field;
-              }
-              if (query.includes('availability =')) updated.availability = params[paramIndex++];
-              if (query.includes('hourly_rate =')) updated.hourly_rate = params[paramIndex++];
-              if (query.includes('payment_types =')) updated.payment_types = params[paramIndex++];
-              if (query.includes('expertise_domains =')) updated.expertise_domains = params[paramIndex++];
-              if (query.includes('expertise_topics_preset =')) updated.expertise_topics_preset = params[paramIndex++];
-              if (query.includes('expertise_topics_custom =')) updated.expertise_topics_custom = params[paramIndex++];
-              if (query.includes('allow_reviews =')) updated.allow_reviews = params[paramIndex++];
-              if (query.includes('allow_recording =')) updated.allow_recording = params[paramIndex++];
-              if (query.includes('linkedin_url =')) updated.linkedin_url = params[paramIndex++];
-
-              updated.updated_at = params[params.length - 2];
-              mockProfiles.set(id, updated);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-          if (query.includes('DELETE FROM mentor_profiles')) {
-            const id = params[0];
-            if (mockProfiles.has(id)) {
-              mockProfiles.delete(id);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-          return { success: true, meta: { changes: 0 } };
-        }),
-      })),
-    })),
-    _mockUsers: mockUsers,
-    _mockProfiles: mockProfiles,
-  };
-};
-
-// ============================================================================
-// Helper Functions for Tests
-// ============================================================================
-
-async function createTestUser(mockEnv: Env, email: string, name: string) {
-  const req = new Request('http://localhost/api/v1/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name }),
-  });
-  const res = await app.fetch(req, mockEnv);
-  return await res.json();
-}
+import { createMockDb } from './utils/mockDbFactory';
+import { createTestEnv, createAuthenticatedRequest, createTestToken } from './utils/testAuth';
+import { expectCreated, expectBadRequest, expectForbidden, expectConflict } from './utils/assertions';
+import { createTestUser } from './fixtures/testUsers';
 
 // ============================================================================
 // Test Suite
@@ -189,15 +23,12 @@ async function createTestUser(mockEnv: Env, email: string, name: string) {
 
 describe('Mentor Profile CRUD API', () => {
   let mockDb: ReturnType<typeof createMockDb>;
-  let mockEnv: Env;
+  let mockEnv: ReturnType<typeof createTestEnv>;
   let testUser: Record<string, unknown>;
 
   beforeEach(async () => {
-    mockDb = createMockDb();
-    mockEnv = {
-      platform_db: mockDb as unknown,
-      JWT_SECRET: 'test-jwt-secret',
-    } as Env;
+    mockDb = createMockDb({ tables: { users: {}, mentor_profiles: {} } });
+    mockEnv = createTestEnv({ platform_db: mockDb as unknown });
 
     // Create a test user for mentor profiles
     testUser = await createTestUser(mockEnv, 'mentor@example.com', 'Test Mentor');
@@ -222,21 +53,14 @@ describe('Mentor Profile CRUD API', () => {
       };
 
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(profileData),
+        body: profileData,
       });
 
       const res = await app.fetch(req, mockEnv);
+      const data = await expectCreated(res);
 
-      expect(res.status).toBe(201);
-
-      const data = await res.json();
       expect(data).toMatchObject({
         id: expect.any(String),
         user_id: testUser.id,
@@ -263,21 +87,14 @@ describe('Mentor Profile CRUD API', () => {
       };
 
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(profileData),
+        body: profileData,
       });
 
       const res = await app.fetch(req, mockEnv);
+      const data = await expectCreated(res);
 
-      expect(res.status).toBe(201);
-
-      const data = await res.json();
       expect(data.user_id).toBe(testUser.id);
       expect(data.nick_name).toBe('MinimalMentor');
       expect(data.availability).toBe(null);
@@ -288,46 +105,30 @@ describe('Mentor Profile CRUD API', () => {
 
     it('should return 400 when required fields are missing', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ user_id: testUser.id }), // Missing nick_name, bio, etc
+        body: { user_id: testUser.id }, // Missing nick_name, bio, etc
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
+      await expectBadRequest(res);
     });
 
     it('should return 400 when user_id does not exist', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: 'nonexistent-user-id',
           nick_name: 'TestMentor',
           bio: 'Test bio',
           mentoring_levels: MentoringLevel.Entry,
           payment_types: PaymentType.Venmo,
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(403);
-      const data = await res.json();
-      expect(data.error).toContain('Cannot create mentor profile for another user');
+      await expectForbidden(res, undefined, 'Cannot create mentor profile for another user');
     });
 
     it('should return 409 when nick_name already exists', async () => {
@@ -341,14 +142,9 @@ describe('Mentor Profile CRUD API', () => {
 
       // Create first profile
       const token1 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req1 = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req1 = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token1, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token1}`,
-        },
-        body: JSON.stringify(profileData),
+        body: profileData,
       });
       await app.fetch(req1, mockEnv);
 
@@ -357,89 +153,60 @@ describe('Mentor Profile CRUD API', () => {
 
       // Try to create second profile with same nickname
       const token2 = await createTestToken(user2.id as string, user2.email as string, user2.name as string);
-      
-      const req2 = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req2 = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token2, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token2}`,
-        },
-        body: JSON.stringify({ ...profileData, user_id: user2.id }),
+        body: { ...profileData, user_id: user2.id },
       });
       const res = await app.fetch(req2, mockEnv);
-
-      expect(res.status).toBe(409);
-      const data = await res.json();
-      expect(data.error).toContain('nickname already exists');
+      await expectConflict(res, undefined, 'nickname already exists');
     });
 
     it('should return 409 when user already has a mentor profile', async () => {
       // Create first profile
       const token1 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req1 = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req1 = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token1, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token1}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: testUser.id,
           nick_name: 'FirstProfile',
           bio: 'First bio',
           mentoring_levels: MentoringLevel.Entry,
           payment_types: PaymentType.Venmo,
-        }),
+        },
       });
       await app.fetch(req1, mockEnv);
 
       // Try to create second profile for same user
       const token2 = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req2 = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req2 = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token2, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token2}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: testUser.id,
           nick_name: 'SecondProfile',
           bio: 'Second bio',
           mentoring_levels: MentoringLevel.Senior,
           payment_types: PaymentType.Paypal,
-        }),
+        },
       });
       const res = await app.fetch(req2, mockEnv);
-
-      expect(res.status).toBe(409);
-      const data = await res.json();
-      expect(data.error).toContain('already has a mentor profile');
+      await expectConflict(res, undefined, 'already has a mentor profile');
     });
 
     it('should validate bit flags are non-negative integers', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
-      
-      const req = new Request('http://localhost/api/v1/mentors/profiles', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: testUser.id,
           nick_name: 'TestMentor',
           bio: 'Test bio',
           mentoring_levels: -1, // Invalid
           payment_types: PaymentType.Venmo,
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.error).toContain('must be non-negative');
+      await expectBadRequest(res, undefined, 'must be non-negative');
     });
   });
 
@@ -451,20 +218,16 @@ describe('Mentor Profile CRUD API', () => {
     it('should return 401 when no authentication headers provided', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
 
-      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+      const createReq = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: testUser.id,
           nick_name: `GetTestMentor_${Date.now()}`,
           bio: 'Bio for get test',
           mentoring_levels: MentoringLevel.Staff,
           payment_types: PaymentType.Crypto,
           hourly_rate: 100,
-        }),
+        },
       });
       const createRes = await app.fetch(createReq, mockEnv);
       const created = await createRes.json();
@@ -483,30 +246,21 @@ describe('Mentor Profile CRUD API', () => {
     it('should return 401 when invalid authentication token provided', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
 
-      const createReq = new Request('http://localhost/api/v1/mentors/profiles', {
+      const createReq = createAuthenticatedRequest('http://localhost/api/v1/mentors/profiles', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           user_id: testUser.id,
           nick_name: `InvalidAuthTest_${Date.now()}`,
           bio: 'Bio for invalid auth test',
           mentoring_levels: MentoringLevel.Entry,
           payment_types: PaymentType.Venmo,
-        }),
+        },
       });
       const createRes = await app.fetch(createReq, mockEnv);
       const created = await createRes.json();
 
       // Try to get profile with invalid token
-      const getReq = new Request(`http://localhost/api/v1/mentors/profiles/${created.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': 'Bearer invalid-token',
-        },
-      });
+      const getReq = createAuthenticatedRequest(`http://localhost/api/v1/mentors/profiles/${created.id}`, 'invalid-token');
       const getRes = await app.fetch(getReq, mockEnv);
 
       expect(getRes.status).toBe(401);

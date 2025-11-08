@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import i18n from '../../i18n';
 import { AuthProvider } from '../../context/AuthContext';
 import { FeatureProvider } from '../../context/FeatureContext';
 import { Sidebar } from '../Sidebar';
+
+// Mock the feature service
+vi.mock('../../services/featureService', () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue({}),
+}));
 
 /**
  * Test suite for Sidebar component

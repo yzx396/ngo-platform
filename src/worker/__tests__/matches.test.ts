@@ -10,337 +10,14 @@
  * - DELETE /api/v1/matches/:id - Cancel/delete match
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import app from '../index';
-import { createToken } from '../auth/jwt';
-import type { AuthPayload } from '../../types/user';
-
-interface Env {
-  platform_db: D1Database;
-  GOOGLE_CLIENT_ID?: string;
-  GOOGLE_CLIENT_SECRET?: string;
-  JWT_SECRET: string;
-}
-
-// ============================================================================
-// Mock D1 Database
-// ============================================================================
-
-interface MockUser {
-  id: string;
-  email: string;
-  name: string;
-  created_at: number;
-  updated_at: number;
-}
-
-interface MockMentorProfile {
-  id: string;
-  user_id: string;
-  nick_name: string;
-  bio: string;
-  mentoring_levels: number;
-  availability: string;
-  hourly_rate: number;
-  payment_types: number;
-  allow_reviews: boolean;
-  allow_recording: boolean;
-  linkedin_url?: string | null;
-  created_at: number;
-  updated_at: number;
-}
-
-interface MockMatch {
-  id: string;
-  mentor_id: string;
-  mentee_id: string;
-  status: string;
-  introduction: string;
-  preferred_time: string;
-  cv_included: number;
-  created_at: number;
-  updated_at: number;
-}
-
-interface EnrichedMatch extends MockMatch {
-  mentor_name?: string;
-  mentee_name?: string;
-  mentor_email?: string;
-  mentee_email?: string;
-  mentor_linkedin_url?: string;
-}
-
-const createMockDb = () => {
-  const mockUsers = new Map<string, MockUser>();
-  const mockProfiles = new Map<string, MockMentorProfile>();
-  const mockMatches = new Map<string, MockMatch>();
-
-  return {
-    prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: (string | number)[]) => ({
-        all: vi.fn(async () => {
-          // SELECT matches with filters
-          if (query.includes('SELECT') && query.includes('matches') && query.includes('WHERE')) {
-            let results = Array.from(mockMatches.values());
-            let paramIndex = 0;
-
-            // Handle OR condition first (it appears first in query string)
-            if (query.includes('(matches.mentor_id = ? OR matches.mentee_id = ?)')) {
-              const userId = params[paramIndex++];
-              results = results.filter(m => m.mentor_id === userId || m.mentee_id === userId);
-              // The OR condition has two parameters (same value repeated)
-              paramIndex++; // Skip the second parameter in the OR
-              // Check for role filter (additional condition after OR)
-              if (query.includes('AND matches.mentor_id = ?')) {
-                const mentorId = params[paramIndex++];
-                results = results.filter(m => m.mentor_id === mentorId);
-              } else if (query.includes('AND matches.mentee_id = ?')) {
-                const menteeId = params[paramIndex++];
-                results = results.filter(m => m.mentee_id === menteeId);
-              }
-            } else if (query.includes('matches.mentor_id = ?') && !query.includes('OR')) {
-              const mentorId = params[paramIndex++];
-              results = results.filter(m => m.mentor_id === mentorId);
-            } else if (query.includes('matches.mentee_id = ?') && !query.includes('OR')) {
-              const menteeId = params[paramIndex++];
-              results = results.filter(m => m.mentee_id === menteeId);
-            }
-
-            // Handle status filter
-            if (query.includes('status = ?')) {
-              const status = params[paramIndex++];
-              results = results.filter(m => m.status === status);
-            }
-
-            // Enhance results with user emails and mentor LinkedIn if query includes those fields
-            const enhancedResults = results.map(match => {
-              const enhancedMatch: EnrichedMatch = { ...match };
-
-              // Add mentor and mentee names (always included)
-              const mentorUser = mockUsers.get(match.mentor_id);
-              const menteeUser = mockUsers.get(match.mentee_id);
-              if (mentorUser) enhancedMatch.mentor_name = mentorUser.name;
-              if (menteeUser) enhancedMatch.mentee_name = menteeUser.name;
-
-              // Add emails and LinkedIn for active/completed matches
-              if (match.status === 'active' || match.status === 'completed') {
-                if (mentorUser) enhancedMatch.mentor_email = mentorUser.email;
-                if (menteeUser) enhancedMatch.mentee_email = menteeUser.email;
-
-                // Add mentor LinkedIn URL if exists - find profile by user_id
-                for (const profile of mockProfiles.values()) {
-                  if (profile.user_id === match.mentor_id) {
-                    if (profile.linkedin_url) {
-                      enhancedMatch.mentor_linkedin_url = profile.linkedin_url;
-                    }
-                    break; // Found the profile, no need to continue
-                  }
-                }
-              }
-
-              return enhancedMatch;
-            });
-
-            return { results: enhancedResults };
-          }
-
-          return { results: [] };
-        }),
-        first: vi.fn(async () => {
-          if (query.includes('SELECT') && query.includes('users') && query.includes('WHERE id = ?')) {
-            const userId = params[0];
-            return mockUsers.get(userId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE id = ?')) {
-            const profileId = params[0];
-            return mockProfiles.get(profileId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('mentor_profiles') && query.includes('WHERE user_id = ?')) {
-            const userId = params[0];
-            for (const [, profile] of mockProfiles.entries()) {
-              if (profile.user_id === userId) {
-                return profile;
-              }
-            }
-            return null;
-          }
-          if (query.includes('SELECT') && query.includes('matches') && query.includes('WHERE id = ?')) {
-            const matchId = params[0];
-            return mockMatches.get(matchId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('matches') && query.includes('mentor_id') && query.includes('mentee_id')) {
-            const mentorId = params[0];
-            const menteeId = params[1];
-            for (const [, match] of mockMatches.entries()) {
-              if (match.mentor_id === mentorId && match.mentee_id === menteeId) {
-                return match;
-              }
-            }
-            return null;
-          }
-          return null;
-        }),
-        run: vi.fn(async () => {
-          if (query.includes('INSERT INTO users')) {
-            const [id, email, name, created_at, updated_at] = params;
-            mockUsers.set(id, { id, email, name, created_at, updated_at });
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          if (query.includes('INSERT INTO mentor_profiles')) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const [id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, allow_reviews, allow_recording, linkedin_url, created_at, updated_at] = params;
-            mockProfiles.set(id, { id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, allow_reviews, allow_recording, linkedin_url, created_at, updated_at });
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          if (query.includes('INSERT INTO matches')) {
-            const [id, mentor_id, mentee_id, status, introduction, preferred_time, cv_included, created_at, updated_at] = params;
-            mockMatches.set(id, { id, mentor_id, mentee_id, status, introduction, preferred_time, cv_included, created_at, updated_at });
-            return { success: true, meta: { changes: 1 } };
-          }
-
-          if (query.includes('UPDATE matches')) {
-            const id = params[params.length - 1];
-            const existing = mockMatches.get(id);
-            if (existing) {
-              const updated = { ...existing };
-              let paramIndex = 0;
-
-              if (query.includes('status = ?')) {
-                updated.status = params[paramIndex++];
-              }
-
-              updated.updated_at = params[params.length - 2];
-              mockMatches.set(id, updated);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-
-          if (query.includes('UPDATE mentor_profiles')) {
-            const id = params[params.length - 1] as string;
-            // Try to find profile by id first
-            let profile = mockProfiles.get(id);
-            
-            // If not found by id, try to find by user_id (fallback)
-            if (!profile) {
-              for (const [, p] of mockProfiles.entries()) {
-                if (p.user_id === id) {
-                  profile = p;
-                  break;
-                }
-              }
-            }
-            
-            if (profile) {
-              const updated = { ...profile };
-              // Parse SET clause to determine parameter order
-              // The query format is: UPDATE mentor_profiles SET field1 = ?, field2 = ?, ... WHERE id = ?
-              // Parameters are in the same order as fields appear in SET clause, with id as last param
-              const setClauseMatch = query.match(/SET\s+(.+?)\s+WHERE/i);
-              if (setClauseMatch && setClauseMatch[1]) {
-                const setClause = setClauseMatch[1];
-                const fields = setClause.split(',').map(f => f.trim().split('=')[0].trim());
-                let paramIndex = 0;
-                
-                for (const field of fields) {
-                  if (field === 'linkedin_url') {
-                    updated.linkedin_url = params[paramIndex++] as string | null;
-                  } else if (field === 'updated_at') {
-                    updated.updated_at = params[paramIndex++] as number;
-                  } else if (field === 'nick_name') {
-                    updated.nick_name = params[paramIndex++] as string;
-                  } else if (field === 'bio') {
-                    updated.bio = params[paramIndex++] as string;
-                  } else if (field === 'mentoring_levels') {
-                    updated.mentoring_levels = params[paramIndex++] as number;
-                  } else if (field === 'availability') {
-                    updated.availability = params[paramIndex++] as string;
-                  } else if (field === 'hourly_rate') {
-                    updated.hourly_rate = params[paramIndex++] as number;
-                  } else if (field === 'payment_types') {
-                    updated.payment_types = params[paramIndex++] as number;
-                  } else if (field === 'allow_reviews') {
-                    updated.allow_reviews = Boolean(params[paramIndex++]);
-                  } else if (field === 'allow_recording') {
-                    updated.allow_recording = Boolean(params[paramIndex++]);
-                  } else {
-                    // Unknown field, skip parameter
-                    paramIndex++;
-                  }
-                }
-              }
-
-              // Update the profile in the map using the original id (not user_id)
-              mockProfiles.set(profile.id, updated);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-
-          if (query.includes('DELETE FROM matches')) {
-            const id = params[0];
-            if (mockMatches.has(id)) {
-              mockMatches.delete(id);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-
-          return { success: true, meta: { changes: 0 } };
-        }),
-      })),
-    })),
-    _mockUsers: mockUsers,
-    _mockProfiles: mockProfiles,
-    _mockMatches: mockMatches,
-  };
-};
-
-// ============================================================================
-// Helper Functions for Tests
-// ============================================================================
-
-const JWT_SECRET = 'test-secret-key';
-
-/**
- * Create a JWT token for testing
- */
-async function createTestToken(userId: string, email: string, name: string): Promise<string> {
-  const payload: AuthPayload = { userId, email, name };
-  return createToken(payload, JWT_SECRET);
-}
-
-async function createTestUser(mockEnv: Env, email: string, name: string) {
-  const req = new Request('http://localhost/api/v1/users', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name }),
-  });
-  const res = await app.fetch(req, mockEnv);
-  return await res.json();
-}
-
-async function createTestMentorProfile(mockEnv: Env, userId: string, nickName: string) {
-  const token = await createTestToken(userId, 'test@example.com', 'Test User');
-  const req = new Request('http://localhost/api/v1/mentors/profiles', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      user_id: userId,
-      nick_name: nickName,
-      bio: 'Test mentor',
-      mentoring_levels: 1,
-      payment_types: 1,
-    }),
-  });
-  const res = await app.fetch(req, mockEnv);
-  return await res.json();
-}
+import { createMockDb } from './utils/mockDbFactory';
+import { createTestEnv, createAuthenticatedRequest, createTestToken } from './utils/testAuth';
+import { expectCreated, expectBadRequest, expectConflict } from './utils/assertions';
+import { createTestUser } from './fixtures/testUsers';
+import { createMentorProfile } from './fixtures/testMentorProfiles';
+import type { Env } from './utils/testAuth';
 
 // ============================================================================
 // Test Suite
@@ -349,22 +26,23 @@ async function createTestMentorProfile(mockEnv: Env, userId: string, nickName: s
 describe('Match Management API', () => {
   let mockDb: ReturnType<typeof createMockDb>;
   let mockEnv: Env;
-  let mentor: MockUser;
-  let mentee: MockUser;
-  let mentorProfile: MockMentorProfile;
+  let mentor: Record<string, unknown>;
+  let mentee: Record<string, unknown>;
+  let mentorProfile: Record<string, unknown>;
 
   beforeEach(async () => {
-    mockDb = createMockDb();
-     
-    mockEnv = {
-      platform_db: mockDb as unknown,
-      JWT_SECRET: JWT_SECRET,
-    } as Env;
+    mockDb = createMockDb({ tables: { users: {}, mentor_profiles: {}, matches: {} } });
+    mockEnv = createTestEnv({ platform_db: mockDb as unknown });
 
     // Create test users and mentor profile
     mentor = await createTestUser(mockEnv, 'mentor@example.com', 'Test Mentor');
     mentee = await createTestUser(mockEnv, 'mentee@example.com', 'Test Mentee');
-    mentorProfile = await createTestMentorProfile(mockEnv, mentor.id, 'TestMentor');
+    mentorProfile = createMentorProfile('profile-1', mentor.id, 'TestMentor', 'Test mentor', 1, 1);
+
+    // Add mentor profile to mock database
+    const profilesTable = mockDb._mockTables.mentor_profiles || {};
+    profilesTable[mentorProfile.id] = mentorProfile;
+    mockDb._mockTables.mentor_profiles = profilesTable;
   });
 
   // ==========================================================================
@@ -380,19 +58,24 @@ describe('Match Management API', () => {
         preferred_time: 'Weekends, preferably Saturday afternoons',
       };
 
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(matchData),
+        body: matchData,
       });
 
       const res = await app.fetch(req, mockEnv);
 
-      expect(res.status).toBe(201);
-      const data = await res.json();
+      // Debug: log the response if it's not 201
+      if (res.status !== 201) {
+        const errorData = await res.json();
+        console.log('Match creation failed:', res.status, errorData);
+        console.log('Mentor ID:', mentorProfile.user_id);
+        console.log('Mentor exists:', mockDb._mockTables.users[mentorProfile.user_id]);
+        console.log('MentorProfile exists:', mockDb._mockTables.mentor_profiles[mentorProfile.id]);
+      }
+
+      const data = await expectCreated(res);
+
       expect(data).toMatchObject({
         id: expect.any(String),
         mentor_id: mentorProfile.user_id,
@@ -407,137 +90,97 @@ describe('Match Management API', () => {
 
     it('should return 400 when mentor_id is missing', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           introduction: 'Test introduction',
           preferred_time: 'Weekends',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('mentor_id');
+      await expectBadRequest(res, undefined, 'mentor_id');
     });
 
     it('should return 400 when introduction is missing', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           mentor_id: mentorProfile.user_id,
           preferred_time: 'Weekends',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('introduction');
+      await expectBadRequest(res, undefined, 'introduction');
     });
 
     it('should return 400 when preferred_time is missing', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           mentor_id: mentorProfile.user_id,
           introduction: 'Test introduction',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('preferred_time');
+      await expectBadRequest(res, undefined, 'preferred_time');
     });
 
     it('should return 400 when mentor does not exist', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           mentor_id: 'nonexistent-user-id',
           introduction: 'Test introduction',
           preferred_time: 'Weekends',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.error).toContain('Mentor');
+      await expectBadRequest(res, undefined, 'Mentor');
     });
 
     it('should return 400 when mentor profile does not exist', async () => {
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           mentor_id: mentee.id, // User without mentor profile
           introduction: 'Test introduction',
           preferred_time: 'Weekends',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.error).toContain('mentor profile');
+      await expectBadRequest(res, undefined, 'mentor profile');
     });
 
     it('should return 400 when mentee tries to match with themselves', async () => {
       // First create a mentor profile for mentee
-      await createTestMentorProfile(mockEnv, mentee.id, 'MenteeMentor');
+      const menteeProfile = createMentorProfile('profile-2', mentee.id, 'MenteeMentor', 'Test mentor', 1, 1);
+
+      // Add mentee mentor profile to mock database
+      const profilesTable = mockDb._mockTables.mentor_profiles || {};
+      profilesTable[menteeProfile.id] = menteeProfile;
+      mockDb._mockTables.mentor_profiles = profilesTable;
 
       const token = await createTestToken(mentee.id, mentee.email, mentee.name);
-      const req = new Request('http://localhost/api/v1/matches', {
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+        body: {
           mentor_id: mentee.id,
           introduction: 'Test introduction',
           preferred_time: 'Weekends',
-        }),
+        },
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.error).toContain('themselves');
+      await expectBadRequest(res, undefined, 'themselves');
     });
 
     it('should return 409 when duplicate match already exists', async () => {
@@ -549,30 +192,19 @@ describe('Match Management API', () => {
       };
 
       // Create first match
-      const req1 = new Request('http://localhost/api/v1/matches', {
+      const req1 = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(matchData),
+        body: matchData,
       });
       await app.fetch(req1, mockEnv);
 
       // Try to create duplicate
-      const req2 = new Request('http://localhost/api/v1/matches', {
+      const req2 = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(matchData),
+        body: matchData,
       });
       const res = await app.fetch(req2, mockEnv);
-
-      expect(res.status).toBe(409);
-      const data = await res.json();
-      expect(data.error.toLowerCase()).toContain('duplicate');
+      await expectConflict(res, undefined, 'duplicate');
     });
   });
 

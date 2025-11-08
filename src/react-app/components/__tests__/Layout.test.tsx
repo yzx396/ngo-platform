@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import i18n from '../../i18n';
 import { AuthProvider } from '../../context/AuthContext';
 import { FeatureProvider } from '../../context/FeatureContext';
 import { Layout } from '../Layout';
+
+// Mock the feature service
+vi.mock('../../services/featureService', () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue({}),
+}));
 
 /**
  * Test suite for Layout component

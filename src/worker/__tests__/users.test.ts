@@ -8,100 +8,11 @@
  * - PUT /api/v1/users/:id - Update user
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import app from '../index';
-
-// ============================================================================
-// Mock D1 Database
-// ============================================================================
-
-const createMockDb = () => {
-  const mockResults = new Map<string, Record<string, unknown>>();
-
-  return {
-    prepare: vi.fn((query: string) => ({
-      bind: vi.fn((...params: unknown[]) => ({
-        all: vi.fn(async () => {
-          // Simulate SELECT queries
-          if (query.includes('SELECT') && query.includes('WHERE id = ?')) {
-            const userId = params[0];
-            const user = mockResults.get(userId);
-            return { results: user ? [user] : [] };
-          }
-          if (query.includes('SELECT') && query.includes('WHERE email = ?')) {
-            const email = params[0];
-            // Find user by email
-            for (const [, user] of mockResults.entries()) {
-              if (user.email === email) {
-                return { results: [user] };
-              }
-            }
-            return { results: [] };
-          }
-          return { results: [] };
-        }),
-        first: vi.fn(async () => {
-          // Simulate SELECT with LIMIT 1
-          if (query.includes('SELECT') && query.includes('WHERE id = ?')) {
-            const userId = params[0];
-            return mockResults.get(userId) || null;
-          }
-          if (query.includes('SELECT') && query.includes('WHERE email = ?')) {
-            const email = params[0];
-            for (const [, user] of mockResults.entries()) {
-              if (user.email === email) {
-                return user;
-              }
-            }
-            return null;
-          }
-          return null;
-        }),
-        run: vi.fn(async () => {
-          // Simulate INSERT or UPDATE
-          if (query.includes('INSERT')) {
-            const [id, email, name, created_at, updated_at] = params;
-            mockResults.set(id, { id, email, name, created_at, updated_at });
-            return { success: true, meta: { changes: 1 } };
-          }
-          if (query.includes('UPDATE')) {
-            // For UPDATE queries, id is last param
-            const id = params[params.length - 1]; // id is last param in WHERE clause
-            const existing = mockResults.get(id);
-            if (existing) {
-              // Update the existing record
-              const updated = { ...existing };
-
-              // Parse the SET clause to determine which fields are being updated
-              let paramIndex = 0;
-
-              // Check which fields are in the UPDATE query in order
-              if (query.includes('name =')) {
-                updated.name = params[paramIndex++];
-              }
-              if (query.includes('email =') && !query.includes('name =')) {
-                // Email is first if name is not present
-                updated.email = params[paramIndex++];
-              } else if (query.includes('email =')) {
-                // Email is second if name is present
-                updated.email = params[paramIndex++];
-              }
-
-              // updated_at is always second-to-last param (before id)
-              updated.updated_at = params[params.length - 2];
-
-              mockResults.set(id, updated);
-              return { success: true, meta: { changes: 1 } };
-            }
-            return { success: true, meta: { changes: 0 } };
-          }
-          return { success: true, meta: { changes: 0 } };
-        }),
-      })),
-    })),
-    _mockResults: mockResults, // Expose for test inspection
-  };
-};
+import { createMockDb } from './utils/mockDbFactory';
+import { createTestEnv } from './utils/testAuth';
+import { expectCreated, expectBadRequest, expectNotFound, expectConflict } from './utils/assertions';
 
 // ============================================================================
 // Test Suite
@@ -109,13 +20,11 @@ const createMockDb = () => {
 
 describe('User CRUD API', () => {
   let mockDb: ReturnType<typeof createMockDb>;
-  let mockEnv: Env;
+  let mockEnv: ReturnType<typeof createTestEnv>;
 
   beforeEach(() => {
-    mockDb = createMockDb();
-    mockEnv = {
-      platform_db: mockDb as unknown,
-    } as Env;
+    mockDb = createMockDb({ tables: { users: {} } });
+    mockEnv = createTestEnv({ platform_db: mockDb as unknown });
   });
 
   // ==========================================================================
@@ -137,9 +46,14 @@ describe('User CRUD API', () => {
 
       const res = await app.fetch(req, mockEnv);
 
-      expect(res.status).toBe(201);
+      // Debug: log the response if it's not 201
+      if (res.status !== 201) {
+        const errorData = await res.json();
+        console.log('User creation failed:', res.status, errorData);
+      }
 
-      const data = await res.json();
+      const data = await expectCreated(res);
+
       expect(data).toMatchObject({
         id: expect.any(String),
         email: userData.email,
@@ -159,10 +73,7 @@ describe('User CRUD API', () => {
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
+      await expectBadRequest(res, undefined, 'email');
     });
 
     it('should return 400 when name is missing', async () => {
@@ -173,10 +84,7 @@ describe('User CRUD API', () => {
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
+      await expectBadRequest(res, undefined, 'name');
     });
 
     it('should return 400 when email format is invalid', async () => {
@@ -187,11 +95,7 @@ describe('User CRUD API', () => {
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('email');
+      await expectBadRequest(res, undefined, 'email');
     });
 
     it('should return 409 when email already exists', async () => {
@@ -215,11 +119,7 @@ describe('User CRUD API', () => {
         body: JSON.stringify({ ...userData, name: 'User Two' }),
       });
       const res = await app.fetch(req2, mockEnv);
-
-      expect(res.status).toBe(409);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('already exists');
+      await expectConflict(res, undefined, 'already exists');
     });
 
     it('should return 400 when body is not JSON', async () => {
@@ -230,8 +130,7 @@ describe('User CRUD API', () => {
       });
 
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(400);
+      await expectBadRequest(res);
     });
   });
 
@@ -269,11 +168,7 @@ describe('User CRUD API', () => {
         method: 'GET',
       });
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(404);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
-      expect(data.error).toContain('not found');
+      await expectNotFound(res);
     });
 
     it('should return 400 when ID parameter is empty', async () => {
@@ -384,10 +279,7 @@ describe('User CRUD API', () => {
         body: JSON.stringify({ name: 'New Name' }),
       });
       const res = await app.fetch(req, mockEnv);
-
-      expect(res.status).toBe(404);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
+      await expectNotFound(res);
     });
 
     it('should return 400 when update email format is invalid', async () => {
@@ -410,10 +302,7 @@ describe('User CRUD API', () => {
         body: JSON.stringify({ email: 'invalid-email' }),
       });
       const updateRes = await app.fetch(updateReq, mockEnv);
-
-      expect(updateRes.status).toBe(400);
-      const data = await updateRes.json();
-      expect(data).toHaveProperty('error');
+      await expectBadRequest(updateRes, undefined, 'email');
     });
 
     it('should return 400 when no fields provided to update', async () => {
@@ -436,10 +325,7 @@ describe('User CRUD API', () => {
         body: JSON.stringify({}),
       });
       const updateRes = await app.fetch(updateReq, mockEnv);
-
-      expect(updateRes.status).toBe(400);
-      const data = await updateRes.json();
-      expect(data).toHaveProperty('error');
+      await expectBadRequest(updateRes);
     });
   });
 

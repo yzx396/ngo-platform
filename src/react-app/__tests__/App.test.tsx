@@ -1,16 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import App from '../App';
+
+// Mock the feature service
+vi.mock('../services/featureService', () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue({}),
+}));
 
 describe('App', () => {
   describe('Rendering', () => {
-    it('should render without crashing', () => {
-      render(<App />);
+    it('should render without crashing', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       expect(document.body).toBeTruthy();
     });
 
     it('should render the home page with main heading', async () => {
-      render(<App />);
+      await act(async () => {
+        render(<App />);
+      });
       await waitFor(() => {
         expect(
           screen.getByRole('heading', { name: /Lead Forward/i, level: 1 })
@@ -18,15 +28,19 @@ describe('App', () => {
       }, { timeout: 3000 });
     });
 
-    it('should render the navbar with brand logo', () => {
-      render(<App />);
+    it('should render the navbar with brand logo', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
     });
   });
 
   describe('Navigation', () => {
-    it('should have navigation links', () => {
-      render(<App />);
+    it('should have navigation links', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       // Check for Lead Forward branding logo (Home - clicking logo goes to home)
       expect(screen.getByAltText('Lead Forward')).toBeInTheDocument();
       // Check for navigation links in navbar: Events
@@ -37,7 +51,9 @@ describe('App', () => {
     });
 
     it('should display public navigation links on home page', async () => {
-      render(<App />);
+      await act(async () => {
+        render(<App />);
+      });
       // Wait for HomePage to load
       await waitFor(() => {
         // Check for Feed link in sidebar (public)
@@ -51,8 +67,10 @@ describe('App', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have accessible button labels', () => {
-      render(<App />);
+    it('should have accessible button labels', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       const buttons = screen.getAllByRole('button');
 
       expect(buttons.length).toBeGreaterThan(0);
@@ -61,8 +79,10 @@ describe('App', () => {
       });
     });
 
-    it('should have accessible navigation links', () => {
-      render(<App />);
+    it('should have accessible navigation links', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       const links = screen.getAllByRole('link');
 
       expect(links.length).toBeGreaterThan(0);
@@ -71,28 +91,34 @@ describe('App', () => {
       });
     });
 
-    it('should use semantic HTML structure', () => {
-      const { container } = render(<App />);
+    it('should use semantic HTML structure', async () => {
+      await act(async () => {
+        render(<App />);
+      });
 
       // Check for nav element
-      expect(container.querySelector('nav')).toBeTruthy();
+      expect(document.body.querySelector('nav')).toBeTruthy();
       // Check for main content
-      expect(container.querySelector('a')).toBeTruthy();
-      expect(container.querySelector('button')).toBeTruthy();
+      expect(document.body.querySelector('a')).toBeTruthy();
+      expect(document.body.querySelector('button')).toBeTruthy();
     });
   });
 
   describe('Page Content', () => {
     it('should display community features on home page', async () => {
-      render(<App />);
+      await act(async () => {
+        render(<App />);
+      });
       // Wait for HomePage to load and check for Lead Forward heading on About page section
       await waitFor(() => {
         expect(screen.getByRole('heading', { name: /Lead Forward/i, level: 1 })).toBeInTheDocument();
       }, { timeout: 3000 });
     });
 
-    it('should have auth button in navbar', () => {
-      render(<App />);
+    it('should have auth button in navbar', async () => {
+      await act(async () => {
+        render(<App />);
+      });
       // When not authenticated, should show "Sign In" button
       // Get all Sign In buttons and ensure at least one exists (could be in navbar, sidebar, etc)
       const signInButtons = screen.getAllByRole('button', { name: /Sign In/i });
