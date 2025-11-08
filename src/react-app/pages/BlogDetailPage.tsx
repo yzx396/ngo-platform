@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Loader2, ArrowLeft, Star, Edit, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -28,14 +28,7 @@ export function BlogDetailPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [userHasLiked, setUserHasLiked] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      loadBlog();
-      loadComments();
-    }
-  }, [id]);
-
-  const loadBlog = async () => {
+  const loadBlog = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
@@ -48,9 +41,9 @@ export function BlogDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, t]);
 
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     if (!id) return;
     try {
       const response = await getBlogComments(id, 100, 0);
@@ -58,7 +51,14 @@ export function BlogDetailPage() {
     } catch (err) {
       console.error('Error loading comments:', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      loadBlog();
+      loadComments();
+    }
+  }, [id, loadBlog, loadComments]);
 
   const handleLike = async () => {
     if (!id || !blog) return;
@@ -139,7 +139,7 @@ export function BlogDetailPage() {
     );
   }
 
-  const isAuthor = user?.userId === blog.user_id;
+  const isAuthor = user?.id === blog.user_id;
   const isAdmin = user?.role === 'admin';
   const canEdit = isAuthor;
   const canDelete = isAuthor || isAdmin;

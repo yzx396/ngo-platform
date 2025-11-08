@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -16,13 +16,7 @@ export function CreateBlogPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isEditing && id) {
-      loadBlog();
-    }
-  }, [id]);
-
-  const loadBlog = async () => {
+  const loadBlog = useCallback(async () => {
     if (!id) return;
     try {
       setLoading(true);
@@ -35,7 +29,13 @@ export function CreateBlogPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, t]);
+
+  useEffect(() => {
+    if (isEditing && id) {
+      loadBlog();
+    }
+  }, [isEditing, id, loadBlog]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

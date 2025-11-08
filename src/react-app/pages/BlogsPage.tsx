@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -15,11 +15,7 @@ export function BlogsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'featured'>('all');
 
-  useEffect(() => {
-    loadBlogs();
-  }, [filter]);
-
-  const loadBlogs = async () => {
+  const loadBlogs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -35,7 +31,11 @@ export function BlogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, t]);
+
+  useEffect(() => {
+    loadBlogs();
+  }, [loadBlogs]);
 
   const handleLike = async (blogId: string) => {
     try {

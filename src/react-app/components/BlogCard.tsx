@@ -14,7 +14,7 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
   const { t } = useTranslation();
 
   const handleLikeClick = () => {
-    if (blog.user_has_liked) {
+    if (blog.liked_by_user) {
       onUnlike?.(blog.id);
     } else {
       onLike?.(blog.id);
@@ -65,11 +65,11 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
           <button
             onClick={handleLikeClick}
             className={`flex items-center gap-1 hover:text-red-600 transition-colors ${
-              blog.user_has_liked ? 'text-red-600' : ''
+              blog.liked_by_user ? 'text-red-600' : ''
             }`}
           >
             <Heart
-              className={`w-4 h-4 ${blog.user_has_liked ? 'fill-current' : ''}`}
+              className={`w-4 h-4 ${blog.liked_by_user ? 'fill-current' : ''}`}
             />
             <span>{blog.likes_count}</span>
           </button>

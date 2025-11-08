@@ -31,7 +31,7 @@ import type { MentorProfile } from "../types/mentor";
 import type { Match } from "../types/match";
 import type { Post } from "../types/post";
 import { normalizePost, normalizePostCommentWithAuthor } from "../types/post";
-import type { Blog } from "../types/blog";
+import type { Blog, BlogWithLikeStatus } from "../types/blog";
 import { normalizeBlog, normalizeBlogCommentWithAuthor } from "../types/blog";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
@@ -3059,13 +3059,13 @@ app.get("/api/v1/blogs", async (c) => {
           ...blog,
           author_name: author?.name || "Unknown User",
           author_email: author?.email || "",
-          user_has_liked: userHasLiked,
+          liked_by_user: userHasLiked,
         };
       })
     );
 
     const response: GetBlogsResponse = {
-      blogs: blogsWithAuthorsAndLikes as unknown as Blog[],
+      blogs: blogsWithAuthorsAndLikes as unknown as BlogWithLikeStatus[],
       total,
       limit,
       offset,

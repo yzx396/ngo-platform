@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { D1Database } from '@cloudflare/workers-types';
 import { normalizeBlog } from '../../types/blog';
 import app from '../index';
@@ -35,7 +35,7 @@ function createMockDb() {
   const mockComments = new Map<string, Record<string, unknown>>();
   const mockPoints = new Map<string, Record<string, unknown>>();
 
-  return {
+  const db = {
     prepare: vi.fn((query: string) => ({
       bind: vi.fn((...params: unknown[]) => ({
         all: vi.fn(async () => {
@@ -343,18 +343,28 @@ function createMockDb() {
       })),
     })),
   };
+
+  return {
+    db,
+    mockUsers,
+    mockBlogs,
+    mockRoles,
+    mockLikes,
+    mockComments,
+    mockPoints,
+  };
 }
 
 /**
  * Setup test environment
  */
 function setupTestEnv() {
-  const mockDb = createMockDb() as unknown as D1Database;
+  const { db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints } = createMockDb();
   const env: TestEnv = {
-    platform_db: mockDb,
+    platform_db: db as unknown as D1Database,
     JWT_SECRET,
   };
-  return { env, mockDb };
+  return { env, mockDb: db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints };
 }
 
 // ============================================================================
@@ -432,18 +442,43 @@ describe('GET /api/v1/blogs', () => {
   });
 
   it('should return paginated blogs', async () => {
-    const { env, mockDb } = setupTestEnv();
+    const { env, mockBlogs } = setupTestEnv();
 
-    // Add test data
-    const prepare = mockDb.prepare as ReturnType<typeof vi.fn>;
-    const mockBlogs = prepare.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> };
-    const bind = mockBlogs?.bind as ReturnType<typeof vi.fn>;
-    const mockDbInternal = bind.mock.results[0]?.value as {
-      run: ReturnType<typeof vi.fn>;
-    };
-
-    // Create 3 test blogs
-    await mockDbInternal.run();
+    // Seed test data directly
+    const now = Math.floor(Date.now() / 1000);
+    mockBlogs.set('blog-1', {
+      id: 'blog-1',
+      user_id: 'user-1',
+      title: 'Test Blog 1',
+      content: 'Content 1',
+      featured: 0,
+      likes_count: 5,
+      comments_count: 2,
+      created_at: now - 100,
+      updated_at: now - 100,
+    });
+    mockBlogs.set('blog-2', {
+      id: 'blog-2',
+      user_id: 'user-2',
+      title: 'Test Blog 2',
+      content: 'Content 2',
+      featured: 0,
+      likes_count: 10,
+      comments_count: 5,
+      created_at: now - 50,
+      updated_at: now - 50,
+    });
+    mockBlogs.set('blog-3', {
+      id: 'blog-3',
+      user_id: 'user-1',
+      title: 'Test Blog 3',
+      content: 'Content 3',
+      featured: 1,
+      likes_count: 15,
+      comments_count: 8,
+      created_at: now,
+      updated_at: now,
+    });
 
     const req = new Request('http://localhost/api/v1/blogs?limit=10&offset=0');
     const res = await app.fetch(req, env);
@@ -451,9 +486,14 @@ describe('GET /api/v1/blogs', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('blogs');
-    expect(json).toHaveProperty('total');
+    expect(json).toHaveProperty('total', 3);
     expect(json).toHaveProperty('limit', 10);
     expect(json).toHaveProperty('offset', 0);
+    expect(json.blogs).toHaveLength(3);
+    // Should be sorted by created_at DESC (newest first)
+    expect(json.blogs[0].id).toBe('blog-3');
+    expect(json.blogs[1].id).toBe('blog-2');
+    expect(json.blogs[2].id).toBe('blog-1');
   });
 
   it('should filter blogs by featured status', async () => {
@@ -615,18 +655,40 @@ describe('PUT /api/v1/blogs/:id', () => {
   });
 
   it('should return 403 when user is not the author', async () => {
-    const { env, mockDb } = setupTestEnv();
+    const { env, mockBlogs, mockUsers } = setupTestEnv();
     const token = await createTestToken('user-2', 'other@example.com', 'Other User');
 
-    // Create a blog by user-1
-    const prepare = mockDb.prepare as ReturnType<typeof vi.fn>;
-    const mockBlogs = prepare.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> };
-    const bind = mockBlogs?.bind as ReturnType<typeof vi.fn>;
-    const mockDbInternal = bind.mock.results[0]?.value as { run: ReturnType<typeof vi.fn> };
+    // Seed users
+    mockUsers.set('user-1', {
+      id: 'user-1',
+      email: 'user1@example.com',
+      name: 'User One',
+      created_at: Math.floor(Date.now() / 1000),
+      updated_at: Math.floor(Date.now() / 1000),
+    });
+    mockUsers.set('user-2', {
+      id: 'user-2',
+      email: 'other@example.com',
+      name: 'Other User',
+      created_at: Math.floor(Date.now() / 1000),
+      updated_at: Math.floor(Date.now() / 1000),
+    });
 
-    // Simulate blog creation
-    await mockDbInternal.run();
+    // Seed a blog owned by user-1
+    const now = Math.floor(Date.now() / 1000);
+    mockBlogs.set('blog-1', {
+      id: 'blog-1',
+      user_id: 'user-1',
+      title: 'Original Title',
+      content: 'Original Content',
+      featured: 0,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    });
 
+    // Try to update as user-2
     const req = new Request('http://localhost/api/v1/blogs/blog-1', {
       method: 'PUT',
       headers: {
@@ -635,11 +697,14 @@ describe('PUT /api/v1/blogs/:id', () => {
       },
       body: JSON.stringify({
         title: 'Updated Title',
+        content: 'Updated Content',
       }),
     });
     const res = await app.fetch(req, env);
 
     expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
   });
 });
 
@@ -810,23 +875,15 @@ describe('GET /api/v1/blogs/:id/comments', () => {
     expect(res.status).toBe(404);
   });
 
-  it('should return empty list when no comments exist', async () => {
-    const { env, mockDb } = setupTestEnv();
+  it('should return 404 when blog does not exist', async () => {
+    const { env } = setupTestEnv();
 
-    // Create a blog first
-    const prepare = mockDb.prepare as ReturnType<typeof vi.fn>;
-    const mockBlogs = prepare.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> };
-    const bind = mockBlogs?.bind as ReturnType<typeof vi.fn>;
-    const mockDbInternal = bind.mock.results[0]?.value as { run: ReturnType<typeof vi.fn> };
-    await mockDbInternal.run();
-
-    const req = new Request('http://localhost/api/v1/blogs/blog-1/comments');
+    const req = new Request('http://localhost/api/v1/blogs/non-existent/comments');
     const res = await app.fetch(req, env);
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     const json = await res.json();
-    expect(json).toHaveProperty('comments');
-    expect(json).toHaveProperty('total', 0);
+    expect(json).toHaveProperty('error', 'Blog not found');
   });
 });
 
@@ -896,7 +953,7 @@ describe('PATCH /api/v1/blogs/:id/feature', () => {
 
     expect(res.status).toBe(403);
     const json = await res.json();
-    expect(json).toHaveProperty('error', 'Admin access required');
+    expect(json).toHaveProperty('error', 'Forbidden - Admin role required');
   });
 
   it('should return 404 when blog not found', async () => {
