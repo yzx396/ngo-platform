@@ -6,8 +6,6 @@
 
 Lead Forward Platform is a comprehensive NGO community platform that connects members through mentorship, challenges, and shared learning. Beyond mentor-mentee matching, the platform features a modern community feed, gamified points system, admin-curated challenges, and member-created blogs. Built on Cloudflare's edge network, it provides fast, reliable performance for global NGO communities.
 
-![Tech Stack](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/fc7b4b62-442b-4769-641b-ad4422d74300/public)
-
 ---
 
 ## ✨ Features
