@@ -116,7 +116,7 @@ function createMockDb() {
             }
             return { results: comment ? [comment] : [] };
           }
-          // SELECT COUNT(*) FROM blogs (with optional WHERE featured = ?)
+          // SELECT COUNT(*) FROM blogs (with optional WHERE featured = ? or WHERE user_id = ?)
           if (query.includes('SELECT COUNT') && query.includes('FROM blogs')) {
             let blogs = Array.from(mockBlogs.values());
             // Check if filtering by featured status
@@ -124,9 +124,14 @@ function createMockDb() {
               const featured = params[0];
               blogs = blogs.filter(b => b.featured === featured);
             }
+            // Check if filtering by user_id
+            if (query.includes('WHERE user_id = ?')) {
+              const userId = params[0];
+              blogs = blogs.filter(b => b.user_id === userId);
+            }
             return { results: [{ count: blogs.length }] };
           }
-          // SELECT * FROM blogs (with optional WHERE featured = ? and LIMIT/OFFSET)
+          // SELECT * FROM blogs (with optional WHERE featured = ? or WHERE user_id = ? and LIMIT/OFFSET)
           if (query.includes('SELECT *') && query.includes('FROM blogs') && !query.includes('COUNT')) {
             let blogs = Array.from(mockBlogs.values());
             let paramIndex = 0;
@@ -135,6 +140,12 @@ function createMockDb() {
             if (query.includes('WHERE featured = ?')) {
               const featured = params[paramIndex++];
               blogs = blogs.filter(b => b.featured === featured);
+            }
+
+            // Check if filtering by user_id
+            if (query.includes('WHERE user_id = ?')) {
+              const userId = params[paramIndex++];
+              blogs = blogs.filter(b => b.user_id === userId);
             }
 
             // Sort by created_at DESC (newest first)
@@ -180,6 +191,10 @@ function createMockDb() {
             if (query.includes('WHERE featured = ?')) {
               const featured = params[0];
               blogs = blogs.filter(b => b.featured === featured);
+            }
+            if (query.includes('WHERE user_id = ?')) {
+              const userId = params[0];
+              blogs = blogs.filter(b => b.user_id === userId);
             }
             return { count: blogs.length };
           }
@@ -505,6 +520,146 @@ describe('GET /api/v1/blogs', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json).toHaveProperty('blogs');
+  });
+
+  it('should filter blogs by author when author_id is provided', async () => {
+    const { env, mockBlogs, mockUsers } = setupTestEnv();
+
+    // Seed test data
+    const now = Math.floor(Date.now() / 1000);
+
+    // Create users
+    mockUsers.set('user-1', {
+      id: 'user-1',
+      name: 'Alice',
+      email: 'alice@example.com',
+    });
+    mockUsers.set('user-2', {
+      id: 'user-2',
+      name: 'Bob',
+      email: 'bob@example.com',
+    });
+
+    // Create blogs
+    mockBlogs.set('blog-1', {
+      id: 'blog-1',
+      user_id: 'user-1',
+      title: 'Alice Blog 1',
+      content: 'Content 1',
+      featured: 0,
+      likes_count: 5,
+      comments_count: 2,
+      created_at: now - 100,
+      updated_at: now - 100,
+    });
+    mockBlogs.set('blog-2', {
+      id: 'blog-2',
+      user_id: 'user-2',
+      title: 'Bob Blog 1',
+      content: 'Content 2',
+      featured: 0,
+      likes_count: 10,
+      comments_count: 5,
+      created_at: now - 50,
+      updated_at: now - 50,
+    });
+    mockBlogs.set('blog-3', {
+      id: 'blog-3',
+      user_id: 'user-1',
+      title: 'Alice Blog 2',
+      content: 'Content 3',
+      featured: 1,
+      likes_count: 15,
+      comments_count: 8,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const req = new Request('http://localhost/api/v1/blogs?author_id=user-1');
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty('blogs');
+    expect(json.blogs).toHaveLength(2);
+    expect(json.total).toBe(2);
+    // Both blogs should be from user-1
+    expect(json.blogs[0].user_id).toBe('user-1');
+    expect(json.blogs[1].user_id).toBe('user-1');
+    // Should be sorted by created_at DESC (newest first)
+    expect(json.blogs[0].id).toBe('blog-3');
+    expect(json.blogs[1].id).toBe('blog-1');
+  });
+
+  it('should return user\'s own blogs when authenticated and my=true', async () => {
+    const { env, mockBlogs, mockUsers } = setupTestEnv();
+
+    // Seed test data
+    const now = Math.floor(Date.now() / 1000);
+
+    mockUsers.set('user-1', {
+      id: 'user-1',
+      name: 'Alice',
+      email: 'alice@example.com',
+    });
+    mockUsers.set('user-2', {
+      id: 'user-2',
+      name: 'Bob',
+      email: 'bob@example.com',
+    });
+
+    mockBlogs.set('blog-1', {
+      id: 'blog-1',
+      user_id: 'user-1',
+      title: 'My Blog 1',
+      content: 'Content 1',
+      featured: 0,
+      likes_count: 5,
+      comments_count: 2,
+      created_at: now - 100,
+      updated_at: now - 100,
+    });
+    mockBlogs.set('blog-2', {
+      id: 'blog-2',
+      user_id: 'user-2',
+      title: 'Bob Blog',
+      content: 'Content 2',
+      featured: 0,
+      likes_count: 10,
+      comments_count: 5,
+      created_at: now - 50,
+      updated_at: now - 50,
+    });
+    mockBlogs.set('blog-3', {
+      id: 'blog-3',
+      user_id: 'user-1',
+      title: 'My Blog 2',
+      content: 'Content 3',
+      featured: 1,
+      likes_count: 15,
+      comments_count: 8,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Create JWT token for user-1
+    const token = await createTestToken('user-1', 'alice@example.com', 'Alice');
+
+    const req = new Request('http://localhost/api/v1/blogs?my=true', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toHaveProperty('blogs');
+    expect(json.blogs).toHaveLength(2);
+    expect(json.total).toBe(2);
+    // Both blogs should be from user-1
+    expect(json.blogs[0].user_id).toBe('user-1');
+    expect(json.blogs[1].user_id).toBe('user-1');
   });
 });
 

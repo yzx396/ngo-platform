@@ -32,6 +32,7 @@ const AdminFeatureTogglePage = lazy(() => import('./pages/AdminFeatureTogglePage
 const BlogsPage = lazy(() => import('./pages/BlogsPage').then(m => ({ default: m.BlogsPage })));
 const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage').then(m => ({ default: m.BlogDetailPage })));
 const CreateBlogPage = lazy(() => import('./pages/CreateBlogPage').then(m => ({ default: m.CreateBlogPage })));
+const MyBlogsPage = lazy(() => import('./pages/MyBlogsPage').then(m => ({ default: m.MyBlogsPage })));
 
 /**
  * Loading fallback component for Suspense
@@ -193,6 +194,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <CreateBlogPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-blogs"
+                element={
+                  <ProtectedRoute>
+                    <MyBlogsPage />
                   </ProtectedRoute>
                 }
               />

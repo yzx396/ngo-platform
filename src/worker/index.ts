@@ -2994,32 +2994,50 @@ app.delete("/api/v1/comments/:id", requireAuth, async (c) => {
 /**
  * GET /api/v1/blogs - List blogs with pagination
  * Public endpoint - no authentication required
- * Supports filtering by featured status
+ * Supports filtering by featured status, author_id, or current user's blogs (my=true)
  */
 app.get("/api/v1/blogs", async (c) => {
   try {
     const limitParam = c.req.query("limit");
     const offsetParam = c.req.query("offset");
     const featuredParam = c.req.query("featured");
+    const authorIdParam = c.req.query("author_id");
+    const myParam = c.req.query("my");
 
     // Validation: Parse and validate limit and offset
     const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 20; // Default 20, max 100
     const offset = offsetParam ? Math.max(parseInt(offsetParam, 10), 0) : 0; // Default 0
 
-    // Build query - filter by featured if provided
+    // Build query - filter by featured, author_id, or current user
     let query = "SELECT * FROM blogs";
     const bindings: unknown[] = [];
+    let whereClause = "";
 
-    if (featuredParam !== undefined) {
+    // If my=true, filter by current user's blogs (requires authentication)
+    if (myParam === "true") {
+      const user = c.get('user') as AuthPayload | undefined;
+      if (!user) {
+        return c.json({ error: "Authentication required to view your blogs" }, 401);
+      }
+      whereClause = " WHERE user_id = ?";
+      bindings.push(user.userId);
+    }
+    // If author_id is provided, filter by that author
+    else if (authorIdParam) {
+      whereClause = " WHERE user_id = ?";
+      bindings.push(authorIdParam);
+    }
+    // If featured is provided, filter by featured status
+    else if (featuredParam !== undefined) {
       const featured = featuredParam === "true" ? 1 : 0;
-      query += " WHERE featured = ?";
+      whereClause = " WHERE featured = ?";
       bindings.push(featured);
     }
 
+    query += whereClause;
+
     // Count total blogs (matching filter if applied)
-    const countQuery = featuredParam !== undefined
-      ? "SELECT COUNT(*) as count FROM blogs WHERE featured = ?"
-      : "SELECT COUNT(*) as count FROM blogs";
+    const countQuery = `SELECT COUNT(*) as count FROM blogs${whereClause}`;
     const countResult = await c.env.platform_db
       .prepare(countQuery)
       .bind(...bindings)

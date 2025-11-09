@@ -61,6 +61,30 @@ export async function getAllBlogs(featured?: boolean): Promise<Blog[]> {
 }
 
 /**
+ * Fetch the current user's blogs
+ * @param limit - Number of blogs to fetch (default: 100)
+ * @param offset - Number of blogs to skip (default: 0)
+ * @param featured - Optional filter for featured blogs
+ * @returns Blogs response with pagination info and blogs array
+ */
+export async function getMyBlogs(
+  limit: number = 100,
+  offset: number = 0,
+  featured?: boolean
+): Promise<GetBlogsResponse> {
+  const params = new URLSearchParams();
+  params.append('limit', String(limit));
+  params.append('offset', String(offset));
+  params.append('my', 'true');
+  if (featured !== undefined) {
+    params.append('featured', String(featured));
+  }
+
+  const url = `/api/v1/blogs?${params.toString()}`;
+  return apiGet<GetBlogsResponse>(url);
+}
+
+/**
  * Create a new blog
  * @param title - The blog title (required)
  * @param content - The blog content (required)
