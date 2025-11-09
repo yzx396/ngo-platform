@@ -44,7 +44,7 @@ export function BlogsPage() {
       setBlogs((prev) =>
         prev.map((blog) =>
           blog.id === blogId
-            ? { ...blog, likes_count: updatedBlog.likes_count, user_has_liked: true }
+            ? { ...blog, likes_count: updatedBlog.likes_count, liked_by_user: true }
             : blog
         )
       );
@@ -59,7 +59,7 @@ export function BlogsPage() {
       setBlogs((prev) =>
         prev.map((blog) =>
           blog.id === blogId
-            ? { ...blog, likes_count: updatedBlog.likes_count, user_has_liked: false }
+            ? { ...blog, likes_count: updatedBlog.likes_count, liked_by_user: false }
             : blog
         )
       );

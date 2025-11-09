@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Star } from 'lucide-react';
+import { Heart, Star, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { BlogComments } from './BlogComments';
+import { CommentForm } from './CommentForm';
 import type { BlogWithLikeStatus } from '../../types/blog';
 
 interface BlogCardProps {
@@ -15,6 +19,9 @@ interface BlogCardProps {
 
 export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCardProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(blog.comments_count);
 
   const handleLikeClick = () => {
     if (blog.liked_by_user) {
@@ -22,6 +29,10 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
     } else {
       onLike?.(blog.id);
     }
+  };
+
+  const handleCommentCreated = () => {
+    setCommentCount((prev) => prev + 1);
   };
 
   // Truncate content for preview
@@ -66,8 +77,9 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
 
       {/* Footer: Engagement Actions and Counts */}
       {showActions && (
-        <div className="px-6 py-3 border-t bg-muted/50">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="px-6 py-3 border-t bg-muted/50 space-y-3">
+          {/* Row 1: Action Buttons */}
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
@@ -82,15 +94,25 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
               />
               {t('blogs.like', 'Like')}
             </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <MessageCircle className="h-4 w-4 mr-1" />
+              {t('blogs.comment', 'Comment')}
+            </Button>
           </div>
 
-          {/* Engagement counts and read more */}
-          <div className="text-xs text-muted-foreground flex gap-4">
+          {/* Row 2: Engagement Counts and Read More */}
+          <div className="text-xs text-muted-foreground flex gap-4 items-center">
             <span>
               {t('blogs.likes', { defaultValue: '{{count}} likes', count: blog.likes_count })}
             </span>
             <span>
-              {t('blogs.comments', { defaultValue: '{{count}} comments', count: blog.comments_count })}
+              {t('blogs.comments', { defaultValue: '{{count}} comments', count: commentCount })}
             </span>
             <Link
               to={`/blogs/${blog.id}`}
@@ -99,6 +121,32 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
               {t('blogs.readMore', 'Read More')} →
             </Link>
           </div>
+
+          {/* Comments section */}
+          {showComments && (
+            <div className="pt-3 border-t space-y-3 animate-in fade-in duration-300">
+              {user && (
+                <div className="bg-background rounded p-3">
+                  <CommentForm
+                    blogId={blog.id}
+                    onCommentCreated={handleCommentCreated}
+                    placeholder={t('posts.addComment', 'Add a comment...')}
+                  />
+                </div>
+              )}
+              <div>
+                <BlogComments blogId={blog.id} compactMode={true} limit={10} />
+              </div>
+              {commentCount > 10 && (
+                <Link
+                  to={`/blogs/${blog.id}#comments`}
+                  className="text-xs text-primary hover:underline block text-center py-2"
+                >
+                  {t('blogs.viewAllComments', 'View all comments')} →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Card>

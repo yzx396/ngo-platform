@@ -142,7 +142,7 @@ export async function deleteBlog(blogId: string): Promise<void> {
  * @returns Updated blog with like status
  */
 export async function likeBlog(blogId: string): Promise<Blog> {
-  const response = await apiPost<{ blog: Blog; user_has_liked: boolean }>(
+  const response = await apiPost<{ blog: Blog; liked_by_user: boolean; likes_count: number }>(
     `/api/v1/blogs/${blogId}/like`,
     {}
   );
@@ -155,7 +155,7 @@ export async function likeBlog(blogId: string): Promise<Blog> {
  * @returns Updated blog with like status
  */
 export async function unlikeBlog(blogId: string): Promise<Blog> {
-  const response = await apiFetch<{ blog: Blog; user_has_liked: boolean }>(
+  const response = await apiFetch<{ blog: Blog; liked_by_user: boolean; likes_count: number }>(
     `/api/v1/blogs/${blogId}/like`,
     { method: 'DELETE' }
   );

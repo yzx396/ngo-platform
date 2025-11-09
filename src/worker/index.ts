@@ -3394,7 +3394,8 @@ app.post("/api/v1/blogs/:id/like", requireAuth, async (c) => {
 
     return c.json({
       blog: normalizedBlog,
-      user_has_liked: true,
+      liked_by_user: true,
+      likes_count: normalizedBlog.likes_count,
     });
   } catch (err) {
     console.error("Error liking blog:", err);
@@ -3464,7 +3465,8 @@ app.delete("/api/v1/blogs/:id/like", requireAuth, async (c) => {
 
     return c.json({
       blog: normalizedBlog,
-      user_has_liked: false,
+      liked_by_user: false,
+      likes_count: normalizedBlog.likes_count,
     });
   } catch (err) {
     console.error("Error unliking blog:", err);
@@ -3538,6 +3540,28 @@ app.post("/api/v1/blogs/:id/comments", requireAuth, async (c) => {
       .prepare("UPDATE blogs SET comments_count = ? WHERE id = ?")
       .bind(newCommentsCount, blogId)
       .run();
+
+    // Award points to the comment creator (silent failure if points system fails)
+    await awardPointsForAction(
+      c.env.platform_db,
+      userId,
+      "comment_created",
+      commentId,
+      POINTS_FOR_CREATE_COMMENT
+    );
+
+    // Award points to the blog author for receiving a comment (silent failure if points system fails)
+    const blogAuthorId = blog.user_id as string;
+    if (blogAuthorId !== userId) {
+      // Only award points if the commenter is not the blog author
+      await awardPointsForAction(
+        c.env.platform_db,
+        blogAuthorId,
+        "comment_received",
+        commentId,
+        POINTS_FOR_RECEIVING_COMMENT
+      );
+    }
 
     // Fetch created comment with author info
     const comment = await c.env.platform_db

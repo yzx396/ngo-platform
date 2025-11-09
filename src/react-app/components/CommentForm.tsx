@@ -3,11 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { createComment } from '../services/postService';
+import { createBlogComment } from '../services/blogService';
 import { handleApiError } from '../services/apiClient';
 import { toast } from 'sonner';
 
 interface CommentFormProps {
-  postId: string;
+  postId?: string;
+  blogId?: string;
   parentCommentId?: string;
   onCommentCreated?: (content: string) => void;
   placeholder?: string;
@@ -18,17 +20,19 @@ const MAX_COMMENT_LENGTH = 500;
 
 /**
  * CommentForm component
- * Form for users to add comments on posts or reply to comments
+ * Form for users to add comments on posts/blogs or reply to comments
  * Features:
  * - Character limit (500 chars)
  * - Character counter
  * - Loading state
  * - Error handling
  * - Support for nested replies via parentCommentId
+ * - Support for both post and blog comments
  * - Submit button disabled when empty or > max length
  */
 export function CommentForm({
   postId,
+  blogId,
   parentCommentId,
   onCommentCreated,
   placeholder,
@@ -46,12 +50,20 @@ export function CommentForm({
       e.preventDefault();
 
       if (!isValid || isSubmitting) return;
+      if (!postId && !blogId) {
+        setError('Either postId or blogId must be provided');
+        return;
+      }
 
       try {
         setIsSubmitting(true);
         setError(null);
 
-        await createComment(postId, content.trim(), parentCommentId);
+        if (postId) {
+          await createComment(postId, content.trim(), parentCommentId);
+        } else if (blogId) {
+          await createBlogComment(blogId, content.trim(), parentCommentId);
+        }
 
         // Clear form on success
         setContent('');
@@ -63,14 +75,14 @@ export function CommentForm({
         // Notify parent component
         onCommentCreated?.(content.trim());
       } catch (err) {
-        const errorMsg = t('posts.commentError', 'Failed to create comment. Please try again.');
+        const errorMsg = t('comments.error', 'Failed to create comment. Please try again.');
         setError(errorMsg);
         handleApiError(err);
       } finally {
         setIsSubmitting(false);
       }
     },
-    [postId, parentCommentId, content, isValid, isSubmitting, onCommentCreated, t]
+    [postId, blogId, parentCommentId, content, isValid, isSubmitting, onCommentCreated, t]
   );
 
   return (

@@ -925,6 +925,103 @@ describe('POST /api/v1/blogs/:id/like', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('should like a blog and return liked_by_user property', async () => {
+    const { env, mockBlogs, mockUsers } = setupTestEnv();
+    const userId = 'user-1';
+    const blogId = 'blog-1';
+    const now = Math.floor(Date.now() / 1000);
+
+    // Seed user
+    mockUsers.set(userId, {
+      id: userId,
+      email: 'user@example.com',
+      name: 'Test User',
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed blog
+    mockBlogs.set(blogId, {
+      id: blogId,
+      user_id: 'user-2',
+      title: 'Test Blog',
+      content: 'Blog content',
+      featured: 0,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const token = await createTestToken(userId, 'user@example.com', 'Test User');
+
+    const req = new Request(`http://localhost/api/v1/blogs/${blogId}/like`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    // IMPORTANT: The response should return liked_by_user property
+    expect(json).toHaveProperty('liked_by_user', true);
+    expect(json).toHaveProperty('likes_count', 1);
+  });
+
+  it('should not allow duplicate likes', async () => {
+    const { env, mockBlogs, mockUsers, mockLikes } = setupTestEnv();
+    const userId = 'user-1';
+    const blogId = 'blog-1';
+    const now = Math.floor(Date.now() / 1000);
+
+    // Seed user
+    mockUsers.set(userId, {
+      id: userId,
+      email: 'user@example.com',
+      name: 'Test User',
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed blog
+    mockBlogs.set(blogId, {
+      id: blogId,
+      user_id: 'user-2',
+      title: 'Test Blog',
+      content: 'Blog content',
+      featured: 0,
+      likes_count: 1,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed existing like
+    const likeKey = `${blogId}:${userId}`;
+    mockLikes.set(likeKey, {
+      id: 'like-1',
+      blog_id: blogId,
+      user_id: userId,
+      created_at: now,
+    });
+
+    const token = await createTestToken(userId, 'user@example.com', 'Test User');
+
+    const req = new Request(`http://localhost/api/v1/blogs/${blogId}/like`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
+  });
 });
 
 // ============================================================================
@@ -956,6 +1053,103 @@ describe('DELETE /api/v1/blogs/:id/like', () => {
     const res = await app.fetch(req, env);
 
     expect(res.status).toBe(404);
+  });
+
+  it('should unlike a blog and return liked_by_user property as false', async () => {
+    const { env, mockBlogs, mockUsers, mockLikes } = setupTestEnv();
+    const userId = 'user-1';
+    const blogId = 'blog-1';
+    const now = Math.floor(Date.now() / 1000);
+
+    // Seed user
+    mockUsers.set(userId, {
+      id: userId,
+      email: 'user@example.com',
+      name: 'Test User',
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed blog
+    mockBlogs.set(blogId, {
+      id: blogId,
+      user_id: 'user-2',
+      title: 'Test Blog',
+      content: 'Blog content',
+      featured: 0,
+      likes_count: 1,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed existing like
+    const likeKey = `${blogId}:${userId}`;
+    mockLikes.set(likeKey, {
+      id: 'like-1',
+      blog_id: blogId,
+      user_id: userId,
+      created_at: now,
+    });
+
+    const token = await createTestToken(userId, 'user@example.com', 'Test User');
+
+    const req = new Request(`http://localhost/api/v1/blogs/${blogId}/like`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    // IMPORTANT: The response should return liked_by_user property as false
+    expect(json).toHaveProperty('liked_by_user', false);
+    expect(json).toHaveProperty('likes_count', 0);
+  });
+
+  it('should return 400 when user has not liked the blog', async () => {
+    const { env, mockBlogs, mockUsers } = setupTestEnv();
+    const userId = 'user-1';
+    const blogId = 'blog-1';
+    const now = Math.floor(Date.now() / 1000);
+
+    // Seed user
+    mockUsers.set(userId, {
+      id: userId,
+      email: 'user@example.com',
+      name: 'Test User',
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Seed blog (no like exists for this user)
+    mockBlogs.set(blogId, {
+      id: blogId,
+      user_id: 'user-2',
+      title: 'Test Blog',
+      content: 'Blog content',
+      featured: 0,
+      likes_count: 0,
+      comments_count: 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const token = await createTestToken(userId, 'user@example.com', 'Test User');
+
+    const req = new Request(`http://localhost/api/v1/blogs/${blogId}/like`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const res = await app.fetch(req, env);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json).toHaveProperty('error');
   });
 });
 

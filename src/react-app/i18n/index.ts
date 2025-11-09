@@ -20,7 +20,9 @@ i18n
     fallbackLng: 'zh-CN', // Default to Simplified Chinese
     defaultNS: 'translation',
     interpolation: {
-      escapeValue: false // React already handles XSS
+      escapeValue: false, // React already handles XSS
+      prefix: '{{',
+      suffix: '}}'
     },
     detection: {
       // Language detection order:

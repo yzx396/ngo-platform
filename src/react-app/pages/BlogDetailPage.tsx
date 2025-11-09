@@ -1,34 +1,33 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, Loader2, ArrowLeft, Star, Edit, Trash2 } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Heart, Loader2, ArrowLeft, Star, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { BlogComments } from '../components/BlogComments';
+import { CommentForm } from '../components/CommentForm';
 import {
   getBlogById,
   likeBlog,
   unlikeBlog,
   deleteBlog,
-  getBlogComments,
-  createBlogComment,
   featureBlog,
 } from '../services/blogService';
-import type { BlogWithAuthor, BlogCommentWithAuthor } from '../../types/blog';
+import type { BlogWithAuthor } from '../../types/blog';
 
 export function BlogDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [blog, setBlog] = useState<BlogWithAuthor | null>(null);
-  const [comments, setComments] = useState<BlogCommentWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [commentContent, setCommentContent] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [userHasLiked, setUserHasLiked] = useState(false);
 
   const loadBlog = useCallback(async () => {
@@ -46,22 +45,18 @@ export function BlogDetailPage() {
     }
   }, [id, t]);
 
-  const loadComments = useCallback(async () => {
-    if (!id) return;
-    try {
-      const response = await getBlogComments(id, 100, 0);
-      setComments(response.comments);
-    } catch (err) {
-      console.error('Error loading comments:', err);
-    }
-  }, [id]);
-
   useEffect(() => {
     if (id) {
       loadBlog();
-      loadComments();
     }
-  }, [id, loadBlog, loadComments]);
+  }, [id, loadBlog]);
+
+  // Auto-expand comments section when URL contains #comments hash
+  useEffect(() => {
+    if (location.hash === '#comments') {
+      setShowComments(true);
+    }
+  }, [location.hash]);
 
   const handleLike = async () => {
     if (!id || !blog) return;
@@ -85,22 +80,9 @@ export function BlogDetailPage() {
     }
   };
 
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id || !commentContent.trim()) return;
-
-    try {
-      setSubmittingComment(true);
-      const newComment = await createBlogComment(id, commentContent);
-      setComments([...comments, newComment]);
-      setCommentContent('');
-      if (blog) {
-        setBlog({ ...blog, comments_count: blog.comments_count + 1 });
-      }
-    } catch (err) {
-      console.error('Error creating comment:', err);
-    } finally {
-      setSubmittingComment(false);
+  const handleCommentCreated = () => {
+    if (blog) {
+      setBlog({ ...blog, comments_count: blog.comments_count + 1 });
     }
   };
 
@@ -270,53 +252,40 @@ export function BlogDetailPage() {
       {/* Comments Section */}
       <Card className="flex flex-col">
         <CardHeader className="pb-3">
-          <h2 className="text-2xl font-bold">
-            {t('blogs.comments')} ({comments.length})
-          </h2>
-        </CardHeader>
-
-        <CardContent className="flex-1 space-y-6">
-          {/* Comment Form */}
-          {user && (
-            <form onSubmit={handleSubmitComment} className="space-y-2">
-              <textarea
-                value={commentContent}
-                onChange={(e) => setCommentContent(e.target.value)}
-                placeholder={t('blogs.addComment')}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                rows={3}
-              />
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              {t('blogs.comments', { defaultValue: '{{count}} comments', count: blog?.comments_count || 0 })}
+            </h2>
+            {user && (
               <Button
-                type="submit"
-                disabled={submittingComment || !commentContent.trim()}
+                variant="ghost"
                 size="sm"
+                onClick={() => setShowComments(!showComments)}
               >
-                {submittingComment ? t('blogs.submitting') : t('blogs.submit')}
+                {showComments ? t('blogs.hideComments', 'Hide') : t('blogs.showComments', 'Show')}
               </Button>
-            </form>
-          )}
-
-          {/* Comments List */}
-          <div className="space-y-4">
-            {comments.map((comment) => (
-              <div key={comment.id} className="border-l-4 border-muted pl-4 py-2">
-                <div className="text-xs text-muted-foreground mb-1">
-                  <span className="font-medium">{comment.author_name}</span>
-                  <span className="mx-2">•</span>
-                  <span>{new Date(comment.created_at * 1000).toLocaleDateString()}</span>
-                </div>
-                <p className="text-sm text-foreground whitespace-pre-wrap">
-                  {comment.content}
-                </p>
-              </div>
-            ))}
-            {comments.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-8">
-                {t('blogs.noComments')}
-              </p>
             )}
           </div>
-        </CardContent>
+        </CardHeader>
+
+        {showComments && (
+          <CardContent className="flex-1 space-y-6 border-t">
+            {/* Comment Form */}
+            {user && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">{t('blogs.addComment', 'Add a comment...')}</h3>
+                <CommentForm
+                  blogId={id}
+                  onCommentCreated={handleCommentCreated}
+                />
+              </div>
+            )}
+
+            {/* Comments List */}
+            {id && <BlogComments blogId={id} />}
+          </CardContent>
+        )}
       </Card>
     </div>
   );
