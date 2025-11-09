@@ -150,20 +150,6 @@ describe('PostCard Component', () => {
   });
 
   describe('Actions', () => {
-    it('should call onViewDetails when view button clicked', () => {
-      const onViewDetails = vi.fn();
-      render(<PostCard post={mockPost} onViewDetails={onViewDetails} />);
-      const viewButton = screen.getByText('View');
-      viewButton.click();
-      expect(onViewDetails).toHaveBeenCalled();
-    });
-
-    it('should not render view button when onViewDetails not provided', () => {
-      render(<PostCard post={mockPost} />);
-      const viewButton = screen.queryByText('View');
-      expect(viewButton).not.toBeInTheDocument();
-    });
-
     it('should show edit/delete menu for post author', () => {
       // Mock useAuth to return the post author
       vi.mock('../context/AuthContext', () => ({

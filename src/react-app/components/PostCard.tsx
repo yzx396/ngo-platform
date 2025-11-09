@@ -14,7 +14,6 @@ import type { Post, PostType } from '../../types/post';
 
 interface PostCardProps {
   post: Post & { author_name?: string; user_has_liked?: boolean };
-  onViewDetails?: () => void;
   onEdit?: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onLikesChange?: (postId: string, newLikesCount: number) => void;
@@ -35,7 +34,6 @@ interface PostCardProps {
  */
 function PostCardComponent({
   post,
-  onViewDetails,
   onEdit,
   onDelete,
   onLikesChange,
@@ -262,14 +260,6 @@ function PostCardComponent({
           >
             {t('posts.comments', { defaultValue: '{{count}} comments', count: commentsCount })}
           </button>
-          {onViewDetails && (
-            <button
-              onClick={onViewDetails}
-              className="text-primary hover:underline ml-auto"
-            >
-              {t('common.view', 'View')}
-            </button>
-          )}
         </div>
       </div>
 

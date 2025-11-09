@@ -265,9 +265,6 @@ export function FeedPage() {
           <PostCard
             key={post.id}
             post={post}
-            onViewDetails={() => {
-              // TODO: Navigate to post detail page in future slices
-            }}
             onEdit={handleEditPost}
             onDelete={handleDeletePost}
           />
