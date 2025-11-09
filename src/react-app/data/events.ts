@@ -30,7 +30,7 @@ export const events: Event[] = [
     ],
     guest_count: 8,
     ticket_count: 8,
-    cover_image_url: 'https://images.lumacdn.com/gallery-images/c7/f478f17a-9b2c-470d-b2b6-7046bfde8674',
+    cover_image_url: 'https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=1,background=white,quality=75,width=400,height=400/event-covers/9p/7cfc96e8-9fd6-44e4-aaba-4d0a60b53339.png',
     luma_url: 'https://luma.com/o4f5akc4',
     luma_slug: 'o4f5akc4',
   },
