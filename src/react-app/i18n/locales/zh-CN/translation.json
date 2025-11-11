@@ -623,6 +623,7 @@
     "membersOnly": "仅限会员",
     "membersOnlyShort": "仅限会员（需要登录查看）",
     "membersOnlyContent": "会员专属内容",
+    "membersOnlyDescription": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "membersOnlyPreview": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "signInToRead": "登录以阅读全部内容"
   }

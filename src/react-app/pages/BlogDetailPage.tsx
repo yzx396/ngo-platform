@@ -198,7 +198,7 @@ export function BlogDetailPage() {
                       size="lg"
                       className="mt-2"
                     >
-                      {t('auth.signIn', 'Sign In')}
+                      {t('auth.signIn', t('common.signIn', 'Sign In'))}
                     </Button>
                   </div>
                 </CardContent>

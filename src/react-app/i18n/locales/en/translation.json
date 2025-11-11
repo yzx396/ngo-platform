@@ -624,6 +624,7 @@
     "membersOnly": "Members only",
     "membersOnlyShort": "Members only (requires sign-in to view)",
     "membersOnlyContent": "Members-Only Content",
+    "membersOnlyDescription": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "membersOnlyPreview": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "signInToRead": "Sign in to read the full content"
   }
