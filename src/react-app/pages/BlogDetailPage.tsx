@@ -194,7 +194,7 @@ export function BlogDetailPage() {
                       </p>
                     </div>
                     <Button
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate('/login', { state: { from: location.pathname } })}
                       size="lg"
                       className="mt-2"
                     >

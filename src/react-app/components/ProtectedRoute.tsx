@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,6 +14,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
 
   // Show loading while checking auth state
   if (isLoading) {
@@ -26,7 +27,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Render protected content if authenticated
