@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MentorBrowse } from '../pages/MentorBrowse';
@@ -58,17 +58,12 @@ const mockMentor: MentorProfile = {
 describe('MentorBrowse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
     vi.mocked(mentorService.searchMentors).mockResolvedValue({
       mentors: [mockMentor],
       total: 1,
     });
     // Mock getMatches to return empty array by default
     vi.mocked(matchService.getMatches).mockResolvedValue([]);
-  });
-
-  afterEach(() => {
-    localStorage.clear();
   });
 
   it('should render mentor cards', async () => {
@@ -118,7 +113,7 @@ describe('MentorBrowse', () => {
 
   describe('when user is authenticated', () => {
     it('should navigate to mentor detail page when clicking View Details', async () => {
-      // Mock authenticated user by setting token in localStorage
+      // Mock authenticated user (auth uses cookies, not localStorage)
       const mockUser: User = {
         id: 'user-1',
         email: 'test@example.com',
@@ -127,8 +122,7 @@ describe('MentorBrowse', () => {
         updated_at: Date.now(),
       };
 
-      localStorage.setItem('auth_token', 'mock-token');
-      
+        
       // Mock fetch to return user data
       global.fetch = vi.fn(() =>
         Promise.resolve(new Response(JSON.stringify(mockUser)))
@@ -154,7 +148,7 @@ describe('MentorBrowse', () => {
     });
 
     it('should proceed with mentorship request when clicking Request Mentorship', async () => {
-      // Mock authenticated user by setting token in localStorage
+      // Mock authenticated user (auth uses cookies, not localStorage)
       const mockUser: User = {
         id: 'user-1',
         email: 'test@example.com',
@@ -163,8 +157,7 @@ describe('MentorBrowse', () => {
         updated_at: Date.now(),
       };
 
-      localStorage.setItem('auth_token', 'mock-token');
-      
+        
       // Mock fetch to return user data
       global.fetch = vi.fn(() =>
         Promise.resolve(new Response(JSON.stringify(mockUser)))

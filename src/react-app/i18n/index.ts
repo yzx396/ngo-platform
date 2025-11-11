@@ -26,13 +26,12 @@ i18n
     },
     detection: {
       // Language detection order:
-      // 1. localStorage (user preference)
-      // 2. sessionStorage
-      // 3. HTML lang attribute
-      // 4. navigator language
-      // 5. fallback to zh-CN
-      order: ['localStorage', 'sessionStorage', 'htmlTag', 'navigator'],
-      caches: ['localStorage']
+      // 1. sessionStorage (user preference for current session)
+      // 2. HTML lang attribute
+      // 3. navigator language
+      // 4. fallback to zh-CN
+      order: ['sessionStorage', 'htmlTag', 'navigator'],
+      caches: ['sessionStorage']
     }
   });
 

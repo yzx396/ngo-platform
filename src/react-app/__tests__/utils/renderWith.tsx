@@ -24,7 +24,6 @@ import type { User } from '../../types/user';
 
 export interface RenderWithAuthOptions {
   user?: User | null;
-  token?: string | null;
   i18n?: typeof i18n;
 }
 
@@ -40,16 +39,9 @@ export interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  * Creates a render function with authentication context
  */
 export function createRenderWithAuth(options: RenderWithAuthOptions = {}) {
-  const { token = null, i18n: i18nInstance = i18n } = options;
+  const { i18n: i18nInstance = i18n } = options;
 
-  // Setup localStorage for auth token
-  if (token) {
-    localStorage.setItem('auth_token', token);
-  } else {
-    localStorage.removeItem('auth_token');
-  }
-
-  // Mock AuthContext
+  // Mock AuthContext - no localStorage needed (auth uses cookies now)
   const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
   };
@@ -91,10 +83,9 @@ export function renderUnauthenticated(
 export function renderAuthenticated(
   ui: ReactElement,
   user: User,
-  token: string = 'test-token',
   renderOptions: CustomRenderOptions = {}
 ) {
-  return createRenderWithAuth({ user, token })(ui, renderOptions);
+  return createRenderWithAuth({ user })(ui, renderOptions);
 }
 
 /**
@@ -122,21 +113,14 @@ export function renderWithProviders(
   ui: ReactElement,
   options: {
     user?: User | null;
-    token?: string | null;
     router?: boolean;
     i18n?: typeof i18n;
   } = {},
   renderOptions: CustomRenderOptions = {}
 ) {
-  const { token = null, router = true, i18n: i18nInstance = i18n } = options;
+  const { router = true, i18n: i18nInstance = i18n } = options;
 
-  // Setup localStorage
-  if (token) {
-    localStorage.setItem('auth_token', token);
-  } else {
-    localStorage.removeItem('auth_token');
-  }
-
+  // Mock AuthContext - no localStorage needed (auth uses cookies now)
   const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return <>{children}</>;
   };

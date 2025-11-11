@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FeedPage } from '../FeedPage';
 import type { Post } from '../../../types/post';
 
@@ -67,7 +67,6 @@ const mockGetPosts = getPosts as ReturnType<typeof vi.fn>;
 describe('FeedPage - Points Banner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
 
     // Setup default mock for getPosts
     const mockPost: Post = {
@@ -87,10 +86,6 @@ describe('FeedPage - Points Banner', () => {
     });
   });
 
-  afterEach(() => {
-    localStorage.clear();
-  });
-
   it('should render Community Feed title', async () => {
     render(<FeedPage />);
 
@@ -108,7 +103,8 @@ describe('FeedPage - Points Banner', () => {
   });
 
   it('should not render points banner if already dismissed', async () => {
-    localStorage.setItem('pointsBannerDismissed', 'true');
+    // Set cookie to indicate banner was dismissed
+    document.cookie = 'pointsBannerDismissed=true; path=/';
 
     render(<FeedPage />);
 
@@ -118,14 +114,22 @@ describe('FeedPage - Points Banner', () => {
     });
   });
 
-  it('should have localStorage integration for banner dismissal', () => {
-    // Test localStorage behavior
+  it('should have cookie integration for banner dismissal', () => {
+    // Test cookie behavior for banner dismissal
     const key = 'pointsBannerDismissed';
 
-    expect(localStorage.getItem(key)).toBeNull();
-    localStorage.setItem(key, 'true');
-    expect(localStorage.getItem(key)).toBe('true');
-    localStorage.clear();
-    expect(localStorage.getItem(key)).toBeNull();
+    // Clear cookie first to ensure clean state
+    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+
+    // Cookie should not be set initially
+    expect(document.cookie).not.toContain(`${key}=true`);
+
+    // Set cookie (simulating banner dismissal)
+    document.cookie = `${key}=true; path=/`;
+    expect(document.cookie).toContain(`${key}=true`);
+
+    // Clear cookie
+    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+    expect(document.cookie).not.toContain(`${key}=true`);
   });
 });

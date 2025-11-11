@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
@@ -18,15 +18,10 @@ describe('OAuthCallbackPage', () => {
   const mockFetch = vi.fn();
 
   beforeEach(() => {
-    localStorage.clear();
     sessionStorage.clear();
     vi.clearAllMocks();
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
     global.fetch = mockFetch as unknown as typeof fetch;
-  });
-
-  afterEach(() => {
-    localStorage.clear();
   });
 
   it('should extract authorization code from URL and send it to backend', async () => {
@@ -173,7 +168,8 @@ describe('OAuthCallbackPage', () => {
     });
 
     // Verify no token in localStorage (token is in HTTP-only cookie)
-    expect(localStorage.getItem('auth_token')).toBeNull();
+    // This test verifies that we're not using localStorage for auth
+    expect(document.cookie).not.toContain('auth_token=');
   });
 
   it('should properly encode authorization code with special characters', async () => {

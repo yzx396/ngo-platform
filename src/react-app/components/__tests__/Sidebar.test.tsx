@@ -54,7 +54,7 @@ describe('Sidebar', () => {
 
   it('should not render Browse Mentors link when not authenticated', () => {
     // Ensure no auth token - Browse Mentors requires authentication
-    localStorage.removeItem('auth_token');
+    // Auth uses cookies now, not localStorage
     renderSidebar();
 
     // Browse Mentors link should NOT be visible for unauthenticated users

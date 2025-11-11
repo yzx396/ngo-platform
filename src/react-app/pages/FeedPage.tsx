@@ -14,6 +14,22 @@ import { X, Lightbulb } from 'lucide-react';
 
 const POSTS_PER_PAGE = 20;
 
+// Cookie utility functions
+const getCookie = (name: string): string | null => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+  return null;
+};
+
+const setCookie = (name: string, value: string, days: number = 365) => {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+};
+
 /**
  * FeedPage Component
  * Displays a paginated feed of community posts
@@ -34,8 +50,8 @@ export function FeedPage() {
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [pointsInfoDialogOpen, setPointsInfoDialogOpen] = useState(false);
   const [showPointsBanner, setShowPointsBanner] = useState(() => {
-    // Check localStorage to see if user has dismissed the banner
-    const dismissed = localStorage.getItem('pointsBannerDismissed');
+    // Check cookie to see if user has dismissed the banner
+    const dismissed = getCookie('pointsBannerDismissed');
     return !dismissed;
   });
 
@@ -208,7 +224,7 @@ export function FeedPage() {
   // Handle banner dismissal
   const handleDismissBanner = () => {
     setShowPointsBanner(false);
-    localStorage.setItem('pointsBannerDismissed', 'true');
+    setCookie('pointsBannerDismissed', 'true', 365); // Persist for 1 year
   };
 
   // Render feed

@@ -77,13 +77,8 @@ const mockMatches: Match[] = [
 ];
 
 // Helper to render component with AuthProvider
-function renderWithAuth(user: User | null = null, token: string | null = null) {
-  // Mock localStorage
-  if (token) {
-    localStorage.setItem('auth_token', token);
-  }
-
-  // Mock fetch for auth
+function renderWithAuth(user: User | null = null) {
+  // Mock fetch for auth - no localStorage needed (auth uses cookies)
   global.fetch = vi.fn((url: string | URL | Request) => {
     const urlString = typeof url === 'string' ? url : url.toString();
     if (urlString.includes('/api/v1/auth/me')) {
@@ -107,7 +102,6 @@ function renderWithAuth(user: User | null = null, token: string | null = null) {
 describe('MatchesList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
   });
 
   describe('Role Selection Based on Mentor Status', () => {

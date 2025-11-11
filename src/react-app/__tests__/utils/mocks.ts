@@ -272,7 +272,7 @@ export function createMockMatch(overrides: Partial<Match> = {}): Match {
  */
 export function cleanupMocks() {
   vi.clearAllMocks();
-  localStorage.clear();
+  // Note: localStorage.clear() removed - no longer using localStorage
 }
 
 /**

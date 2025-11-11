@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 /**
  * LanguageSwitcher component
  * Allows users to switch between Chinese (默认/default) and English
- * Saves preference to localStorage for persistence
+ * Saves preference to sessionStorage for persistence
  */
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
