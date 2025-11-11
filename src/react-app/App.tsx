@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import i18n from './i18n';
@@ -86,8 +86,8 @@ function AppContent() {
         {!isAuthPage && (
           <Layout>
             <Routes>
-              {/* About Page - Home/default page */}
-              <Route path="/" element={<AboutPage />} />
+              {/* Redirect root to feed page */}
+              <Route path="/" element={<Navigate to="/feed" replace />} />
 
               {/* Feed Page - Main page showing community posts */}
               <Route path="/feed" element={<FeedPage />} />

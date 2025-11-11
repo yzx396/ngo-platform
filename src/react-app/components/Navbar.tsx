@@ -24,12 +24,13 @@ export function Navbar() {
   const isActive = (path: string) => location.pathname === path;
 
   const navLinks = [
-    { href: '/', label: t('common.home') },
-    { href: '/feed', label: t('navigation.feed') },
+    { href: '/feed', label: t('common.home') },
     { href: '/events', label: t('events.title', 'Events') },
+    { href: '/blogs', label: t('navigation.blogs', 'Blogs') },
     ...(isFeatureEnabled('leaderboard')
       ? [{ href: '/leaderboard', label: t('navigation.leaderboard', 'Leaderboard') }]
       : []),
+    { href: '/about', label: t('navigation.about', 'About Us') },
   ];
 
   const handleLogout = () => {
