@@ -67,6 +67,7 @@ import {
   POSTS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
 } from "../types/points";
+import { generateBlogId, generateBlogLikeId, generateBlogCommentId } from "./utils/idGenerator";
 
 /**
  * Environment variables and bindings for the Worker
@@ -3185,7 +3186,7 @@ app.post("/api/v1/blogs", requireAuth, async (c) => {
     }
 
     // Generate blog ID and timestamps
-    const blogId = `blog-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const blogId = generateBlogId();
     const now = Math.floor(Date.now() / 1000);
     const requiresAuth = body.requires_auth ? 1 : 0; // Convert boolean to SQLite integer
 
@@ -3388,7 +3389,7 @@ app.post("/api/v1/blogs/:id/like", requireAuth, async (c) => {
     }
 
     // Create like record
-    const likeId = `like-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const likeId = generateBlogLikeId();
     const now = Math.floor(Date.now() / 1000);
 
     const insertResult = await c.env.platform_db
@@ -3543,7 +3544,7 @@ app.post("/api/v1/blogs/:id/comments", requireAuth, async (c) => {
     }
 
     // Create comment
-    const commentId = `comment-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const commentId = generateBlogCommentId();
     const now = Math.floor(Date.now() / 1000);
 
     const insertResult = await c.env.platform_db
