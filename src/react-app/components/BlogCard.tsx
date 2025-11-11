@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Star, MessageCircle } from 'lucide-react';
+import { Heart, Star, MessageCircle, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -52,12 +52,20 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
           >
             {blog.title}
           </Link>
-          {blog.featured && (
-            <Badge variant="secondary" className="flex-shrink-0 gap-1">
-              <Star className="w-3 h-3 fill-current" />
-              {t('blogs.featured')}
-            </Badge>
-          )}
+          <div className="flex gap-2 flex-shrink-0">
+            {blog.requires_auth && (
+              <Badge variant="outline" className="gap-1">
+                <Lock className="w-3 h-3" />
+                {t('blogs.membersOnly', 'Members')}
+              </Badge>
+            )}
+            {blog.featured && (
+              <Badge variant="secondary" className="gap-1">
+                <Star className="w-3 h-3 fill-current" />
+                {t('blogs.featured')}
+              </Badge>
+            )}
+          </div>
         </div>
         {/* Author and Date */}
         <div className="text-xs text-muted-foreground mt-2">

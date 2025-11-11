@@ -229,11 +229,13 @@ export type GetBlogByIdResponse = BlogWithAuthor;
 export interface CreateBlogRequest {
   title: string; // Blog title (required)
   content: string; // Blog content (required)
+  requires_auth?: boolean; // If true, only authenticated users can view full content (default: false)
 }
 
 export interface UpdateBlogRequest {
   title?: string;
   content?: string;
+  requires_auth?: boolean; // If true, only authenticated users can view full content
 }
 
 export type CreateBlogResponse = Blog;
