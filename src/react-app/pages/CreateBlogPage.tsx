@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { createBlog, getBlogById, updateBlog } from '../services/blogService';
 import { BlogEditor } from '../components/BlogEditor';
 
@@ -119,13 +119,6 @@ export function CreateBlogPage() {
 
       {/* Form Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>{isEditing ? t('blogs.editBlogContent') : t('blogs.newBlogPost')}</CardTitle>
-          <CardDescription>
-            {isEditing ? t('blogs.editBlogDesc') : t('blogs.createBlogDesc')}
-          </CardDescription>
-        </CardHeader>
-
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Title */}
