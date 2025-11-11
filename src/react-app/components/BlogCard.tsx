@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { BlogComments } from './BlogComments';
 import { CommentForm } from './CommentForm';
 import type { BlogWithLikeStatus } from '../../types/blog';
+import { getTruncatedText } from '../utils/blogUtils';
 
 interface BlogCardProps {
   blog: BlogWithLikeStatus;
@@ -35,10 +36,8 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
     setCommentCount((prev) => prev + 1);
   };
 
-  // Truncate content for preview
-  const previewContent = blog.content.length > 200
-    ? blog.content.substring(0, 200) + '...'
-    : blog.content;
+  // Truncate content for preview (strip HTML and truncate text)
+  const previewContent = getTruncatedText(blog.content, 200);
 
   const formattedDate = new Date(blog.created_at * 1000).toLocaleDateString();
 

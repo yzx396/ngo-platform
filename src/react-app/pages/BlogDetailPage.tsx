@@ -16,6 +16,7 @@ import {
   featureBlog,
 } from '../services/blogService';
 import type { BlogWithAuthor } from '../../types/blog';
+import { sanitizeHtml } from '../utils/blogUtils';
 
 export function BlogDetailPage() {
   const { t } = useTranslation();
@@ -169,9 +170,10 @@ export function BlogDetailPage() {
 
         {/* Content */}
         <CardContent className="flex-1 pb-3">
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {blog.content}
-          </p>
+          <div
+            className="prose prose-sm max-w-none text-foreground break-words"
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
+          />
         </CardContent>
 
         {/* Footer: Engagement Actions and Admin Controls */}

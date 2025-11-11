@@ -5,6 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { createBlog, getBlogById, updateBlog } from '../services/blogService';
+import { BlogEditor } from '../components/BlogEditor';
+
+// Utility function to strip HTML tags and get text length
+function getTextLength(html: string): number {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent?.length || 0;
+}
 
 export function CreateBlogPage() {
   const { t } = useTranslation();
@@ -24,7 +32,11 @@ export function CreateBlogPage() {
       setLoading(true);
       const blog = await getBlogById(id);
       setTitle(blog.title);
-      setContent(blog.content);
+      // Handle backward compatibility: wrap plain text in <p> tags if not HTML
+      const blogContent = blog.content.trim().startsWith('<')
+        ? blog.content
+        : `<p>${blog.content.replace(/\n/g, '</p><p>')}</p>`;
+      setContent(blogContent);
     } catch (err) {
       console.error('Error loading blog:', err);
       setError(t('blogs.loadError'));
@@ -144,17 +156,14 @@ export function CreateBlogPage() {
               <label htmlFor="content" className="text-sm font-medium">
                 {t('blogs.contentLabel')}
               </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+              <BlogEditor
+                content={content}
+                onChange={setContent}
                 placeholder={t('blogs.contentPlaceholder')}
                 disabled={submitting}
-                rows={15}
-                className="min-h-[300px] w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
               <p className="text-xs text-muted-foreground">
-                {content.length} {t('blogs.characters')}
+                {getTextLength(content)} {t('blogs.characters')}
               </p>
             </div>
 
