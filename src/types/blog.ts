@@ -6,6 +6,7 @@ export interface Blog {
   title: string;
   content: string;
   featured: boolean;
+  requires_auth: boolean; // If true, only authenticated users can view full content
   likes_count: number;
   comments_count: number;
   created_at: number; // Unix timestamp
@@ -59,6 +60,7 @@ export function normalizeBlog(blog: unknown): Blog {
     title: String(dbBlog.title),
     content: String(dbBlog.content),
     featured: Boolean(dbBlog.featured),
+    requires_auth: Boolean(dbBlog.requires_auth),
     likes_count: Number(dbBlog.likes_count) || 0,
     comments_count: Number(dbBlog.comments_count) || 0,
     created_at: Number(dbBlog.created_at),

@@ -22,6 +22,7 @@ export function CreateBlogPage() {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [requiresAuth, setRequiresAuth] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export function CreateBlogPage() {
       setLoading(true);
       const blog = await getBlogById(id);
       setTitle(blog.title);
+      setRequiresAuth(blog.requires_auth || false);
       // Handle backward compatibility: wrap plain text in <p> tags if not HTML
       const blogContent = blog.content.trim().startsWith('<')
         ? blog.content
@@ -69,10 +71,10 @@ export function CreateBlogPage() {
       setSubmitting(true);
 
       if (isEditing && id) {
-        await updateBlog(id, title, content);
+        await updateBlog(id, title, content, requiresAuth);
         navigate(`/blogs/${id}`);
       } else {
-        const newBlog = await createBlog(title, content);
+        const newBlog = await createBlog(title, content, requiresAuth);
         navigate(`/blogs/${newBlog.id}`);
       }
     } catch (err) {
@@ -166,6 +168,26 @@ export function CreateBlogPage() {
                 {getTextLength(content)} {t('blogs.characters')}
               </p>
             </div>
+
+            {/* Members Only Checkbox */}
+            <div className="flex items-center space-x-2">
+              <input
+                id="requiresAuth"
+                type="checkbox"
+                checked={requiresAuth}
+                onChange={(e) => setRequiresAuth(e.target.checked)}
+                disabled={submitting}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              />
+              <label htmlFor="requiresAuth" className="text-sm font-medium leading-none cursor-pointer">
+                {t('blogs.membersOnly', 'Members only (requires sign-in to view)')}
+              </label>
+            </div>
+            {requiresAuth && (
+              <p className="text-xs text-muted-foreground ml-6">
+                {t('blogs.membersOnlyDescription', 'Non-members will see a preview and be prompted to sign in to read the full content.')}
+              </p>
+            )}
 
             {/* Error message */}
             {error && (

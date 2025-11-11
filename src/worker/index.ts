@@ -3077,6 +3077,7 @@ app.get("/api/v1/blogs", async (c) => {
           ...blog,
           // Normalize SQLite boolean fields (stored as 0/1)
           featured: Boolean(blog.featured),
+          requires_auth: Boolean(blog.requires_auth),
           author_name: author?.name || "Unknown User",
           author_email: author?.email || "",
           liked_by_user: userHasLiked,
@@ -3101,6 +3102,7 @@ app.get("/api/v1/blogs", async (c) => {
 /**
  * GET /api/v1/blogs/:id - Get single blog by ID
  * Public endpoint - no authentication required
+ * For members-only blogs (requires_auth=true), returns preview for unauthenticated users
  */
 app.get("/api/v1/blogs/:id", async (c) => {
   try {
@@ -3116,16 +3118,35 @@ app.get("/api/v1/blogs/:id", async (c) => {
       return c.json({ error: "Blog not found" }, 404);
     }
 
+    // Check if blog requires authentication
+    const requiresAuth = Boolean(blog.requires_auth);
+    const user = c.get('user') as AuthPayload | undefined;
+    const isAuthenticated = !!user;
+
     // Fetch author name and email
     const author = await c.env.platform_db
       .prepare("SELECT name, email FROM users WHERE id = ?")
       .bind(blog.user_id)
       .first<{ name: string; email: string }>();
 
+    let content = String(blog.content);
+
+    // If blog requires auth and user is not authenticated, return preview (first 200 chars)
+    if (requiresAuth && !isAuthenticated) {
+      const previewLength = 200;
+      const textContent = content.replace(/<[^>]*>/g, ''); // Strip HTML tags for preview
+      content = textContent.substring(0, previewLength);
+      if (textContent.length > previewLength) {
+        content += '...';
+      }
+    }
+
     const blogWithAuthor = {
       ...blog,
+      content,
       // Normalize SQLite boolean fields (stored as 0/1)
       featured: Boolean(blog.featured),
+      requires_auth: requiresAuth,
       author_name: author?.name || "Unknown User",
       author_email: author?.email || "",
     };
@@ -3166,13 +3187,14 @@ app.post("/api/v1/blogs", requireAuth, async (c) => {
     // Generate blog ID and timestamps
     const blogId = `blog-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const now = Math.floor(Date.now() / 1000);
+    const requiresAuth = body.requires_auth ? 1 : 0; // Convert boolean to SQLite integer
 
     // Insert blog into database
     const insertResult = await c.env.platform_db
       .prepare(
-        "INSERT INTO blogs (id, user_id, title, content, likes_count, comments_count, featured, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO blogs (id, user_id, title, content, requires_auth, likes_count, comments_count, featured, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(blogId, userId, body.title.trim(), body.content.trim(), 0, 0, 0, now, now)
+      .bind(blogId, userId, body.title.trim(), body.content.trim(), requiresAuth, 0, 0, 0, now, now)
       .run();
 
     if (!insertResult.success) {
@@ -3244,18 +3266,19 @@ app.put("/api/v1/blogs/:id", requireAuth, async (c) => {
     const body = await c.req.json<UpdateBlogRequest>();
 
     // At least one field must be provided
-    if (!body.title && !body.content) {
-      return c.json({ error: "At least one field (title or content) must be provided" }, 400);
+    if (!body.title && !body.content && body.requires_auth === undefined) {
+      return c.json({ error: "At least one field (title, content, or requires_auth) must be provided" }, 400);
     }
 
     // Update blog
     const now = Math.floor(Date.now() / 1000);
     const title = body.title?.trim() || blog.title;
     const content = body.content?.trim() || blog.content;
+    const requiresAuth = body.requires_auth !== undefined ? (body.requires_auth ? 1 : 0) : blog.requires_auth;
 
     const updateResult = await c.env.platform_db
-      .prepare("UPDATE blogs SET title = ?, content = ?, updated_at = ? WHERE id = ?")
-      .bind(title, content, now, blogId)
+      .prepare("UPDATE blogs SET title = ?, content = ?, requires_auth = ?, updated_at = ? WHERE id = ?")
+      .bind(title, content, requiresAuth, now, blogId)
       .run();
 
     if (!updateResult.success) {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Loader2, ArrowLeft, Star, Edit, Trash2, MessageCircle } from 'lucide-react';
+import { Heart, Loader2, ArrowLeft, Star, Edit, Trash2, MessageCircle, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -134,6 +134,7 @@ export function BlogDetailPage() {
   const canEdit = isAuthor;
   const canDelete = isAuthor || isAdmin;
   const canFeature = isAdmin;
+  const isLocked = blog.requires_auth && !user;
 
   return (
     <div className="space-y-6">
@@ -170,10 +171,45 @@ export function BlogDetailPage() {
 
         {/* Content */}
         <CardContent className="flex-1 pb-3">
-          <div
-            className="prose prose-sm max-w-none text-foreground break-words"
-            dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
-          />
+          {isLocked ? (
+            <div className="space-y-4">
+              {/* Preview Content */}
+              <div className="prose prose-sm max-w-none text-foreground break-words">
+                <p className="text-muted-foreground italic">{blog.content}</p>
+              </div>
+
+              {/* Locked Content CTA */}
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="rounded-full bg-primary/10 p-3">
+                      <Lock className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">
+                        {t('blogs.membersOnlyContent', 'Members-Only Content')}
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        {t('blogs.signInToRead', 'Sign in to read the full blog post and join our community of learners and mentors.')}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/login')}
+                      size="lg"
+                      className="mt-2"
+                    >
+                      {t('auth.signIn', 'Sign In')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div
+              className="prose prose-sm max-w-none text-foreground break-words"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
+            />
+          )}
         </CardContent>
 
         {/* Footer: Engagement Actions and Admin Controls */}

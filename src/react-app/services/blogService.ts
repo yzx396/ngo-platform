@@ -88,16 +88,21 @@ export async function getMyBlogs(
  * Create a new blog
  * @param title - The blog title (required)
  * @param content - The blog content (required)
+ * @param requiresAuth - Whether the blog requires authentication (default: false)
  * @returns The created blog
  */
 export async function createBlog(
   title: string,
-  content: string
+  content: string,
+  requiresAuth?: boolean
 ): Promise<Blog> {
   const body: CreateBlogRequest = {
     title,
     content,
   };
+  if (requiresAuth !== undefined) {
+    body.requires_auth = requiresAuth;
+  }
 
   return apiPost<CreateBlogResponse>('/api/v1/blogs', body);
 }
@@ -107,12 +112,14 @@ export async function createBlog(
  * @param blogId - The ID of the blog to update
  * @param title - Optional new title
  * @param content - Optional new content
+ * @param requiresAuth - Optional flag to require authentication
  * @returns The updated blog
  */
 export async function updateBlog(
   blogId: string,
   title?: string,
-  content?: string
+  content?: string,
+  requiresAuth?: boolean
 ): Promise<Blog> {
   const body: UpdateBlogRequest = {};
   if (title !== undefined) {
@@ -120,6 +127,9 @@ export async function updateBlog(
   }
   if (content !== undefined) {
     body.content = content;
+  }
+  if (requiresAuth !== undefined) {
+    body.requires_auth = requiresAuth;
   }
 
   return apiPut<UpdateBlogResponse>(
