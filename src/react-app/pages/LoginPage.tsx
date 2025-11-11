@@ -13,7 +13,7 @@ export function LoginPage() {
   useEffect(() => {
     const from = (location.state as { from?: string })?.from;
     if (from) {
-      localStorage.setItem('auth_return_url', from);
+      sessionStorage.setItem('auth_redirect', from);
     }
   }, [location]);
 

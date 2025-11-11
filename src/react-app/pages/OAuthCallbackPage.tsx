@@ -51,16 +51,16 @@ export function OAuthCallbackPage() {
 
         const data = await response.json();
 
-        if (!data.token || !data.user) {
+        if (!data.user) {
           throw new Error('Invalid response from server');
         }
 
-        // Save token and user info
-        login(data.token, data.user);
+        // Update auth context with user (token is in HTTP-only cookie)
+        login(data.user);
 
-        // Check if there's a return URL saved
-        const returnUrl = localStorage.getItem('auth_return_url');
-        localStorage.removeItem('auth_return_url'); // Clear it
+        // Check if there's a return URL saved in sessionStorage
+        const returnUrl = sessionStorage.getItem('auth_redirect');
+        sessionStorage.removeItem('auth_redirect'); // Clear it
 
         // Redirect to return URL or home page
         navigate(returnUrl || '/', { replace: true });

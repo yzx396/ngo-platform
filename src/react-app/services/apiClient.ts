@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 /**
  * API Client Configuration
  * Handles all HTTP requests with:
- * - JWT Bearer token authentication
+ * - HTTP-only cookie authentication
  * - Retry logic with exponential backoff
  * - Error handling and logging
  */
@@ -38,13 +38,6 @@ function isRetryableError(error: unknown): boolean {
 }
 
 /**
- * Get JWT token from localStorage
- */
-function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
-}
-
-/**
  * Main API fetch function with retry logic
  * @param url - API endpoint URL
  * @param options - Fetch options including custom retries count
@@ -62,15 +55,10 @@ export async function apiFetch<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // Inject JWT token for authentication
-  const token = getAuthToken();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
   const finalOptions: RequestInit = {
     ...fetchOptions,
     headers,
+    credentials: 'include', // Send cookies with request
   };
 
   let lastError: Error | null = null;
@@ -209,17 +197,12 @@ export async function apiUpload<T>(
   // Create headers without Content-Type - browser will set it with boundary
   const headers = new Headers(fetchOptions.headers || {});
 
-  // Inject JWT token for authentication
-  const token = getAuthToken();
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
   const finalOptions: RequestInit = {
     ...fetchOptions,
     method: 'POST',
     headers,
     body: formData,
+    credentials: 'include', // Send cookies with request
   };
 
   let lastError: Error | null = null;

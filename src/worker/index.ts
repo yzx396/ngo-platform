@@ -2089,9 +2089,15 @@ app.get("/api/v1/auth/google/callback", async (c) => {
     authPayload.role = userRole;
     const token = await createToken(authPayload, jwtSecret);
 
-    // Return token and user info
+    // Set auth token as HTTP-only cookie
+    let cookieValue = `auth_token=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`;
+    if (isHttps) {
+      cookieValue += "; Secure";
+    }
+    c.header("Set-Cookie", cookieValue, { append: true });
+
+    // Return user info (token is in cookie now)
     return c.json({
-      token,
       user: {
         id: user.id,
         email: user.email,
@@ -2155,10 +2161,18 @@ app.get("/api/v1/auth/me", async (c) => {
 });
 
 /**
- * POST /api/v1/auth/logout - Logout (token invalidation on frontend)
- * Note: JWT tokens are stateless, so logout is handled by frontend token removal
+ * POST /api/v1/auth/logout - Clear auth cookie and logout
+ * Clears the auth_token cookie by setting Max-Age=0
  */
 app.post("/api/v1/auth/logout", (c) => {
+  const requestUrl = new URL(c.req.url);
+  const isHttps = requestUrl.protocol === "https:";
+  let clearCookieValue = "auth_token=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0";
+  if (isHttps) {
+    clearCookieValue += "; Secure";
+  }
+  c.header("Set-Cookie", clearCookieValue, { append: true });
+
   return c.json({ success: true, message: "Logged out successfully" });
 });
 

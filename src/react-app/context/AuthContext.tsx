@@ -4,11 +4,10 @@ import type { User } from '../../types/user';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   getUser: () => Promise<User | null>;
 }
 
@@ -20,53 +19,44 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token from localStorage on mount
+  // Restore session from cookie on mount
   useEffect(() => {
     const abortController = new AbortController();
     let isMounted = true;
 
-    const loadToken = async () => {
-      const storedToken = localStorage.getItem('auth_token');
-      if (storedToken) {
-        setToken(storedToken);
-        // Optionally fetch user info
-        try {
-          const response = await fetch('/api/v1/auth/me', {
-            headers: {
-              Authorization: `Bearer ${storedToken}`,
-            },
-            signal: abortController.signal,
-          });
+    const restoreSession = async () => {
+      try {
+        const response = await fetch('/api/v1/auth/me', {
+          credentials: 'include', // Send cookies with request
+          signal: abortController.signal,
+        });
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch user');
-          }
-
+        if (response.ok) {
           const userData = await response.json();
           if (isMounted) {
             setUser(userData);
           }
-        } catch (error) {
-          if (isMounted && error instanceof Error && error.name !== 'AbortError') {
-            console.error('Failed to fetch user:', error);
-            // Clear invalid token
-            localStorage.removeItem('auth_token');
-            setToken(null);
-          }
-        } finally {
+        } else {
+          // No valid cookie or session expired
           if (isMounted) {
-            setIsLoading(false);
+            setUser(null);
           }
         }
-      } else {
-        setIsLoading(false);
+      } catch (error) {
+        if (isMounted && error instanceof Error && error.name !== 'AbortError') {
+          console.error('Failed to restore session:', error);
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    loadToken();
+    restoreSession();
 
     return () => {
       isMounted = false;
@@ -75,39 +65,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
-   * Login with token and user data
+   * Login with user data (token is in HTTP-only cookie)
    */
-  const login = (authToken: string, userData: User) => {
-    setToken(authToken);
+  const login = (userData: User) => {
     setUser(userData);
-    localStorage.setItem('auth_token', authToken);
   };
 
   /**
-   * Logout and clear auth state
+   * Logout and clear server-side cookie
    */
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('auth_token');
+  const logout = async () => {
+    try {
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   /**
    * Get current user info
    */
   const getUser = async (): Promise<User | null> => {
-    if (!token) return null;
-
     try {
       const response = await fetch('/api/v1/auth/me', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: 'include', // Send cookies with request
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          logout();
+          setUser(null);
         }
         return null;
       }
@@ -123,8 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextType = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,

@@ -19,6 +19,7 @@ describe('OAuthCallbackPage', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     vi.clearAllMocks();
     vi.mocked(useNavigate).mockReturnValue(mockNavigate);
     global.fetch = mockFetch as unknown as typeof fetch;
@@ -29,11 +30,10 @@ describe('OAuthCallbackPage', () => {
   });
 
   it('should extract authorization code from URL and send it to backend', async () => {
-    // Mock successful OAuth callback response
+    // Mock successful OAuth callback response (no token in response)
     mockFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          token: 'jwt-token-123',
           user: {
             id: 'user-456',
             email: 'user@example.com',
@@ -85,8 +85,9 @@ describe('OAuthCallbackPage', () => {
       expect(screen.getByText(/missing authorization code/i)).toBeInTheDocument();
     });
 
-    // Should not call fetch if code is missing
-    expect(mockFetch).not.toHaveBeenCalled();
+    // Should not call fetch for OAuth callback (but may call /auth/me for session check)
+    const oauthCalls = mockFetch.mock.calls.filter(([url]) => url.includes('/auth/google/callback'));
+    expect(oauthCalls).toHaveLength(0);
   });
 
   it('should handle OAuth error from Google', async () => {
@@ -107,8 +108,9 @@ describe('OAuthCallbackPage', () => {
       expect(screen.getByText(/oauth error/i)).toBeInTheDocument();
     });
 
-    // Should not call fetch if OAuth error is present
-    expect(mockFetch).not.toHaveBeenCalled();
+    // Should not call fetch for OAuth callback if OAuth error is present (but may call /auth/me for session check)
+    const oauthCalls = mockFetch.mock.calls.filter(([url]) => url.includes('/auth/google/callback'));
+    expect(oauthCalls).toHaveLength(0);
   });
 
   it('should handle backend authentication failure', async () => {
@@ -139,11 +141,10 @@ describe('OAuthCallbackPage', () => {
   });
 
   it('should redirect to home page after successful login', async () => {
-    // Mock successful OAuth callback response
+    // Mock successful OAuth callback response (no token, just user)
     mockFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
-          token: 'jwt-token-456',
           user: {
             id: 'user-789',
             email: 'success@example.com',
@@ -171,8 +172,8 @@ describe('OAuthCallbackPage', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 
-    // Verify token was stored
-    expect(localStorage.getItem('auth_token')).toBe('jwt-token-456');
+    // Verify no token in localStorage (token is in HTTP-only cookie)
+    expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
   it('should properly encode authorization code with special characters', async () => {
