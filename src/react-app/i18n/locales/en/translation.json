@@ -620,6 +620,11 @@
     "addComment": "Add a comment...",
     "noComments": "No comments yet. Be the first to comment!",
     "submitting": "Submitting...",
-    "submit": "Submit Comment"
+    "submit": "Submit Comment",
+    "membersOnly": "Members only",
+    "membersOnlyShort": "Members only (requires sign-in to view)",
+    "membersOnlyContent": "Members-Only Content",
+    "membersOnlyPreview": "Non-members will see a preview and be prompted to sign in to read the full content.",
+    "signInToRead": "Sign in to read the full content"
   }
 }

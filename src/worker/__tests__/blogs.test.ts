@@ -409,6 +409,7 @@ describe('Blog Type Utilities', () => {
         title: 'Test Blog',
         content: 'Blog content here',
         featured: false,
+        requires_auth: false,
         likes_count: 5,
         comments_count: 3,
         created_at: 1234567890,

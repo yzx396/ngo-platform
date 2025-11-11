@@ -619,6 +619,11 @@
     "addComment": "添加评论...",
     "noComments": "还没有评论。成为第一个评论者！",
     "submitting": "提交中...",
-    "submit": "提交评论"
+    "submit": "提交评论",
+    "membersOnly": "仅限会员",
+    "membersOnlyShort": "仅限会员（需要登录查看）",
+    "membersOnlyContent": "会员专属内容",
+    "membersOnlyPreview": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
+    "signInToRead": "登录以阅读全部内容"
   }
 }
