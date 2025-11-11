@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isWeChatBrowser } from '../utils/wechatDetection';
+import { WeChatLoginWarning } from '../components/WeChatLoginWarning';
 import '../styles/LoginPage.css';
 
 export function LoginPage() {
@@ -8,6 +10,13 @@ export function LoginPage() {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Detect if user is in WeChat browser
+  const [inWeChat, setInWeChat] = useState(false);
+
+  useEffect(() => {
+    setInWeChat(isWeChatBrowser());
+  }, []);
 
   // Save the return URL when landing on login page
   useEffect(() => {
@@ -52,6 +61,16 @@ export function LoginPage() {
     }
   };
 
+  // Show WeChat warning for WeChat users
+  if (inWeChat) {
+    return (
+      <div className="login-container">
+        <WeChatLoginWarning />
+      </div>
+    );
+  }
+
+  // Show normal login for all other browsers
   return (
     <div className="login-container">
       <div className="login-card">

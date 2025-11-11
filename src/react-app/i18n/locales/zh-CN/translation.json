@@ -138,7 +138,11 @@
     "signingInTitle": "登录中...",
     "signingInMessage": "请稍候，我们正在验证您的账户。",
     "authenticationFailed": "身份验证失败",
-    "backToLogin": "返回登录"
+    "backToLogin": "返回登录",
+    "wechatLoginWarning": "检测到微信浏览器",
+    "wechatLoginMessage1": "您正在使用微信内置浏览器，该浏览器不支持 Google 登录。",
+    "wechatLoginMessage2": "请点击右上角「...」菜单，然后选择「在浏览器中打开」。",
+    "wechatLoginTip": "在 Safari 或 Chrome 中打开后，您就可以使用 Google 账户登录了。"
   },
   "mentor": {
     "findYourMentor": "找到您的导师",
