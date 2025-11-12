@@ -7,6 +7,8 @@ import { PostType } from '../../types/post';
 import { createPost } from '../services/postService';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
+import { RichTextEditor } from './RichTextEditor';
+import { getTextLengthFromHtml, isHtmlEmpty } from '../utils/htmlUtils';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void; // Callback when post is successfully created
@@ -54,12 +56,13 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
     setError(null);
 
     // Validation
-    if (!content.trim()) {
+    if (isHtmlEmpty(content)) {
       setError(t('posts.validationRequired'));
       return;
     }
 
-    if (content.length > MAX_CONTENT_LENGTH) {
+    const textLength = getTextLengthFromHtml(content);
+    if (textLength > MAX_CONTENT_LENGTH) {
       setError(t('posts.validationTooLong'));
       return;
     }
@@ -72,7 +75,7 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
 
     try {
       setLoading(true);
-      await createPost(content.trim(), postType);
+      await createPost(content, postType);
 
       // Success - show base success toast
       toast.success(t('posts.createSuccess'));
@@ -113,27 +116,25 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Content Textarea */}
+          {/* Content Rich Text Editor */}
           <div className="space-y-2">
             <label htmlFor="post-content" className="text-sm font-medium">
               {t('posts.contentLabel')}
             </label>
-            <textarea
-              id="post-content"
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
               placeholder={t('posts.contentPlaceholder')}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              maxLength={MAX_CONTENT_LENGTH}
               disabled={loading}
-              className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              minHeight="150px"
             />
 
             {/* Character counter */}
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {t('posts.charLimit', { current: content.length })}
+                {t('posts.charLimit', { current: getTextLengthFromHtml(content) })}
               </p>
-              {content.length > MAX_CONTENT_LENGTH * 0.9 && (
+              {getTextLengthFromHtml(content) > MAX_CONTENT_LENGTH * 0.9 && (
                 <p className="text-xs text-orange-500">
                   {t('posts.validationTooLong')}
                 </p>
@@ -178,7 +179,7 @@ export function CreatePostForm({ onPostCreated, onCancel }: CreatePostFormProps)
           <div className="flex gap-2">
             <Button
               type="submit"
-              disabled={loading || !content.trim()}
+              disabled={loading || isHtmlEmpty(content)}
               className="flex-1"
             >
               {loading ? t('common.loading') : t('posts.create')}

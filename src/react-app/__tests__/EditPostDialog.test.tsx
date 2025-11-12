@@ -24,6 +24,25 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock RichTextEditor component
+vi.mock('../components/RichTextEditor', () => ({
+  RichTextEditor: ({ content, onChange, placeholder, disabled }: {
+    content: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    disabled?: boolean;
+  }) => (
+    <textarea
+      data-testid="rich-text-editor"
+      aria-label="Post Content"
+      value={content}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  ),
+}));
+
 describe('EditPostDialog Component', () => {
   const mockPost = {
     id: 'post-1',

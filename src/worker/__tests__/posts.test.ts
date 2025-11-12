@@ -779,6 +779,72 @@ describe('Posts System', () => {
       expect(data.error).toContain('post type');
     });
 
+    it('should return 400 when content contains script tags', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: '<script>alert("xss")</script>Hello',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('Invalid content');
+    });
+
+    it('should return 400 when content contains javascript protocol', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: '<a href="javascript:alert(1)">Click me</a>',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('Invalid content');
+    });
+
+    it('should accept HTML formatted content', async () => {
+      const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string);
+
+      const req = new Request('http://localhost/api/v1/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: '<p>This is <strong>bold</strong> text with a <a href="https://example.com">link</a></p>',
+          post_type: 'general',
+        }),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+
+      expect(res.status).toBe(201);
+      const data = await res.json();
+      expect(data.content).toContain('<strong>bold</strong>');
+    });
+
     it('should return 403 when non-admin tries to create announcement', async () => {
       const token = await createTestToken(testUser.id as string, testUser.email as string, testUser.name as string, 'member');
 

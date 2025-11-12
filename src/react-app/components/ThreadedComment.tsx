@@ -8,6 +8,7 @@ import { handleApiError } from '../services/apiClient';
 import { formatPostTime } from '../../types/post';
 import type { PostCommentWithReplies } from '../../types/post';
 import { CommentForm } from './CommentForm';
+import { sanitizeHtml } from '../utils/blogUtils';
 
 interface ThreadedCommentProps {
   comment: PostCommentWithReplies;
@@ -124,13 +125,16 @@ export function ThreadedComment({
             </div>
 
             {/* Comment Content */}
-            <p
-              className={`text-sm whitespace-pre-wrap break-words ${
-                isDeleted ? 'text-muted-foreground italic' : 'text-foreground'
-              }`}
-            >
-              {comment.content}
-            </p>
+            {isDeleted ? (
+              <p className="text-sm text-muted-foreground italic whitespace-pre-wrap break-words">
+                {comment.content}
+              </p>
+            ) : (
+              <div
+                className="text-sm text-foreground prose prose-sm max-w-none break-words"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.content) }}
+              />
+            )}
 
             {/* Reply button */}
             {canReply && (

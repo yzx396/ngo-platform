@@ -34,6 +34,24 @@ vi.mock('lucide-react', () => ({
   X: () => <div>X Icon</div>,
 }));
 
+// Mock RichTextEditor component
+vi.mock('../RichTextEditor', () => ({
+  RichTextEditor: ({ content, onChange, placeholder, disabled }: {
+    content: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    disabled?: boolean;
+  }) => (
+    <textarea
+      data-testid="rich-text-editor"
+      value={content}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  ),
+}));
+
 describe('BlogThreadedComment', () => {
   const mockComment: BlogCommentWithReplies = {
     id: 'comment-1',

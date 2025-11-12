@@ -2348,6 +2348,11 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
       return c.json({ error: "Post content must not exceed 2000 characters" }, 400);
     }
 
+    // Security: Check for dangerous HTML
+    if (content.includes('<script') || content.includes('</script>') || content.includes('javascript:')) {
+      return c.json({ error: "Invalid content" }, 400);
+    }
+
     // Validation: Check post type is valid
     if (!["announcement", "discussion", "general"].includes(post_type)) {
       return c.json({ error: "Invalid post type" }, 400);
@@ -2475,6 +2480,11 @@ app.put("/api/v1/posts/:id", requireAuth, async (c) => {
           { error: "Post content must not exceed 2000 characters" },
           400
         );
+      }
+
+      // Security: Check for dangerous HTML
+      if (content.includes('<script') || content.includes('</script>') || content.includes('javascript:')) {
+        return c.json({ error: "Invalid content" }, 400);
       }
     }
 
@@ -2808,6 +2818,11 @@ app.post("/api/v1/posts/:id/comments", requireAuth, async (c) => {
         { error: `Comment content must be ${MAX_COMMENT_LENGTH} characters or less` },
         400
       );
+    }
+
+    // Security: Check for dangerous HTML
+    if (body.content.includes('<script') || body.content.includes('</script>') || body.content.includes('javascript:')) {
+      return c.json({ error: "Invalid content" }, 400);
     }
 
     // Check if post exists
@@ -3549,6 +3564,11 @@ app.post("/api/v1/blogs/:id/comments", requireAuth, async (c) => {
     // Validation
     if (!body.content || body.content.trim() === "") {
       return c.json({ error: "Comment content is required" }, 400);
+    }
+
+    // Security: Check for dangerous HTML
+    if (body.content.includes('<script') || body.content.includes('</script>') || body.content.includes('javascript:')) {
+      return c.json({ error: "Invalid content" }, 400);
     }
 
     // Check if blog exists

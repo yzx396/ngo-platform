@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
 import { createComment } from '../services/postService';
 import { createBlogComment } from '../services/blogService';
 import { handleApiError } from '../services/apiClient';
 import { toast } from 'sonner';
+import { RichTextEditor } from './RichTextEditor';
+import { getTextLengthFromHtml, isHtmlEmpty } from '../utils/htmlUtils';
 
 interface CommentFormProps {
   postId?: string;
@@ -43,7 +44,8 @@ export function CommentForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isValid = content.trim().length > 0 && content.length <= MAX_COMMENT_LENGTH;
+  const textLength = getTextLengthFromHtml(content);
+  const isValid = !isHtmlEmpty(content) && textLength <= MAX_COMMENT_LENGTH;
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -60,9 +62,9 @@ export function CommentForm({
         setError(null);
 
         if (postId) {
-          await createComment(postId, content.trim(), parentCommentId);
+          await createComment(postId, content, parentCommentId);
         } else if (blogId) {
-          await createBlogComment(blogId, content.trim(), parentCommentId);
+          await createBlogComment(blogId, content, parentCommentId);
         }
 
         // Clear form on success
@@ -73,7 +75,7 @@ export function CommentForm({
         toast.success(t('points.notifications.commentCreated', { points: COMMENT_POINTS.toString() }));
 
         // Notify parent component
-        onCommentCreated?.(content.trim());
+        onCommentCreated?.(content);
       } catch (err) {
         const errorMsg = t('comments.error', 'Failed to create comment. Please try again.');
         setError(errorMsg);
@@ -88,22 +90,22 @@ export function CommentForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       <div className="space-y-1">
-        <Textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+        <RichTextEditor
+          content={content}
+          onChange={setContent}
           placeholder={placeholder || t('posts.addComment', 'Add a comment...')}
-          className={isReply ? 'min-h-20 resize-none' : 'min-h-24 resize-none'}
+          minHeight={isReply ? '100px' : '120px'}
           disabled={isSubmitting}
         />
         <div className="flex justify-between items-center text-xs text-muted-foreground">
           <span>
             {t('posts.charLimit', {
               defaultValue: '{{current}}/{{max}} characters',
-              current: content.length,
+              current: textLength,
               max: MAX_COMMENT_LENGTH,
             })}
           </span>
-          {content.length > MAX_COMMENT_LENGTH && (
+          {textLength > MAX_COMMENT_LENGTH && (
             <span className="text-red-500">
               {t('posts.charLimitExceeded', 'Character limit exceeded')}
             </span>

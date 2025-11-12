@@ -11,6 +11,7 @@ import { handleApiError } from '../services/apiClient';
 import { PostComments } from './PostComments';
 import { CommentForm } from './CommentForm';
 import type { Post, PostType } from '../../types/post';
+import { sanitizeHtml } from '../utils/blogUtils';
 
 interface PostCardProps {
   post: Post & { author_name?: string; user_has_liked?: boolean };
@@ -205,9 +206,10 @@ function PostCardComponent({
       {/* Content Section */}
       <CardContent className="flex-1 pb-3">
         {/* Post Content */}
-        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-          {post.content}
-        </p>
+        <div
+          className="text-sm text-foreground prose prose-sm max-w-none break-words"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
+        />
       </CardContent>
 
       {/* Footer: Engagement Actions and Counts */}

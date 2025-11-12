@@ -3,6 +3,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { PostCard } from '../components/PostCard';
 import type { Post } from '../../types/post';
 
+// Mock sanitizeHtml to return the input as-is for testing
+vi.mock('../utils/blogUtils', () => ({
+  sanitizeHtml: (html: string) => html,
+}));
+
 // Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -187,13 +192,15 @@ describe('PostCard Component', () => {
   });
 
   describe('Content Handling', () => {
-    it('should preserve line breaks in content', () => {
-      const multilinePost: typeof mockPost = {
+    it('should render HTML content', () => {
+      const htmlPost: typeof mockPost = {
         ...mockPost,
-        content: 'Line 1\nLine 2\nLine 3',
+        content: '<p>This is <strong>bold</strong> text</p>',
       };
-      render(<PostCard post={multilinePost} />);
-      expect(screen.getByText(/Line 1/)).toBeInTheDocument();
+      render(<PostCard post={htmlPost} />);
+      // The content should be rendered as HTML
+      expect(screen.getByText(/This is/)).toBeInTheDocument();
+      expect(screen.getByText(/bold/)).toBeInTheDocument();
     });
 
     it('should handle long content', () => {

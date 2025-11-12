@@ -14,6 +14,8 @@ import { updatePost, deletePost } from '../services/postService';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
 import type { Post } from '../../types/post';
+import { RichTextEditor } from './RichTextEditor';
+import { getTextLengthFromHtml, isHtmlEmpty } from '../utils/htmlUtils';
 
 interface EditPostDialogProps {
   post: Post | null;
@@ -63,12 +65,13 @@ export function EditPostDialog({
     setError(null);
 
     // Validation
-    if (!content.trim()) {
+    if (isHtmlEmpty(content)) {
       setError(t('posts.validationRequired'));
       return;
     }
 
-    if (content.length > MAX_CONTENT_LENGTH) {
+    const textLength = getTextLengthFromHtml(content);
+    if (textLength > MAX_CONTENT_LENGTH) {
       setError(t('posts.validationTooLong'));
       return;
     }
@@ -84,8 +87,8 @@ export function EditPostDialog({
 
       // Only send changed fields
       const updates: Record<string, unknown> = {};
-      if (content.trim() !== post.content) {
-        updates.content = content.trim();
+      if (content !== post.content) {
+        updates.content = content;
       }
       if (postType !== post.post_type) {
         updates.post_type = postType;
@@ -144,25 +147,23 @@ export function EditPostDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Content Textarea */}
+          {/* Content Rich Text Editor */}
           <div className="space-y-2">
             <label htmlFor="edit-post-content" className="text-sm font-medium">
               {t('posts.contentLabel')}
             </label>
-            <textarea
-              id="edit-post-content"
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
               placeholder={t('posts.contentPlaceholder')}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              maxLength={MAX_CONTENT_LENGTH}
               disabled={loading || deleting}
-              className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              minHeight="150px"
             />
 
             {/* Character counter */}
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {t('posts.charLimit', { current: content.length })}
+                {t('posts.charLimit', { current: getTextLengthFromHtml(content) })}
               </p>
             </div>
           </div>
@@ -204,7 +205,7 @@ export function EditPostDialog({
           <div className="flex gap-2">
             <Button
               onClick={handleSave}
-              disabled={loading || deleting || !content.trim()}
+              disabled={loading || deleting || isHtmlEmpty(content)}
               className="flex-1"
             >
               {loading ? t('common.loading') : t('common.save')}
