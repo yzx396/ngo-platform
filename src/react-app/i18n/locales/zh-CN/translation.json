@@ -462,7 +462,15 @@
     "filterAll": "所有帖子",
     "filterAnnouncements": "公告",
     "filterDiscussions": "讨论",
-    "filterGeneral": "一般"
+    "filterGeneral": "一般",
+    "readMore": "阅读更多",
+    "backToFeed": "返回动态",
+    "postDetails": "帖子详情",
+    "showComments": "显示评论",
+    "hideComments": "隐藏评论",
+    "postNotFound": "帖子未找到",
+    "loadPostError": "加载帖子失败",
+    "viewPost": "查看帖子"
   },
   "postType": {
     "announcement": "公告",

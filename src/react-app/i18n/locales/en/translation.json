@@ -462,7 +462,15 @@
     "filterAll": "All Posts",
     "filterAnnouncements": "Announcements",
     "filterDiscussions": "Discussions",
-    "filterGeneral": "General"
+    "filterGeneral": "General",
+    "readMore": "Read more",
+    "backToFeed": "Back to Feed",
+    "postDetails": "Post Details",
+    "showComments": "Show Comments",
+    "hideComments": "Hide Comments",
+    "postNotFound": "Post not found",
+    "loadPostError": "Failed to load post",
+    "viewPost": "View Post"
   },
   "postType": {
     "announcement": "Announcement",

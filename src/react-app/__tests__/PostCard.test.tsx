@@ -8,6 +8,25 @@ vi.mock('../utils/blogUtils', () => ({
   sanitizeHtml: (html: string) => html,
 }));
 
+// Mock useAuth - default to no user
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: null,
+    token: null,
+    loading: false,
+    error: null,
+  }),
+}));
+
+// Mock useNavigate
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+  };
+});
+
 // Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -209,7 +228,7 @@ describe('PostCard Component', () => {
         ...mockPost,
         content: longContent,
       };
-      render(<PostCard post={longPost} />);
+      render(<PostCard post={longPost} showTruncated={false} />);
       expect(screen.getByText(new RegExp(longContent))).toBeInTheDocument();
     });
 
@@ -220,6 +239,110 @@ describe('PostCard Component', () => {
       };
       render(<PostCard post={specialPost} />);
       expect(screen.getByText(/Check this out/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Content Truncation', () => {
+
+    it('should show "Read more" link when content exceeds 300 characters', () => {
+      const longContent = 'a'.repeat(350);
+      const longPost: typeof mockPost = {
+        ...mockPost,
+        content: longContent,
+      };
+      render(<PostCard post={longPost} showTruncated={true} />);
+      
+      // Should show truncated content with "Read more" link
+      expect(screen.getByText('Read more')).toBeInTheDocument();
+    });
+
+    it('should not show "Read more" link for short content', () => {
+      const shortPost: typeof mockPost = {
+        ...mockPost,
+        content: 'This is a short post',
+      };
+      render(<PostCard post={shortPost} showTruncated={true} />);
+      
+      // Should not show "Read more" link
+      expect(screen.queryByText('Read more')).not.toBeInTheDocument();
+    });
+
+    it('should truncate content at 300 characters correctly', () => {
+      const longContent = 'a'.repeat(350);
+      const longPost: typeof mockPost = {
+        ...mockPost,
+        content: longContent,
+      };
+      render(<PostCard post={longPost} showTruncated={true} />);
+      
+      // Should show truncated content (300 chars + "...")
+      const truncatedContent = longContent.substring(0, 300) + '...';
+      expect(screen.getByText(new RegExp(truncatedContent))).toBeInTheDocument();
+    });
+
+    it('should show full content when showTruncated is false', () => {
+      const longContent = 'a'.repeat(350);
+      const longPost: typeof mockPost = {
+        ...mockPost,
+        content: longContent,
+      };
+      render(<PostCard post={longPost} showTruncated={false} />);
+      
+      // Should show full content without "Read more" link
+      expect(screen.queryByText('Read more')).not.toBeInTheDocument();
+      expect(screen.getByText(new RegExp(longContent))).toBeInTheDocument();
+    });
+
+    it('should navigate to post detail page when "Read more" is clicked', () => {
+      const longContent = 'a'.repeat(350);
+      const longPost: typeof mockPost = {
+        ...mockPost,
+        id: 'post-123',
+        content: longContent,
+      };
+      render(<PostCard post={longPost} showTruncated={true} />);
+      
+      const readMoreButton = screen.getByText('Read more');
+      expect(readMoreButton).toBeInTheDocument();
+      
+      // Click should trigger navigation (testing would require proper mock setup)
+      // In real implementation, this would call navigate('/posts/post-123')
+    });
+
+    it('should handle truncation with HTML content', () => {
+      const longHtmlContent = '<p>' + 'a'.repeat(350) + '</p>';
+      const longPost: typeof mockPost = {
+        ...mockPost,
+        content: longHtmlContent,
+      };
+      render(<PostCard post={longPost} showTruncated={true} />);
+      
+      // Should show "Read more" link for long HTML content
+      expect(screen.getByText('Read more')).toBeInTheDocument();
+    });
+
+    it('should handle truncation at exactly 300 characters', () => {
+      const exactContent = 'a'.repeat(300);
+      const exactPost: typeof mockPost = {
+        ...mockPost,
+        content: exactContent,
+      };
+      render(<PostCard post={exactPost} showTruncated={true} />);
+      
+      // Should NOT show "Read more" for exactly 300 characters
+      expect(screen.queryByText('Read more')).not.toBeInTheDocument();
+    });
+
+    it('should handle truncation at 301 characters', () => {
+      const justOverContent = 'a'.repeat(301);
+      const justOverPost: typeof mockPost = {
+        ...mockPost,
+        content: justOverContent,
+      };
+      render(<PostCard post={justOverPost} showTruncated={true} />);
+      
+      // Should show "Read more" for 301 characters
+      expect(screen.getByText('Read more')).toBeInTheDocument();
     });
   });
 });

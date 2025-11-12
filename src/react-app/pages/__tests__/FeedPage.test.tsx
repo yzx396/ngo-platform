@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { FeedPage } from '../FeedPage';
 import type { Post } from '../../../types/post';
 
@@ -64,6 +65,15 @@ import { getPosts } from '../../services/postService';
 
 const mockGetPosts = getPosts as ReturnType<typeof vi.fn>;
 
+// Helper to render FeedPage with Router
+const renderFeedPage = () => {
+  return render(
+    <MemoryRouter>
+      <FeedPage />
+    </MemoryRouter>
+  );
+};
+
 describe('FeedPage - Points Banner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -87,7 +97,7 @@ describe('FeedPage - Points Banner', () => {
   });
 
   it('should render Community Feed title', async () => {
-    render(<FeedPage />);
+    renderFeedPage();
 
     await waitFor(() => {
       expect(screen.getByText('Community Feed')).toBeInTheDocument();
@@ -95,7 +105,7 @@ describe('FeedPage - Points Banner', () => {
   });
 
   it('should render Create Post button for authenticated users', async () => {
-    render(<FeedPage />);
+    renderFeedPage();
 
     await waitFor(() => {
       expect(screen.getByText('Create Post')).toBeInTheDocument();
@@ -106,7 +116,7 @@ describe('FeedPage - Points Banner', () => {
     // Set cookie to indicate banner was dismissed
     document.cookie = 'pointsBannerDismissed=true; path=/';
 
-    render(<FeedPage />);
+    renderFeedPage();
 
     await waitFor(() => {
       // Banner should not be visible

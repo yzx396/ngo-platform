@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { FeedPage } from '../pages/FeedPage';
 import * as postService from '../services/postService';
 import type { Post } from '../../types/post';
@@ -81,12 +82,14 @@ const mockPosts: (Post & { author_name?: string })[] = [
   },
 ];
 
-// Helper function to render FeedPage with AuthProvider
+// Helper function to render FeedPage with AuthProvider and Router
 function renderFeedPage() {
   return render(
-    <AuthProvider>
-      <FeedPage />
-    </AuthProvider>
+    <MemoryRouter>
+      <AuthProvider>
+        <FeedPage />
+      </AuthProvider>
+    </MemoryRouter>
   );
 }
 

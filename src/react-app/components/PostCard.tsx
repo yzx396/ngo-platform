@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Badge } from './ui/badge';
@@ -18,6 +19,7 @@ interface PostCardProps {
   onEdit?: (post: Post) => void;
   onDelete?: (postId: string) => void;
   onLikesChange?: (postId: string, newLikesCount: number) => void;
+  showTruncated?: boolean; // Whether to truncate long content
 }
 
 /**
@@ -38,9 +40,11 @@ function PostCardComponent({
   onEdit,
   onDelete,
   onLikesChange,
+  showTruncated = true,
 }: PostCardProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
@@ -206,10 +210,30 @@ function PostCardComponent({
       {/* Content Section */}
       <CardContent className="flex-1 pb-3">
         {/* Post Content */}
-        <div
-          className="text-sm text-foreground prose prose-sm max-w-none break-words"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
-        />
+        {(() => {
+          const TRUNCATE_LENGTH = 300;
+          const shouldTruncate = showTruncated && post.content.length > TRUNCATE_LENGTH;
+          const displayContent = shouldTruncate
+            ? post.content.substring(0, TRUNCATE_LENGTH) + '...'
+            : post.content;
+
+          return (
+            <div className="space-y-2">
+              <div
+                className="text-sm text-foreground prose prose-sm max-w-none break-words"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }}
+              />
+              {shouldTruncate && (
+                <button
+                  onClick={() => navigate(`/posts/${post.id}`)}
+                  className="text-primary hover:underline text-sm font-medium inline-flex items-center"
+                >
+                  {t('posts.readMore', 'Read more')}
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </CardContent>
 
       {/* Footer: Engagement Actions and Counts */}
