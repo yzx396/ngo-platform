@@ -10,25 +10,9 @@ import { getPosts, deletePost } from '../services/postService';
 import type { Post, PostType } from '../../types/post';
 import { ApiError } from '../services/apiClient';
 import { toast } from 'sonner';
-import { X, Lightbulb } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 const POSTS_PER_PAGE = 20;
-
-// Cookie utility functions
-const getCookie = (name: string): string | null => {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-};
-
-const setCookie = (name: string, value: string, days: number = 365) => {
-  const expires = new Date();
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
-};
 
 /**
  * FeedPage Component
@@ -49,11 +33,6 @@ export function FeedPage() {
   const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
   const [refetchTrigger, setRefetchTrigger] = useState(0);
   const [pointsInfoDialogOpen, setPointsInfoDialogOpen] = useState(false);
-  const [showPointsBanner, setShowPointsBanner] = useState(() => {
-    // Check cookie to see if user has dismissed the banner
-    const dismissed = getCookie('pointsBannerDismissed');
-    return !dismissed;
-  });
 
   // Fetch posts when offset, filter, or refetch trigger changes
   useEffect(() => {
@@ -221,50 +200,30 @@ export function FeedPage() {
     );
   }
 
-  // Handle banner dismissal
-  const handleDismissBanner = () => {
-    setShowPointsBanner(false);
-    setCookie('pointsBannerDismissed', 'true', 365); // Persist for 1 year
-  };
 
   // Render feed
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
-        <p className="text-muted-foreground">
-          {t('posts.subtitle', 'See what the community is sharing')}
-        </p>
-      </div>
-
-      {/* Points Info Banner */}
-      {showPointsBanner && user && (
-        <div className="flex items-start gap-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <Lightbulb className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-              {t('points.earnPoints', 'Earn Points')}
-            </p>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              {t('posts.description', 'Create posts and comments to earn points and climb the leaderboard!')}{' '}
-              <button
-                onClick={() => setPointsInfoDialogOpen(true)}
-                className="font-semibold underline hover:no-underline cursor-pointer"
-              >
-                {t('points.howToEarn', 'Learn how')}
-              </button>
-            </p>
-          </div>
-          <button
-            onClick={handleDismissBanner}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 flex-shrink-0"
-            aria-label="Dismiss"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 flex-1">
+          <h1 className="text-3xl font-bold">{t('posts.title', 'Community Feed')}</h1>
+          <p className="text-muted-foreground">
+            {t('posts.subtitle', 'See what the community is sharing')}
+          </p>
         </div>
-      )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPointsInfoDialogOpen(true)}
+          className="mt-1"
+          title={t('points.howToEarn', 'How to Earn Points')}
+          aria-label={t('points.howToEarn', 'How to Earn Points')}
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          {t('points.howToEarn', 'How to Earn Points')}
+        </Button>
+      </div>
 
       <FeedControls
         selectedType={selectedType}

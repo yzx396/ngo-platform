@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { FeedPage } from '../FeedPage';
 import type { Post } from '../../../types/post';
 
@@ -112,34 +113,33 @@ describe('FeedPage - Points Banner', () => {
     });
   });
 
-  it('should not render points banner if already dismissed', async () => {
-    // Set cookie to indicate banner was dismissed
-    document.cookie = 'pointsBannerDismissed=true; path=/';
-
+  it('should render How to Earn Points button', async () => {
     renderFeedPage();
-
+    
     await waitFor(() => {
-      // Banner should not be visible
-      expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
+      const button = screen.getByText('How to Earn Points');
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveAttribute('aria-label', 'How to Earn Points');
     });
   });
 
-  it('should have cookie integration for banner dismissal', () => {
-    // Test cookie behavior for banner dismissal
-    const key = 'pointsBannerDismissed';
-
-    // Clear cookie first to ensure clean state
-    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
-
-    // Cookie should not be set initially
-    expect(document.cookie).not.toContain(`${key}=true`);
-
-    // Set cookie (simulating banner dismissal)
-    document.cookie = `${key}=true; path=/`;
-    expect(document.cookie).toContain(`${key}=true`);
-
-    // Clear cookie
-    document.cookie = `${key}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
-    expect(document.cookie).not.toContain(`${key}=true`);
+  it('should open points dialog when How to Earn Points button is clicked', async () => {
+    const user = userEvent.setup();
+    renderFeedPage();
+    
+    await waitFor(() => {
+      expect(screen.getByText('How to Earn Points')).toBeInTheDocument();
+    });
+    
+    // Verify dialog is not open initially
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    
+    const button = screen.getByRole('button', { name: 'How to Earn Points' });
+    await user.click(button);
+    
+    // Dialog should be visible after click
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   });
 });
