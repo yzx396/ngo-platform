@@ -102,7 +102,7 @@ describe('MentorDetailPage', () => {
     expect(screen.getByText(/zelle/i)).toBeInTheDocument();
   });
 
-  it('should have Request Mentorship button', async () => {
+  it('should have Request button', async () => {
     vi.mocked(mentorService.getMentorProfile).mockResolvedValue(mockMentor);
 
     render(
@@ -119,7 +119,7 @@ describe('MentorDetailPage', () => {
       expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: /request mentorship/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^request$/i })).toBeInTheDocument();
   });
 
   it('should show loading state initially', () => {

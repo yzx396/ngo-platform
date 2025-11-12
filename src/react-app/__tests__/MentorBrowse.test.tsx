@@ -94,7 +94,7 @@ describe('MentorBrowse', () => {
     });
   });
 
-  it('should have Request Mentorship button', async () => {
+  it('should have Request button', async () => {
     render(
       <MemoryRouter>
         <AuthProvider>
@@ -104,7 +104,7 @@ describe('MentorBrowse', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /request mentorship/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^request$/i })).toBeInTheDocument();
     });
   });
 
@@ -147,7 +147,7 @@ describe('MentorBrowse', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/mentors/mentor-1');
     });
 
-    it('should proceed with mentorship request when clicking Request Mentorship', async () => {
+    it('should proceed with mentorship request when clicking Request', async () => {
       // Mock authenticated user (auth uses cookies, not localStorage)
       const mockUser: User = {
         id: 'user-1',
@@ -172,11 +172,11 @@ describe('MentorBrowse', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /request mentorship/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /^request$/i })).toBeInTheDocument();
       });
 
-      const requestMentorshipButton = screen.getByRole('button', { name: /request mentorship/i });
-      fireEvent.click(requestMentorshipButton);
+      const requestButton = screen.getByRole('button', { name: /^request$/i });
+      fireEvent.click(requestButton);
 
       // Should not redirect to login
       expect(mockNavigate).not.toHaveBeenCalledWith('/login', expect.any(Object));

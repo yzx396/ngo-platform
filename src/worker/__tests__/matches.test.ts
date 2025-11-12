@@ -37,11 +37,18 @@ describe('Match Management API', () => {
     // Create test users and mentor profile
     mentor = await createTestUser(mockEnv, 'mentor@example.com', 'Test Mentor');
     mentee = await createTestUser(mockEnv, 'mentee@example.com', 'Test Mentee');
-    mentorProfile = createMentorProfile('profile-1', mentor.id, 'TestMentor', 'Test mentor', 1, 1);
+    
+    // Add CV to mentee (CV is mandatory for match requests)
+    mentee.cv_url = 'https://example.com/cv.pdf';
+    mentee.cv_filename = 'mentee-cv.pdf';
+    mentee.cv_uploaded_at = Date.now();
+    mockDb._mockTables.users[mentee.id as string] = mentee;
+    
+    mentorProfile = createMentorProfile('profile-1', mentor.id as string, 'TestMentor', 'Test mentor', 1, 1);
 
     // Add mentor profile to mock database
     const profilesTable = mockDb._mockTables.mentor_profiles || {};
-    profilesTable[mentorProfile.id] = mentorProfile;
+    profilesTable[mentorProfile.id as string] = mentorProfile;
     mockDb._mockTables.mentor_profiles = profilesTable;
   });
 
@@ -206,6 +213,26 @@ describe('Match Management API', () => {
       const res = await app.fetch(req2, mockEnv);
       await expectConflict(res, undefined, 'duplicate');
     });
+
+    it('should return 400 when mentee has not uploaded CV', async () => {
+      // Create mentee without CV
+      const menteeWithoutCV = await createTestUser(mockEnv, 'mentee-no-cv@example.com', 'Mentee No CV');
+      const token = await createTestToken(menteeWithoutCV.id, menteeWithoutCV.email, menteeWithoutCV.name);
+      
+      const matchData = {
+        mentor_id: mentorProfile.user_id,
+        introduction: 'I want mentorship',
+        preferred_time: 'Anytime',
+      };
+
+      const req = createAuthenticatedRequest('http://localhost/api/v1/matches', token, {
+        method: 'POST',
+        body: matchData,
+      });
+
+      const res = await app.fetch(req, mockEnv);
+      await expectBadRequest(res, undefined, 'CV is required');
+    });
   });
 
   // ==========================================================================
@@ -277,6 +304,12 @@ describe('Match Management API', () => {
     it('should return empty list when no matches exist', async () => {
       // Create a new user with no matches
       const newUser = await createTestUser(mockEnv, 'newuser@example.com', 'New User');
+      // Add CV to new user (not needed for this test but keeping consistent)
+      newUser.cv_url = 'https://example.com/newuser-cv.pdf';
+      newUser.cv_filename = 'newuser-cv.pdf';
+      newUser.cv_uploaded_at = Date.now();
+      mockDb._mockTables.users[newUser.id as string] = newUser;
+      
       const newUserToken = await createTestToken(newUser.id, newUser.email, newUser.name);
 
       const req = new Request('http://localhost/api/v1/matches', {
@@ -475,6 +508,12 @@ describe('Match Management API', () => {
     it('should return 400 when match is not active', async () => {
       // Create a new mentee for this test (to avoid duplicate match)
       const newMentee = await createTestUser(mockEnv, 'newmentee@example.com', 'New Mentee');
+      // Add CV to new mentee (required for match creation)
+      newMentee.cv_url = 'https://example.com/newmentee-cv.pdf';
+      newMentee.cv_filename = 'newmentee-cv.pdf';
+      newMentee.cv_uploaded_at = Date.now();
+      mockDb._mockTables.users[newMentee.id as string] = newMentee;
+      
       const newMenteeToken = await createTestToken(newMentee.id, newMentee.email, newMentee.name);
 
       // Create a pending match with the new mentee

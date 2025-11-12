@@ -1707,10 +1707,20 @@ app.post("/api/v1/matches", requireAuth, async (c) => {
       return c.json({ error: "Duplicate match already exists" }, 409);
     }
 
+    // Validate that mentee has uploaded CV (CV is mandatory)
+    const menteeUser = await c.env.platform_db
+      .prepare("SELECT cv_url FROM users WHERE id = ?")
+      .bind(menteeId)
+      .first<{ cv_url: string | null }>();
+
+    if (!menteeUser?.cv_url) {
+      return c.json({ error: "CV is required to send mentorship request" }, 400);
+    }
+
     // Create match
     const matchId = generateId();
     const timestamp = getTimestamp();
-    const cvIncluded = body.cv_included ? 1 : 0;
+    const cvIncluded = 1; // Always 1 since CV is mandatory
 
     await c.env.platform_db
       .prepare(

@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
 import { createMatch } from '../services/matchService';
-import { getCVMetadata } from '../services/cvService';
+import { getCVMetadata, uploadCV } from '../services/cvService';
 import { useAuth } from '../context/AuthContext';
 import type { MentorProfile } from '../../types/mentor';
 
@@ -25,7 +25,6 @@ const mentorshipRequestSchema = z.object({
   preferred_time: z.string()
     .min(3, { message: 'Preferred time must be at least 3 characters' })
     .max(200, { message: 'Preferred time must not exceed 200 characters' }),
-  cv_included: z.boolean().optional(),
 });
 
 type MentorshipRequestFormData = z.infer<typeof mentorshipRequestSchema>;
@@ -40,6 +39,7 @@ interface RequestMentorshipDialogProps {
 /**
  * RequestMentorshipDialog component
  * Modal dialog for collecting mentee information when requesting mentorship
+ * CV upload is now mandatory before sending request
  */
 export function RequestMentorshipDialog({
   mentor,
@@ -52,6 +52,11 @@ export function RequestMentorshipDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasCv, setHasCv] = useState(false);
   const [isCheckingCV, setIsCheckingCV] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [isUploadingCV, setIsUploadingCV] = useState(false);
+  const [cvUploadError, setCvUploadError] = useState<string | null>(null);
+  const [useExistingCV, setUseExistingCV] = useState(false);
+  const [existingCVFilename, setExistingCVFilename] = useState<string | null>(null);
 
   const {
     register,
@@ -59,12 +64,8 @@ export function RequestMentorshipDialog({
     formState: { errors },
     reset,
     watch,
-    setValue,
   } = useForm<MentorshipRequestFormData>({
     resolver: zodResolver(mentorshipRequestSchema),
-    defaultValues: {
-      cv_included: false,
-    },
   });
 
   // Watch introduction field for character count
@@ -76,40 +77,107 @@ export function RequestMentorshipDialog({
   useEffect(() => {
     if (isOpen && user) {
       setIsCheckingCV(true);
+      setCvUploadError(null);
       getCVMetadata(user.id)
         .then((metadata) => {
           if (metadata) {
             setHasCv(true);
-            // Set default to true if user has CV
-            setValue('cv_included', true);
+            setUseExistingCV(true);
+            setExistingCVFilename(metadata.cv_filename);
           } else {
             setHasCv(false);
-            setValue('cv_included', false);
+            setUseExistingCV(false);
+            setExistingCVFilename(null);
           }
         })
         .catch(() => {
           setHasCv(false);
-          setValue('cv_included', false);
+          setUseExistingCV(false);
+          setExistingCVFilename(null);
         })
         .finally(() => {
           setIsCheckingCV(false);
         });
     }
-  }, [isOpen, user, setValue]);
+  }, [isOpen, user]);
+
+  const handleCVFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      setCvUploadError(t('matches.cvUploadError') + ': Only PDF files are allowed');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setCvUploadError(t('matches.cvUploadError') + ': File size must be less than 5MB');
+      return;
+    }
+
+    setCvFile(file);
+    setCvUploadError(null);
+    setUseExistingCV(false);
+  };
+
+  const uploadCVFile = async (): Promise<boolean> => {
+    if (!cvFile || !user) return false;
+
+    setIsUploadingCV(true);
+    setCvUploadError(null);
+
+    try {
+      await uploadCV(user.id, cvFile);
+      showSuccessToast(t('matches.cvUploadSuccess'));
+      setHasCv(true);
+      setExistingCVFilename(cvFile.name);
+      return true;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : t('matches.cvUploadError');
+      setCvUploadError(errorMsg);
+      handleApiError(error);
+      return false;
+    } finally {
+      setIsUploadingCV(false);
+    }
+  };
 
   const onSubmit = async (data: MentorshipRequestFormData) => {
-    if (!mentor) return;
+    if (!mentor || !user) return;
+
+    // Validate CV requirement
+    if (!useExistingCV && !cvFile) {
+      setCvUploadError(t('matches.cvRequired'));
+      return;
+    }
 
     setIsSubmitting(true);
+    setCvUploadError(null);
+
     try {
+      // Upload new CV if selected
+      if (cvFile && !useExistingCV) {
+        const uploadSuccess = await uploadCVFile();
+        if (!uploadSuccess) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Create match request with cv_included flag set to true
       await createMatch({
         mentor_id: mentor.user_id,
         introduction: data.introduction,
         preferred_time: data.preferred_time,
-        cv_included: data.cv_included ?? false,
+        cv_included: true, // Always true since CV is mandatory
       });
+
       showSuccessToast(t('matches.requestSent'));
       reset();
+      setCvFile(null);
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
@@ -122,13 +190,15 @@ export function RequestMentorshipDialog({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       reset();
+      setCvFile(null);
+      setCvUploadError(null);
     }
     onOpenChange(open);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('matches.requestDialogTitle')}</DialogTitle>
           <DialogDescription>
@@ -137,27 +207,6 @@ export function RequestMentorshipDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* CV Status Message */}
-          {!hasCv && !isCheckingCV && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-900">
-                {t('matches.noCvPrompt')}
-              </p>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="mt-2 p-0 h-auto"
-                onClick={() => {
-                  handleOpenChange(false);
-                  window.location.href = '/profile/edit';
-                }}
-              >
-                {t('matches.uploadCvLink')}
-              </Button>
-            </div>
-          )}
-
           {/* Introduction Field */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -171,7 +220,7 @@ export function RequestMentorshipDialog({
               placeholder={t('matches.introductionPlaceholder')}
               {...register('introduction')}
               className="min-h-[120px] resize-none"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploadingCV}
             />
             {errors.introduction && (
               <p className="text-sm text-destructive">{errors.introduction.message}</p>
@@ -186,26 +235,88 @@ export function RequestMentorshipDialog({
               type="text"
               placeholder={t('matches.preferredTimePlaceholder')}
               {...register('preferred_time')}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploadingCV}
             />
             {errors.preferred_time && (
               <p className="text-sm text-destructive">{errors.preferred_time.message}</p>
             )}
           </div>
 
-          {/* CV Include Checkbox */}
-          {hasCv && !isCheckingCV && (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
-              <Checkbox
-                id="cv_included"
-                {...register('cv_included')}
-                disabled={isSubmitting || isCheckingCV}
-              />
-              <Label htmlFor="cv_included" className="text-sm cursor-pointer">
-                {t('matches.includeCv')}
+          {/* CV Upload Section */}
+          <div className="space-y-3 p-4 bg-gray-50 border border-gray-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-semibold">
+                {t('matches.cvUpload')} <span className="text-red-500">*</span>
               </Label>
+              {isCheckingCV && (
+                <span className="text-xs text-muted-foreground">{t('common.loading')}</span>
+              )}
             </div>
-          )}
+
+            <p className="text-xs text-muted-foreground">
+              {t('matches.cvUploadDescription')}
+            </p>
+
+            {/* Show existing CV option if available */}
+            {hasCv && existingCVFilename && !cvFile && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <Checkbox
+                    id="use_existing_cv"
+                    checked={useExistingCV}
+                    onCheckedChange={(checked) => setUseExistingCV(checked as boolean)}
+                    disabled={isSubmitting || isUploadingCV}
+                  />
+                  <Label htmlFor="use_existing_cv" className="text-sm cursor-pointer flex-1">
+                    {t('matches.useExistingCV')}: <strong>{existingCVFilename}</strong>
+                  </Label>
+                </div>
+                {!useExistingCV && (
+                  <p className="text-xs text-blue-600">{t('matches.uploadNewCV')}</p>
+                )}
+              </div>
+            )}
+
+            {/* File upload input */}
+            {(!useExistingCV || !hasCv) && (
+              <div className="space-y-2">
+                <Input
+                  id="cv_file"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={handleCVFileSelect}
+                  disabled={isSubmitting || isUploadingCV}
+                  className="cursor-pointer"
+                />
+                {cvFile && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {t('matches.cvFileSelected', { filename: cvFile.name })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Upload progress */}
+            {isUploadingCV && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                {t('matches.cvUploading')}
+              </div>
+            )}
+
+            {/* Error message */}
+            {cvUploadError && (
+              <p className="text-sm text-destructive">{cvUploadError}</p>
+            )}
+
+            {/* Validation reminder */}
+            {!hasCv && !cvFile && (
+              <p className="text-xs text-red-600">{t('matches.cvRequired')}</p>
+            )}
+          </div>
         </form>
 
         <DialogFooter className="gap-2 sm:gap-0">
@@ -213,15 +324,15 @@ export function RequestMentorshipDialog({
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingCV}
           >
             {t('common.cancel')}
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingCV || (!useExistingCV && !cvFile && !hasCv)}
           >
-            {isSubmitting ? t('mentor.sending') : t('matches.sendRequest')}
+            {isSubmitting || isUploadingCV ? t('mentor.sending') : t('matches.sendRequest')}
           </Button>
         </DialogFooter>
       </DialogContent>

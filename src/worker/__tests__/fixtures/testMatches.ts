@@ -28,7 +28,7 @@ export const testMatches = {
     status: 'pending',
     introduction: 'I am a software engineer looking for mentorship in system design.',
     preferred_time: 'Weekends, preferably Saturday afternoons',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000000,
   } as Match,
@@ -43,7 +43,7 @@ export const testMatches = {
     status: 'active',
     introduction: 'Looking for guidance on career development',
     preferred_time: 'Flexible schedule',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000001,
   } as Match,
@@ -58,7 +58,7 @@ export const testMatches = {
     status: 'completed',
     introduction: 'Interested in learning from experienced mentor',
     preferred_time: 'Weekday evenings',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000002,
   } as Match,
@@ -73,13 +73,14 @@ export const testMatches = {
     status: 'rejected',
     introduction: 'Test introduction for rejection',
     preferred_time: 'Weekend mornings',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000001,
   } as Match,
 
   /**
    * A match with CV included
+   * @deprecated CV is now mandatory for all matches. This fixture is kept for backward compatibility.
    */
   withCv: {
     id: 'match-with-cv-1',
@@ -103,7 +104,7 @@ export const testMatches = {
     status: 'pending',
     introduction: 'Lifecycle integration test introduction',
     preferred_time: 'Any time works',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000000,
   } as Match,
@@ -118,7 +119,7 @@ export const testMatches = {
     status: 'pending',
     introduction: 'Original introduction',
     preferred_time: 'Original time',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000000,
   } as Match,
@@ -133,7 +134,7 @@ export const testMatches = {
     status: 'pending',
     introduction: 'Test introduction for deletion',
     preferred_time: 'Morning sessions',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000000,
   } as Match,
@@ -148,7 +149,7 @@ export const testMatches = {
     status: 'pending',
     introduction: 'First attempt',
     preferred_time: 'Weekends',
-    cv_included: 0,
+    cv_included: 1,
     created_at: 1000000000,
     updated_at: 1000000000,
   } as Match,
@@ -164,7 +165,7 @@ export const testMatches = {
       status: 'pending',
       introduction: 'First match',
       preferred_time: 'Morning',
-      cv_included: 0,
+      cv_included: 1,
       created_at: 1000000000,
       updated_at: 1000000000,
     } as Match,
@@ -175,7 +176,7 @@ export const testMatches = {
       status: 'active',
       introduction: 'Second match',
       preferred_time: 'Afternoon',
-      cv_included: 0,
+      cv_included: 1,
       created_at: 1000000001,
       updated_at: 1000000001,
     } as Match,
@@ -186,7 +187,7 @@ export const testMatches = {
       status: 'completed',
       introduction: 'Third match',
       preferred_time: 'Evening',
-      cv_included: 0,
+      cv_included: 1,
       created_at: 1000000002,
       updated_at: 1000000002,
     } as Match,
@@ -214,7 +215,7 @@ export function createMatch(
   } = {}
 ): Match {
   const {
-    cvIncluded = 0,
+    cvIncluded = 1,  // CV is now mandatory for all matches
     createdAt = Date.now(),
     updatedAt = createdAt,
   } = options;

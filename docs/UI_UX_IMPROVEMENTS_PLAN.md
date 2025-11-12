@@ -437,6 +437,174 @@ LEFT JOIN users as mentee_users ON matches.mentee_id = mentee_users.id
 
 ---
 
+### 4.4: Mandatory CV Upload in Request Dialog ✅ COMPLETE
+
+**Objective**: Make CV upload mandatory for mentorship requests - users can now upload CV directly in the dialog without being redirected
+
+**File**: `src/react-app/components/RequestMentorshipDialog.tsx`
+
+**Key Changes**:
+
+1. **CV is now mandatory** - Users must either:
+   - Upload a new CV file (PDF, max 5MB), or
+   - Use their existing CV (if already uploaded)
+
+2. **In-Dialog CV Upload**:
+   - File input accepts PDF files only
+   - Real-time validation (file type, size)
+   - Upload progress indicator
+   - Success/error feedback
+   - No redirect to profile page needed
+
+3. **Smart CV Detection**:
+   - Checks for existing CV on dialog open
+   - If CV exists: Shows checkbox to "Use existing CV" (pre-checked)
+   - If no CV: Shows file upload input
+   - Users can choose to upload new CV even if one exists
+
+4. **Backend Validation**:
+   - Match creation endpoint validates that mentee has CV
+   - Returns 400 error if CV not found: "CV is required to send mentorship request"
+   - `cv_included` always set to `1` (true) since CV is mandatory
+
+**Implementation Details**:
+
+```typescript
+// State management
+const [cvFile, setCvFile] = useState<File | null>(null);
+const [isUploadingCV, setIsUploadingCV] = useState(false);
+const [useExistingCV, setUseExistingCV] = useState(false);
+const [existingCVFilename, setExistingCVFilename] = useState<string | null>(null);
+
+// File validation
+const handleCVFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const file = event.target.files?.[0];
+  // Validate PDF and max 5MB
+  if (file.type !== 'application/pdf') { /* error */ }
+  if (file.size > 5 * 1024 * 1024) { /* error */ }
+  setCvFile(file);
+};
+
+// Upload before match creation
+const onSubmit = async (data) => {
+  // Validate CV requirement
+  if (!useExistingCV && !cvFile) {
+    setCvUploadError(t('matches.cvRequired'));
+    return;
+  }
+  
+  // Upload new CV if selected
+  if (cvFile && !useExistingCV) {
+    await uploadCVFile();
+  }
+  
+  // Create match (cv_included always true)
+  await createMatch({ ..., cv_included: true });
+};
+```
+
+**UI Components**:
+
+1. **No CV & No File Selected** (Red):
+   - Error message: "CV is required to send mentorship request"
+   - Submit button: Disabled
+
+2. **Existing CV Available** (Green):
+   - Checkbox: "Use existing CV: [filename]"
+   - Option: "Upload new CV" (unchecks existing CV)
+   - Submit button: Enabled
+
+3. **File Selected** (Green checkmark):
+   - Message: "CV file selected: [filename]"
+   - Upload progress: "Uploading CV..." (with spinner)
+   - Submit button: Enabled
+
+**Backend Validation** (`src/worker/index.ts`):
+
+```typescript
+// Validate that mentee has uploaded CV (mandatory)
+const menteeUser = await c.env.platform_db
+  .prepare("SELECT cv_url FROM users WHERE id = ?")
+  .bind(menteeId)
+  .first<{ cv_url: string | null }>();
+
+if (!menteeUser?.cv_url) {
+  return c.json({ error: "CV is required to send mentorship request" }, 400);
+}
+
+// Always set cv_included to 1 since CV is mandatory
+const cvIncluded = 1;
+```
+
+**New Translation Keys** (English):
+```json
+{
+  "matches": {
+    "cvRequired": "CV is required to send mentorship request",
+    "cvUpload": "Upload Your CV",
+    "cvUploadDescription": "Please upload your CV (PDF only, max 5MB). This helps the mentor understand your background.",
+    "cvUploading": "Uploading CV...",
+    "cvUploadSuccess": "CV uploaded successfully",
+    "cvUploadError": "Failed to upload CV",
+    "selectCvFile": "Select CV File (PDF)",
+    "cvFileSelected": "CV file selected: {{filename}}",
+    "useExistingCV": "Use existing CV",
+    "uploadNewCV": "Upload new CV"
+  }
+}
+```
+
+**Chinese Translations**:
+- Full Chinese translations added for all CV upload keys
+- Context-appropriate terminology
+
+**Testing**:
+
+Frontend Tests (`src/react-app/__tests__/RequestMentorshipDialog.test.tsx`):
+- ✅ Shows error when CV not provided
+- ✅ Uploads CV file before submitting match request
+- ✅ Allows using existing CV if available
+- ✅ Validates PDF file type
+- ✅ Validates file size (max 5MB)
+- ✅ Disables submit button when CV not provided
+- ✅ Handles CV upload errors gracefully
+
+Backend Tests (`src/worker/__tests__/matches.test.ts`):
+- ✅ Returns 400 when mentee has not uploaded CV
+- ✅ All existing tests updated to include CV for mentees
+
+**User Flow**:
+
+1. User clicks "Request Mentorship" on mentor detail page
+2. Dialog opens with introduction and preferred time fields
+3. CV section displays:
+   - If no CV: File input with validation message
+   - If CV exists: Checkbox to use existing (checked by default)
+4. User must provide CV (upload new or use existing)
+5. Submit button disabled until CV requirement met
+6. On submit:
+   - New CV uploaded if file selected
+   - Match request created with cv_included=true
+   - Success toast and dialog closes
+7. User redirected to matches page
+
+**Benefits**:
+- ✅ No context switching - CV upload in same dialog
+- ✅ Clear feedback on CV requirement
+- ✅ Flexible - use existing or upload new
+- ✅ Backend validation ensures data integrity
+- ✅ Better UX - no redirect to profile page
+
+**Files Modified**:
+- `src/react-app/components/RequestMentorshipDialog.tsx` - Major refactor
+- `src/react-app/i18n/locales/en/translation.json` - Added CV upload keys
+- `src/react-app/i18n/locales/zh-CN/translation.json` - Added Chinese translations
+- `src/worker/index.ts` - Added CV validation in match creation
+- `src/react-app/__tests__/RequestMentorshipDialog.test.tsx` - Comprehensive tests
+- `src/worker/__tests__/matches.test.ts` - CV validation test
+
+---
+
 ## Phase 5: Polish & Enhancement Features 🔄 PENDING
 
 ### 5.1: Mentor CV View ⏳ HIGH PRIORITY
@@ -670,7 +838,7 @@ CREATE TABLE matches (
 | 5 | Debounced Search | ⏳ Pending | 0% |
 | 5 | Char Counter | ⏳ Pending | 0% |
 
-**Overall Progress**: 13/17 = 76% Complete (Phase 5 = 0% start, estimate ~85% total)
+**Overall Progress**: 14/18 = 78% Complete (Phase 5 = 0% start)
 
 ---
 

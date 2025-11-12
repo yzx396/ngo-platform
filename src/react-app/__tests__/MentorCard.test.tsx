@@ -59,10 +59,10 @@ describe('MentorCard', () => {
     expect(screen.getByRole('button', { name: /view details/i })).toBeInTheDocument();
   });
 
-  it('should have Request Mentorship button', () => {
+  it('should have Request button', () => {
     render(<MentorCard mentor={mockMentor} onRequestMentorship={() => {}} />);
 
-    expect(screen.getByRole('button', { name: /request mentorship/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^request$/i })).toBeInTheDocument();
   });
 
   it('should trigger onViewDetails when View Details is clicked', async () => {
