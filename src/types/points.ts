@@ -151,5 +151,10 @@ export const POSTS_CREATED_FULL_POINTS_THRESHOLD = 3;
 export const POSTS_CREATED_REDUCED_POINTS_THRESHOLD = 5; // 3 + 2
 export const POSTS_CREATED_REDUCED_MULTIPLIER = 0.5;
 
+// Blogs created: First 2 = full points, next 2 = 50% points, then 0
+export const BLOGS_CREATED_FULL_POINTS_THRESHOLD = 2;
+export const BLOGS_CREATED_REDUCED_POINTS_THRESHOLD = 4; // 2 + 2
+export const BLOGS_CREATED_REDUCED_MULTIPLIER = 0.5;
+
 // Time window for diminishing returns (in seconds): 1 hour
 export const DIMINISHING_RETURNS_WINDOW_SECONDS = 3600;

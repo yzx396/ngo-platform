@@ -34,6 +34,7 @@ function createMockDb() {
   const mockLikes = new Map<string, Record<string, unknown>>();
   const mockComments = new Map<string, Record<string, unknown>>();
   const mockPoints = new Map<string, Record<string, unknown>>();
+  const mockPointActions = new Map<string, Record<string, unknown>>();
 
   const db = {
     prepare: vi.fn((query: string) => ({
@@ -221,6 +222,18 @@ function createMockDb() {
             const userId = params[0];
             return mockPoints.get(userId) || null;
           }
+          // SELECT COUNT from point_actions_log (for diminishing returns)
+          if (query.includes('SELECT COUNT') && query.includes('FROM point_actions_log')) {
+            const userId = params[0];
+            const actionType = params[1];
+            const windowStart = params[2];
+            const actions = Array.from(mockPointActions.values()).filter(
+              a => a.user_id === userId && 
+                   a.action_type === actionType && 
+                   (a.created_at as number) >= (windowStart as number)
+            );
+            return { count: actions.length };
+          }
           return null;
         }),
         run: vi.fn(async () => {
@@ -340,16 +353,53 @@ function createMockDb() {
             return { success: true };
           }
           // INSERT or UPDATE user_points
-          if (query.includes('user_points')) {
-            const userId = params[0];
-            const points = params[1];
-            const updatedAt = params[2];
-            const existingPoints = mockPoints.get(userId);
-            mockPoints.set(userId, {
-              id: existingPoints?.id || `points-${userId}`,
+          if (query.includes('user_points') && !query.includes('point_actions_log')) {
+            // Handle UPDATE user_points SET points = ?, updated_at = ? WHERE user_id = ?
+            if (query.includes('UPDATE') && query.includes('WHERE user_id = ?')) {
+              const points = params[0];
+              const updatedAt = params[1];
+              const userId = params[2];
+              const existingPoints = mockPoints.get(userId);
+              mockPoints.set(userId, {
+                id: existingPoints?.id || `points-${userId}`,
+                user_id: userId,
+                points,
+                updated_at: updatedAt,
+              });
+              return { success: true };
+            }
+            // Handle INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)
+            if (query.includes('INSERT INTO user_points')) {
+              const id = params[0];
+              const userId = params[1];
+              const points = params[2];
+              const updatedAt = params[3];
+              mockPoints.set(userId, {
+                id,
+                user_id: userId,
+                points,
+                updated_at: updatedAt,
+              });
+              return { success: true };
+            }
+            return { success: true };
+          }
+          // INSERT into point_actions_log
+          if (query.includes('INSERT INTO point_actions_log')) {
+            const actionId = params[0];
+            const userId = params[1];
+            const actionType = params[2];
+            const referenceId = params[3];
+            const pointsAwarded = params[4];
+            const createdAt = params[5];
+            
+            mockPointActions.set(actionId, {
+              id: actionId,
               user_id: userId,
-              points,
-              updated_at: updatedAt,
+              action_type: actionType,
+              reference_id: referenceId,
+              points_awarded: pointsAwarded,
+              created_at: createdAt,
             });
             return { success: true };
           }
@@ -367,6 +417,7 @@ function createMockDb() {
     mockLikes,
     mockComments,
     mockPoints,
+    mockPointActions,
   };
 }
 
@@ -374,12 +425,12 @@ function createMockDb() {
  * Setup test environment
  */
 function setupTestEnv() {
-  const { db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints } = createMockDb();
+  const { db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints, mockPointActions } = createMockDb();
   const env: TestEnv = {
     platform_db: db as unknown as D1Database,
     JWT_SECRET,
   };
-  return { env, mockDb: db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints };
+  return { env, mockDb: db, mockUsers, mockBlogs, mockRoles, mockLikes, mockComments, mockPoints, mockPointActions };
 }
 
 // ============================================================================
@@ -769,6 +820,70 @@ describe('POST /api/v1/blogs', () => {
     expect(json).toHaveProperty('user_id', 'user-1');
     expect(json).toHaveProperty('featured', false);
   });
+
+  it('should create blog and award +10 points with diminishing returns', async () => {
+    const { env, mockPoints, mockPointActions } = setupTestEnv();
+    const token = await createTestToken('user-1', 'user@example.com', 'Test User');
+
+    // Create first blog - should get full 10 points
+    const req1 = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: 'First Blog',
+        content: 'First blog content.',
+      }),
+    });
+    const res1 = await app.fetch(req1, env);
+    expect(res1.status).toBe(201);
+
+    // Verify points awarded
+    const userPoints = mockPoints.get('user-1');
+    expect(userPoints).toBeDefined();
+    expect(userPoints?.points).toBe(10);
+
+    // Verify action logged
+    const actions = Array.from(mockPointActions.values()).filter(
+      a => a.user_id === 'user-1' && a.action_type === 'blog_created'
+    );
+    expect(actions.length).toBe(1);
+    expect(actions[0].points_awarded).toBe(10);
+
+    // Create second blog - should also get full 10 points (within threshold)
+    const req2 = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: 'Second Blog',
+        content: 'Second blog content.',
+      }),
+    });
+    const res2 = await app.fetch(req2, env);
+    expect(res2.status).toBe(201);
+    expect(mockPoints.get('user-1')?.points).toBe(20);
+
+    // Create third blog - should get reduced points (50%)
+    const req3 = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: 'Third Blog',
+        content: 'Third blog content.',
+      }),
+    });
+    const res3 = await app.fetch(req3, env);
+    expect(res3.status).toBe(201);
+    expect(mockPoints.get('user-1')?.points).toBe(25); // 20 + 5 (50% of 10)
+  });
 });
 
 // ============================================================================
@@ -1022,6 +1137,134 @@ describe('POST /api/v1/blogs/:id/like', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json).toHaveProperty('error');
+  });
+
+  it('should award +2 points to blog author when someone likes their blog', async () => {
+    const { env, mockPoints } = setupTestEnv();
+    
+    // Create author and their blog
+    const authorToken = await createTestToken('author-1', 'author@example.com', 'Blog Author');
+    const createReq = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authorToken}`,
+      },
+      body: JSON.stringify({
+        title: 'Blog to Like',
+        content: 'Content here.',
+      }),
+    });
+    const createRes = await app.fetch(createReq, env);
+    const blog = await createRes.json();
+    
+    // Reset points to 0 for clarity
+    mockPoints.set('author-1', { id: 'points-author-1', user_id: 'author-1', points: 0, updated_at: Date.now() });
+
+    // Different user likes the blog
+    const likerToken = await createTestToken('liker-1', 'liker@example.com', 'Liker');
+    const likeReq = new Request(`http://localhost/api/v1/blogs/${blog.id}/like`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${likerToken}`,
+      },
+    });
+    const likeRes = await app.fetch(likeReq, env);
+    expect(likeRes.status).toBe(200);
+
+    // Verify author received +2 points
+    const authorPoints = mockPoints.get('author-1');
+    expect(authorPoints?.points).toBe(2);
+  });
+
+  it('should NOT award points when user likes their own blog', async () => {
+    const { env, mockPoints } = setupTestEnv();
+    
+    const token = await createTestToken('user-1', 'user@example.com', 'Test User');
+    
+    // Create blog
+    const createReq = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: 'My Blog',
+        content: 'Content.',
+      }),
+    });
+    const createRes = await app.fetch(createReq, env);
+    const blog = await createRes.json();
+    
+    const pointsAfterCreate = mockPoints.get('user-1')?.points || 0;
+
+    // User likes their own blog
+    const likeReq = new Request(`http://localhost/api/v1/blogs/${blog.id}/like`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const likeRes = await app.fetch(likeReq, env);
+    expect(likeRes.status).toBe(200);
+
+    // Points should not increase
+    const pointsAfterLike = mockPoints.get('user-1')?.points || 0;
+    expect(pointsAfterLike).toBe(pointsAfterCreate);
+  });
+
+  it('should enforce diminishing returns on blog likes received', async () => {
+    const { env, mockPoints } = setupTestEnv();
+    
+    // Create author and blog
+    const authorToken = await createTestToken('author-1', 'author@example.com', 'Author');
+    const createReq = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authorToken}`,
+      },
+      body: JSON.stringify({
+        title: 'Popular Blog',
+        content: 'Great content.',
+      }),
+    });
+    const createRes = await app.fetch(createReq, env);
+    const blog = await createRes.json();
+    
+    mockPoints.set('author-1', { id: 'points-author-1', user_id: 'author-1', points: 0, updated_at: Date.now() });
+
+    // First 5 likes - full points (2 each = 10 total)
+    for (let i = 1; i <= 5; i++) {
+      const likerToken = await createTestToken(`liker-${i}`, `liker${i}@example.com`, `Liker ${i}`);
+      const likeReq = new Request(`http://localhost/api/v1/blogs/${blog.id}/like`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${likerToken}` },
+      });
+      await app.fetch(likeReq, env);
+    }
+    expect(mockPoints.get('author-1')?.points).toBe(10); // 5 * 2
+
+    // Next 10 likes - reduced points (50% = 1 each = 10 total)
+    for (let i = 6; i <= 15; i++) {
+      const likerToken = await createTestToken(`liker-${i}`, `liker${i}@example.com`, `Liker ${i}`);
+      const likeReq = new Request(`http://localhost/api/v1/blogs/${blog.id}/like`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${likerToken}` },
+      });
+      await app.fetch(likeReq, env);
+    }
+    expect(mockPoints.get('author-1')?.points).toBe(20); // 10 + (10 * 1)
+
+    // 16th like - no points
+    const liker16Token = await createTestToken('liker-16', 'liker16@example.com', 'Liker 16');
+    const like16Req = new Request(`http://localhost/api/v1/blogs/${blog.id}/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${liker16Token}` },
+    });
+    await app.fetch(like16Req, env);
+    expect(mockPoints.get('author-1')?.points).toBe(20); // No change
   });
 });
 
@@ -1338,5 +1581,104 @@ describe('PATCH /api/v1/blogs/:id/feature', () => {
     const res = await app.fetch(req, env);
 
     expect(res.status).toBe(400);
+  });
+
+  it('should award +50 bonus points when admin features a blog', async () => {
+    const { env, mockRoles, mockPoints } = setupTestEnv();
+    
+    // Create author and blog
+    const authorToken = await createTestToken('author-1', 'author@example.com', 'Author');
+    const createReq = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authorToken}`,
+      },
+      body: JSON.stringify({
+        title: 'Awesome Blog',
+        content: 'High quality content.',
+      }),
+    });
+    const createRes = await app.fetch(createReq, env);
+    const blog = await createRes.json();
+    
+    const pointsAfterCreate = mockPoints.get('author-1')?.points || 0;
+
+    // Admin features the blog
+    mockRoles.set('admin-1', { id: 'role-admin-1', user_id: 'admin-1', role: 'admin', created_at: Date.now() });
+    const adminToken = await createTestToken('admin-1', 'admin@example.com', 'Admin', 'admin');
+    
+    const featureReq = new Request(`http://localhost/api/v1/blogs/${blog.id}/feature`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ featured: true }),
+    });
+    const featureRes = await app.fetch(featureReq, env);
+    expect(featureRes.status).toBe(200);
+    
+    const json = await featureRes.json();
+    expect(json.points_awarded).toBe(50);
+
+    // Verify author received +50 bonus points
+    const pointsAfterFeature = mockPoints.get('author-1')?.points || 0;
+    expect(pointsAfterFeature).toBe(pointsAfterCreate + 50);
+  });
+
+  it('should NOT award bonus points when unfeaturing or re-featuring', async () => {
+    const { env, mockRoles, mockBlogs, mockPoints } = setupTestEnv();
+    
+    // Create featured blog
+    const authorToken = await createTestToken('author-1', 'author@example.com', 'Author');
+    const createReq = new Request('http://localhost/api/v1/blogs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authorToken}`,
+      },
+      body: JSON.stringify({
+        title: 'Blog',
+        content: 'Content.',
+      }),
+    });
+    const createRes = await app.fetch(createReq, env);
+    const blog = await createRes.json();
+    
+    // Feature it first time
+    mockRoles.set('admin-1', { id: 'role-admin-1', user_id: 'admin-1', role: 'admin', created_at: Date.now() });
+    const adminToken = await createTestToken('admin-1', 'admin@example.com', 'Admin', 'admin');
+    
+    const featureReq1 = new Request(`http://localhost/api/v1/blogs/${blog.id}/feature`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ featured: true }),
+    });
+    await app.fetch(featureReq1, env);
+    
+    const pointsAfterFirstFeature = mockPoints.get('author-1')?.points || 0;
+
+    // Set featured in mock (simulate state)
+    mockBlogs.set(blog.id, { ...mockBlogs.get(blog.id), featured: 1 });
+
+    // Try to feature again (should not award points)
+    const featureReq2 = new Request(`http://localhost/api/v1/blogs/${blog.id}/feature`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ featured: true }),
+    });
+    const featureRes2 = await app.fetch(featureReq2, env);
+    const json = await featureRes2.json();
+    expect(json.points_awarded).toBe(0);
+    
+    const pointsAfterSecondFeature = mockPoints.get('author-1')?.points || 0;
+    expect(pointsAfterSecondFeature).toBe(pointsAfterFirstFeature);
   });
 });

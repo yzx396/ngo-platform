@@ -65,6 +65,9 @@ import {
   POSTS_CREATED_FULL_POINTS_THRESHOLD,
   POSTS_CREATED_REDUCED_POINTS_THRESHOLD,
   POSTS_CREATED_REDUCED_MULTIPLIER,
+  BLOGS_CREATED_FULL_POINTS_THRESHOLD,
+  BLOGS_CREATED_REDUCED_POINTS_THRESHOLD,
+  BLOGS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
 } from "../types/points";
 import { generateBlogId, generateBlogLikeId, generateBlogCommentId } from "./utils/idGenerator";
@@ -740,6 +743,12 @@ async function awardPointsForAction(
         adjustedPoints = 0; // Over threshold, no points
       } else if (recentActionCount >= POSTS_CREATED_FULL_POINTS_THRESHOLD) {
         adjustedPoints = Math.floor(basePoints * POSTS_CREATED_REDUCED_MULTIPLIER);
+      }
+    } else if (actionType === 'blog_created') {
+      if (recentActionCount >= BLOGS_CREATED_REDUCED_POINTS_THRESHOLD) {
+        adjustedPoints = 0; // Over threshold, no points
+      } else if (recentActionCount >= BLOGS_CREATED_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = Math.floor(basePoints * BLOGS_CREATED_REDUCED_MULTIPLIER);
       }
     }
 
@@ -3176,7 +3185,7 @@ app.get("/api/v1/blogs/:id", async (c) => {
 /**
  * POST /api/v1/blogs - Create a new blog
  * Authenticated endpoint - requires valid JWT token
- * Awards +10 points to the author
+ * Awards +10 points to the author (with diminishing returns after 2/hour)
  */
 app.post("/api/v1/blogs", requireAuth, async (c) => {
   try {
@@ -3216,21 +3225,14 @@ app.post("/api/v1/blogs", requireAuth, async (c) => {
       throw new Error("Failed to create blog");
     }
 
-    // Award +10 points for creating a blog
-    const pointsResult = await c.env.platform_db
-      .prepare("SELECT points FROM user_points WHERE user_id = ?")
-      .bind(userId)
-      .first<{ points: number }>();
-
-    const currentPoints = pointsResult?.points || 0;
-    const newPoints = currentPoints + POINTS_FOR_CREATE_BLOG;
-
-    await c.env.platform_db
-      .prepare(
-        "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = ?, updated_at = ?"
-      )
-      .bind(`points-${userId}`, userId, newPoints, now, newPoints, now)
-      .run();
+    // Award points for creating a blog (with diminishing returns)
+    await awardPointsForAction(
+      c.env.platform_db,
+      userId,
+      "blog_created",
+      blogId,
+      POINTS_FOR_CREATE_BLOG
+    );
 
     // Fetch the created blog
     const createdBlog = await c.env.platform_db
@@ -3369,6 +3371,7 @@ app.delete("/api/v1/blogs/:id", requireAuth, async (c) => {
 /**
  * POST /api/v1/blogs/:id/like - Like a blog
  * Authenticated endpoint - requires valid JWT token
+ * Awards +2 points to blog author for receiving the like
  * User can only like a blog once
  * Increments likes_count on the blog
  */
@@ -3421,6 +3424,19 @@ app.post("/api/v1/blogs/:id/like", requireAuth, async (c) => {
       .prepare("UPDATE blogs SET likes_count = ? WHERE id = ?")
       .bind(newLikesCount, blogId)
       .run();
+
+    // Award points to the blog author for receiving a like (silent failure if points system fails)
+    const blogAuthorId = blog.user_id as string;
+    if (blogAuthorId !== userId) {
+      // Only award points if the liker is not the blog author
+      await awardPointsForAction(
+        c.env.platform_db,
+        blogAuthorId,
+        "like_received",
+        likeId,
+        POINTS_FOR_RECEIVING_LIKE
+      );
+    }
 
     // Fetch updated blog
     const updatedBlog = await c.env.platform_db
@@ -3783,23 +3799,14 @@ app.patch("/api/v1/blogs/:id/feature", requireAuth, requireAdmin, async (c) => {
     let pointsAwarded = 0;
     if (willBeFeatured && !wasFeatured) {
       const authorId = blog.user_id as string;
-
-      const pointsResult = await c.env.platform_db
-        .prepare("SELECT points FROM user_points WHERE user_id = ?")
-        .bind(authorId)
-        .first<{ points: number }>();
-
-      const currentPoints = pointsResult?.points || 0;
-      const newPoints = currentPoints + POINTS_FOR_BLOG_FEATURED;
-
-      await c.env.platform_db
-        .prepare(
-          "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET points = ?, updated_at = ?"
-        )
-        .bind(`points-${authorId}`, authorId, newPoints, now, newPoints, now)
-        .run();
-
-      pointsAwarded = POINTS_FOR_BLOG_FEATURED;
+      
+      pointsAwarded = await awardPointsForAction(
+        c.env.platform_db,
+        authorId,
+        "blog_featured",
+        blogId,
+        POINTS_FOR_BLOG_FEATURED
+      );
     }
 
     // Fetch updated blog

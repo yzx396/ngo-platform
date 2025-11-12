@@ -34,8 +34,8 @@ Tracks all point awards with timestamps for audit trails and diminishing returns
 ```sql
 id TEXT PRIMARY KEY
 user_id TEXT (FOREIGN KEY to users)
-action_type TEXT (post_created|like_received|comment_created|comment_received)
-reference_id TEXT (ID of post/comment/like)
+action_type TEXT (post_created|blog_created|blog_featured|like_received|comment_created|comment_received)
+reference_id TEXT (ID of post/blog/comment/like)
 points_awarded INTEGER (actual points after diminishing returns)
 created_at INTEGER (Unix timestamp)
 ```
@@ -101,16 +101,85 @@ All point awards use a rolling 1-hour window with diminishing returns to prevent
 
 **Important:** Points awarding is handled silently - if point system fails, the post/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
 
+## Blog Point System
+
+Automatically awards points for creating and engaging with blog posts.
+
+### Point Values (Creation-Focused)
+
+**Content Creation:**
+- Blog posts: 10 points (with diminishing returns)
+- Blog featured by admin: 50 bonus points (one-time, no diminishing returns)
+- Comments on blogs: 5 points (reuses post comment system)
+
+**Content Author Rewards (for receiving engagement):**
+- Each like on blog: 2 points (to blog author)
+- Each comment on blog: 3 points (to blog author)
+
+### Diminishing Returns for Blogs
+
+Blog creation uses a rolling 1-hour window with stricter limits than posts:
+
+- **Blogs created**: First 2/hour = full points, next 2 = 50% points, then 0 points
+- **Likes received**: First 5/hour = full points, next 10 = 50% points, then 0 points (same as posts)
+- **Comments created**: First 10/hour = full points, next 10 = 40% points, then 0 points (same as posts)
+
+**Rationale:** Blogs are longer-form content requiring more effort, so lower creation threshold encourages quality over quantity.
+
+### Action Types for Blogs
+
+The following action types are logged in `point_actions_log`:
+
+- `blog_created` - User creates a blog post
+- `blog_featured` - Admin features a blog (awards bonus to author)
+- `like_received` - Blog author receives like on their blog (shared with posts)
+- `comment_created` - User comments on blog (shared with posts)
+- `comment_received` - Blog author receives comment (shared with posts)
+
+### How It Works
+
+1. **Blog Creation**: User creates blog → immediately receives creation points (with diminishing returns)
+2. **Receiving Like**: Another user likes blog → blog author receives points (not liker)
+3. **Creating Comment**: User comments on blog → commenter receives points AND blog author receives points (unless same person)
+4. **Admin Featuring**: Admin features blog → author receives one-time 50-point bonus (no diminishing returns)
+5. **Point Tracking**: All awards logged in `point_actions_log` table with action type and reference ID
+
+**Important:** Point awarding is handled silently - if point system fails, the blog/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
+
 ## Constants
 
 Located in `src/types/points.ts`:
 
 ```typescript
+// Content creation points
 POINTS_FOR_CREATE_DISCUSSION_POST = 15
 POINTS_FOR_CREATE_GENERAL_POST = 10
+POINTS_FOR_CREATE_BLOG = 10
+POINTS_FOR_BLOG_FEATURED = 50
 POINTS_FOR_CREATE_COMMENT = 5
+
+// Author rewards
 POINTS_FOR_RECEIVING_LIKE = 2
 POINTS_FOR_RECEIVING_COMMENT = 3
+
+// Diminishing returns - Posts
+POSTS_CREATED_FULL_POINTS_THRESHOLD = 3
+POSTS_CREATED_REDUCED_POINTS_THRESHOLD = 5
+POSTS_CREATED_REDUCED_MULTIPLIER = 0.5
+
+// Diminishing returns - Blogs
+BLOGS_CREATED_FULL_POINTS_THRESHOLD = 2
+BLOGS_CREATED_REDUCED_POINTS_THRESHOLD = 4
+BLOGS_CREATED_REDUCED_MULTIPLIER = 0.5
+
+// Diminishing returns - Engagement (shared)
+LIKES_RECEIVED_FULL_POINTS_THRESHOLD = 5
+LIKES_RECEIVED_REDUCED_POINTS_THRESHOLD = 15
+LIKES_RECEIVED_REDUCED_MULTIPLIER = 0.5
+COMMENTS_CREATED_FULL_POINTS_THRESHOLD = 10
+COMMENTS_CREATED_REDUCED_POINTS_THRESHOLD = 20
+COMMENTS_CREATED_REDUCED_MULTIPLIER = 0.4
+
 DIMINISHING_RETURNS_WINDOW_SECONDS = 3600
 ```
 
@@ -132,6 +201,9 @@ async function awardPointsForAction(
 - Updates `user_points` table
 - Logs action in `point_actions_log`
 - Returns actual points awarded (after diminishing returns)
+- **Supported action types**: `post_created`, `blog_created`, `blog_featured`, `like_received`, `comment_created`, `comment_received`
+
+**Silent Failure:** If point awarding fails for any reason, the function returns 0 and logs the error, but the main action (post/blog/like/comment creation) still succeeds.
 
 ## Frontend Components
 
@@ -180,7 +252,8 @@ Located in `src/types/points.ts`:
 
 Points are integrated with:
 - User types and API response types in `src/types/`
-- Post creation and engagement endpoints
+- Post creation and engagement endpoints (`/api/v1/posts/*`)
+- Blog creation and engagement endpoints (`/api/v1/blogs/*`)
 - User profile endpoints
 - Frontend UI components throughout the app
 
