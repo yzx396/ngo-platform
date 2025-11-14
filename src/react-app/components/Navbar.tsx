@@ -25,6 +25,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/feed', label: t('common.home') },
+    { href: '/forum', label: t('navigation.forum', 'Forum') },
     { href: '/events', label: t('events.title', 'Events') },
     { href: '/blogs', label: t('navigation.blogs', 'Blogs') },
     ...(isFeatureEnabled('leaderboard')

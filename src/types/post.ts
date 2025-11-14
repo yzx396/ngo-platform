@@ -22,10 +22,16 @@ export enum PostType {
 export interface Post {
   id: string;
   user_id: string;
+  title?: string; // Optional title for forum-style posts
   content: string;
   post_type: PostType;
+  category?: string; // Category for organizing forum posts
   likes_count: number;
   comments_count: number;
+  views?: number; // View counter for forum posts
+  is_pinned?: boolean; // Whether post is pinned by admin
+  last_reply_at?: number; // Timestamp of last reply (for activity sorting)
+  last_reply_user_id?: string; // User ID of last replier
   created_at: number; // Unix timestamp
   updated_at: number; // Unix timestamp
 }
@@ -37,6 +43,7 @@ export interface Post {
 export interface PostWithAuthor extends Post {
   author_name?: string;
   author_email?: string;
+  last_reply_user_name?: string; // Name of last replier (for forum list view)
 }
 
 /**
@@ -113,10 +120,16 @@ export function normalizePost(dbPost: unknown): Post {
   return {
     id: String(data.id || ''),
     user_id: String(data.user_id || ''),
+    title: data.title ? String(data.title) : undefined,
     content: String(data.content || ''),
     post_type: normalizedType,
+    category: data.category ? String(data.category) : undefined,
     likes_count: Number(data.likes_count || 0),
     comments_count: Number(data.comments_count || 0),
+    views: data.views !== undefined ? Number(data.views) : undefined,
+    is_pinned: data.is_pinned !== undefined ? Boolean(data.is_pinned) : undefined,
+    last_reply_at: data.last_reply_at ? Number(data.last_reply_at) : undefined,
+    last_reply_user_id: data.last_reply_user_id ? String(data.last_reply_user_id) : undefined,
     created_at: Number(data.created_at || 0),
     updated_at: Number(data.updated_at || 0),
   };
@@ -127,17 +140,20 @@ export function normalizePost(dbPost: unknown): Post {
  * @param dbPost - Raw data from database
  * @param authorName - Optional author name from join
  * @param authorEmail - Optional author email from join
+ * @param lastReplyUserName - Optional last replier name from join
  * @returns Properly typed PostWithAuthor object
  */
 export function normalizePostWithAuthor(
   dbPost: unknown,
   authorName?: string,
-  authorEmail?: string
+  authorEmail?: string,
+  lastReplyUserName?: string
 ): PostWithAuthor {
   return {
     ...normalizePost(dbPost),
     author_name: authorName,
     author_email: authorEmail,
+    last_reply_user_name: lastReplyUserName,
   };
 }
 
@@ -343,4 +359,72 @@ function calculateCommentDepth(
     return 0;
   }
   return 1 + calculateCommentDepth(comment.parent_comment_id, commentMap);
+}
+
+/**
+ * Forum Category Enum
+ * Categories for organizing forum posts (similar to 1Point3Acres)
+ */
+export enum ForumCategory {
+  General = 'general',
+  Career = 'career',
+  Mentorship = 'mentorship',
+  Technology = 'technology',
+  Learning = 'learning',
+  Announcements = 'announcements',
+}
+
+/**
+ * Get human-readable name for forum category
+ * @param category - The category enum value
+ * @returns Display name (e.g., "Career Development" for ForumCategory.Career)
+ */
+export function getCategoryName(category: string): string {
+  switch (category) {
+    case ForumCategory.General:
+      return 'General Discussion';
+    case ForumCategory.Career:
+      return 'Career Development';
+    case ForumCategory.Mentorship:
+      return 'Mentorship';
+    case ForumCategory.Technology:
+      return 'Technology';
+    case ForumCategory.Learning:
+      return 'Learning Resources';
+    case ForumCategory.Announcements:
+      return 'Announcements';
+    default:
+      return 'General';
+  }
+}
+
+/**
+ * Forum Sort Options
+ * Different ways to sort forum posts
+ */
+export enum ForumSortBy {
+  Latest = 'latest',           // Sort by created_at DESC
+  Hot = 'hot',                 // Sort by recent activity (last_reply_at)
+  MostReplies = 'most_replies', // Sort by comments_count DESC
+  MostViews = 'most_views',     // Sort by views DESC
+}
+
+/**
+ * Get sort order SQL clause for forum sorting
+ * @param sortBy - The sort option
+ * @returns SQL ORDER BY clause
+ */
+export function getForumSortClause(sortBy: ForumSortBy): string {
+  switch (sortBy) {
+    case ForumSortBy.Latest:
+      return 'created_at DESC';
+    case ForumSortBy.Hot:
+      return 'last_reply_at DESC NULLS LAST, created_at DESC';
+    case ForumSortBy.MostReplies:
+      return 'comments_count DESC, created_at DESC';
+    case ForumSortBy.MostViews:
+      return 'views DESC, created_at DESC';
+    default:
+      return 'created_at DESC';
+  }
 }

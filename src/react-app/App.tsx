@@ -34,6 +34,8 @@ const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage').then(m => ({ 
 const CreateBlogPage = lazy(() => import('./pages/CreateBlogPage').then(m => ({ default: m.CreateBlogPage })));
 const MyBlogsPage = lazy(() => import('./pages/MyBlogsPage').then(m => ({ default: m.MyBlogsPage })));
 const PostDetailPage = lazy(() => import('./pages/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
+const ForumPage = lazy(() => import('./pages/ForumPage').then(m => ({ default: m.ForumPage })));
+const ForumCreatePostPage = lazy(() => import('./pages/ForumCreatePostPage').then(m => ({ default: m.ForumCreatePostPage })));
 
 /**
  * Loading fallback component for Suspense
@@ -92,6 +94,17 @@ function AppContent() {
 
               {/* Feed Page - Main page showing community posts */}
               <Route path="/feed" element={<FeedPage />} />
+
+              {/* Forum Page - Forum-style list view of posts */}
+              <Route path="/forum" element={<ForumPage />} />
+              <Route
+                path="/forum/create"
+                element={
+                  <ProtectedRoute>
+                    <ForumCreatePostPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Post Detail Page - View individual post with comments */}
               <Route path="/posts/:id" element={<PostDetailPage />} />

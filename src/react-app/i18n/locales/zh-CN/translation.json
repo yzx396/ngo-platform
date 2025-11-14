@@ -36,6 +36,7 @@
   },
   "navigation": {
     "feed": "动态",
+    "forum": "论坛",
     "challenges": "挑战",
     "blogs": "博客",
     "memberArea": "会员中心",
@@ -664,5 +665,48 @@
     "membersOnlyDescription": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "membersOnlyPreview": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "signInToRead": "登录以阅读全部内容"
+  },
+  "forum": {
+    "title": "论坛",
+    "subtitle": "参与讨论，分享您的想法",
+    "createPost": "发帖",
+    "noPosts": "暂无帖子",
+    "pageInfo": "显示第 {{start}}-{{end}} 条，共 {{total}} 条",
+    "previous": "上一页",
+    "next": "下一页",
+    "lastReply": "最后回复",
+    "sortBy": "排序方式",
+    "category": {
+      "label": "分类",
+      "all": "全部",
+      "general": "综合讨论",
+      "career": "职业发展",
+      "mentorship": "导师辅导",
+      "technology": "技术交流",
+      "learning": "学习资源",
+      "announcements": "公告"
+    },
+    "sort": {
+      "hot": "最热",
+      "latest": "最新",
+      "mostReplies": "回复最多",
+      "mostViews": "浏览最多"
+    },
+    "create": {
+      "title": "发表新帖",
+      "description": "与社区分享您的想法、问题或见解",
+      "backToForum": "返回论坛",
+      "titleLabel": "标题",
+      "titlePlaceholder": "输入描述性标题...",
+      "titleRequired": "标题为必填项",
+      "categoryLabel": "分类",
+      "typeLabel": "帖子类型",
+      "contentLabel": "内容",
+      "contentPlaceholder": "在此处撰写帖子内容...",
+      "contentRequired": "内容为必填项",
+      "submit": "发布帖子",
+      "success": "帖子发布成功",
+      "error": "发布帖子失败"
+    }
   }
 }

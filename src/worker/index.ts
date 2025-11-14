@@ -2154,20 +2154,23 @@ app.post("/api/v1/auth/logout", (c) => {
 /**
  * GET /api/v1/posts - List posts with pagination
  * Public endpoint - no authentication required
- * Supports filtering by post type
+ * Supports filtering by post type and category, sorting by different criteria
+ * Forum features: category filter, sorting (latest/hot/most_replies/most_views), pinned posts
  */
 app.get("/api/v1/posts", async (c) => {
   try {
     const limitParam = c.req.query("limit");
     const offsetParam = c.req.query("offset");
     const typeParam = c.req.query("type");
+    const categoryParam = c.req.query("category");
+    const sortByParam = c.req.query("sortBy") || "latest"; // Forum sorting
 
     // Validation: Parse and validate limit and offset
     const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 20; // Default 20, max 100
     const offset = offsetParam ? Math.max(parseInt(offsetParam, 10), 0) : 0; // Default 0
 
-    // Build query - filter by type if provided
-    let query = "SELECT * FROM posts";
+    // Build query - filter by type and category if provided
+    const whereConditions: string[] = [];
     const bindings: unknown[] = [];
 
     if (typeParam) {
@@ -2175,22 +2178,41 @@ app.get("/api/v1/posts", async (c) => {
       if (!["announcement", "discussion", "general"].includes(typeParam)) {
         return c.json({ error: "Invalid post type" }, 400);
       }
-      query += " WHERE post_type = ?";
+      whereConditions.push("post_type = ?");
       bindings.push(typeParam);
     }
 
-    // Count total posts (matching filter if applied)
-    const countQuery = typeParam
-      ? "SELECT COUNT(*) as count FROM posts WHERE post_type = ?"
-      : "SELECT COUNT(*) as count FROM posts";
+    if (categoryParam) {
+      // Validate category
+      if (!["general", "career", "mentorship", "technology", "learning", "announcements"].includes(categoryParam)) {
+        return c.json({ error: "Invalid category" }, 400);
+      }
+      whereConditions.push("category = ?");
+      bindings.push(categoryParam);
+    }
+
+    const whereClause = whereConditions.length > 0 ? " WHERE " + whereConditions.join(" AND ") : "";
+
+    // Count total posts (matching filters if applied)
+    const countQuery = `SELECT COUNT(*) as count FROM posts${whereClause}`;
     const countResult = await c.env.platform_db
       .prepare(countQuery)
       .bind(...bindings)
       .first<{ count: number }>();
     const total = countResult?.count || 0;
 
-    // Fetch posts - ordered by created_at DESC (newest first)
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    // Determine sort order based on sortBy parameter
+    let orderByClause = "created_at DESC"; // Default: latest
+    if (sortByParam === "hot") {
+      orderByClause = "last_reply_at DESC NULLS LAST, created_at DESC";
+    } else if (sortByParam === "most_replies") {
+      orderByClause = "comments_count DESC, created_at DESC";
+    } else if (sortByParam === "most_views") {
+      orderByClause = "views DESC, created_at DESC";
+    }
+
+    // Fetch posts - pinned posts first, then sorted by specified criteria
+    const query = `SELECT * FROM posts${whereClause} ORDER BY is_pinned DESC, ${orderByClause} LIMIT ? OFFSET ?`;
     bindings.push(limit, offset);
 
     const results = await c.env.platform_db
@@ -2198,7 +2220,7 @@ app.get("/api/v1/posts", async (c) => {
       .bind(...bindings)
       .all<Record<string, unknown>>();
 
-    // Normalize posts and attach author info and user like status
+    // Normalize posts and attach author info, last replier info, and user like status
     const user = c.get('user') as AuthPayload | undefined;
     const postsWithAuthorsAndLikes = await Promise.all(
       results.results.map(async (post) => {
@@ -2207,6 +2229,16 @@ app.get("/api/v1/posts", async (c) => {
           .prepare("SELECT name FROM users WHERE id = ?")
           .bind(post.user_id)
           .first<{ name: string }>();
+
+        // Fetch last replier name if exists
+        let lastReplyUserName: string | undefined;
+        if (post.last_reply_user_id) {
+          const lastReplier = await c.env.platform_db
+            .prepare("SELECT name FROM users WHERE id = ?")
+            .bind(post.last_reply_user_id)
+            .first<{ name: string }>();
+          lastReplyUserName = lastReplier?.name;
+        }
 
         // Check if current user has liked this post
         let userHasLiked = false;
@@ -2221,6 +2253,7 @@ app.get("/api/v1/posts", async (c) => {
         return {
           ...post,
           author_name: author?.name || "Unknown User",
+          last_reply_user_name: lastReplyUserName,
           user_has_liked: userHasLiked,
         };
       })
@@ -2243,6 +2276,7 @@ app.get("/api/v1/posts", async (c) => {
 /**
  * GET /api/v1/posts/:id - Get single post by ID
  * Public endpoint - no authentication required
+ * Forum feature: Increments view counter
  */
 app.get("/api/v1/posts/:id", async (c) => {
   try {
@@ -2258,15 +2292,34 @@ app.get("/api/v1/posts/:id", async (c) => {
       return c.json({ error: "Post not found" }, 404);
     }
 
+    // Increment view counter (fire and forget - don't block response)
+    c.env.platform_db
+      .prepare("UPDATE posts SET views = COALESCE(views, 0) + 1 WHERE id = ?")
+      .bind(postId)
+      .run()
+      .catch((err) => console.error("Failed to increment view count:", err));
+
     // Fetch author name
     const author = await c.env.platform_db
       .prepare("SELECT name FROM users WHERE id = ?")
       .bind(post.user_id)
       .first<{ name: string }>();
 
+    // Fetch last replier name if exists
+    let lastReplyUserName: string | undefined;
+    if (post.last_reply_user_id) {
+      const lastReplier = await c.env.platform_db
+        .prepare("SELECT name FROM users WHERE id = ?")
+        .bind(post.last_reply_user_id)
+        .first<{ name: string }>();
+      lastReplyUserName = lastReplier?.name;
+    }
+
     const postWithAuthor = {
       ...post,
       author_name: author?.name || "Unknown User",
+      last_reply_user_name: lastReplyUserName,
+      views: (post.views as number || 0) + 1, // Return incremented count immediately
     };
 
     return c.json<Post>(postWithAuthor as unknown as Post);
@@ -2299,8 +2352,15 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
 
     // Parse request body
     const body = await c.req.json<Record<string, unknown>>();
+    const title = body.title ? String(body.title).trim() : undefined;
     const content = String(body.content || "").trim();
     const post_type = String(body.post_type || "general");
+    const category = String(body.category || "general");
+
+    // Validation: Check title if provided
+    if (title && title.length > 200) {
+      return c.json({ error: "Post title must not exceed 200 characters" }, 400);
+    }
 
     // Validation: Check content is not empty and within length limits
     if (!content) {
@@ -2310,7 +2370,10 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
       return c.json({ error: "Post content must not exceed 2000 characters" }, 400);
     }
 
-    // Security: Check for dangerous HTML
+    // Security: Check for dangerous HTML in title and content
+    if (title && (title.includes('<script') || title.includes('</script>') || title.includes('javascript:'))) {
+      return c.json({ error: "Invalid title" }, 400);
+    }
     if (content.includes('<script') || content.includes('</script>') || content.includes('javascript:')) {
       return c.json({ error: "Invalid content" }, 400);
     }
@@ -2318,6 +2381,11 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
     // Validation: Check post type is valid
     if (!["announcement", "discussion", "general"].includes(post_type)) {
       return c.json({ error: "Invalid post type" }, 400);
+    }
+
+    // Validation: Check category is valid
+    if (!["general", "career", "mentorship", "technology", "learning", "announcements"].includes(category)) {
+      return c.json({ error: "Invalid category" }, 400);
     }
 
     // Authorization: Only admins can create announcements
@@ -2332,12 +2400,12 @@ app.post("/api/v1/posts", requireAuth, async (c) => {
     const postId = crypto.randomUUID();
     const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
 
-    // Insert post into database
+    // Insert post into database with forum fields
     const result = await c.env.platform_db
       .prepare(
-        "INSERT INTO posts (id, user_id, content, post_type, likes_count, comments_count, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0, ?, ?)"
+        "INSERT INTO posts (id, user_id, title, content, post_type, category, likes_count, comments_count, views, is_pinned, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?)"
       )
-      .bind(postId, userId, content, post_type, now, now)
+      .bind(postId, userId, title || null, content, post_type, category, now, now)
       .run();
 
     if (!result.success) {
@@ -2577,6 +2645,74 @@ app.delete("/api/v1/posts/:id", requireAuth, async (c) => {
   } catch (err) {
     console.error("Error deleting post:", err);
     return c.json({ error: "Failed to delete post" }, 500);
+  }
+});
+
+/**
+ * PATCH /api/v1/posts/:id/pin - Pin or unpin a post
+ * Admin-only endpoint - requires admin role
+ * Forum feature: Pinned posts appear at the top of the list
+ */
+app.patch("/api/v1/posts/:id/pin", requireAuth, async (c) => {
+  try {
+    const authPayload = c.get("user") as AuthPayload | undefined;
+    if (!authPayload) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = authPayload.userId;
+    const postId = c.req.param("id");
+
+    // Check if user is admin
+    const roleRecord = await c.env.platform_db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(userId)
+      .first<{ role: string }>();
+    const userRole = roleRecord ? roleRecord.role : "member";
+
+    if (userRole !== "admin") {
+      return c.json({ error: "Only administrators can pin/unpin posts" }, 403);
+    }
+
+    // Parse request body
+    const body = await c.req.json<Record<string, unknown>>();
+    const isPinned = Boolean(body.is_pinned);
+
+    // Fetch the post
+    const post = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    if (!post) {
+      return c.json({ error: "Post not found" }, 404);
+    }
+
+    // Update the is_pinned status
+    const now = Math.floor(Date.now() / 1000);
+    const result = await c.env.platform_db
+      .prepare("UPDATE posts SET is_pinned = ?, updated_at = ? WHERE id = ?")
+      .bind(isPinned ? 1 : 0, now, postId)
+      .run();
+
+    if (!result.success) {
+      throw new Error("Failed to update post pin status");
+    }
+
+    // Fetch and return the updated post
+    const updatedPost = await c.env.platform_db
+      .prepare("SELECT * FROM posts WHERE id = ?")
+      .bind(postId)
+      .first<Record<string, unknown>>();
+
+    return c.json({
+      success: true,
+      message: isPinned ? "Post pinned successfully" : "Post unpinned successfully",
+      post: updatedPost,
+    });
+  } catch (err) {
+    console.error("Error updating post pin status:", err);
+    return c.json({ error: "Failed to update post pin status" }, 500);
   }
 });
 
@@ -2832,10 +2968,10 @@ app.post("/api/v1/posts/:id/comments", requireAuth, async (c) => {
       throw new Error("Failed to insert comment");
     }
 
-    // Increment comments_count in posts table
+    // Increment comments_count and update last_reply info in posts table (forum feature)
     const updateResult = await c.env.platform_db
-      .prepare("UPDATE posts SET comments_count = comments_count + 1, updated_at = ? WHERE id = ?")
-      .bind(now, postId)
+      .prepare("UPDATE posts SET comments_count = comments_count + 1, last_reply_at = ?, last_reply_user_id = ?, updated_at = ? WHERE id = ?")
+      .bind(now, userId, now, postId)
       .run();
 
     if (!updateResult.success) {

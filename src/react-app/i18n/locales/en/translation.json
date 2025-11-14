@@ -36,6 +36,7 @@
   },
   "navigation": {
     "feed": "Feed",
+    "forum": "Forum",
     "challenges": "Challenges",
     "blogs": "Blogs",
     "memberArea": "Member Area",
@@ -664,5 +665,48 @@
     "membersOnlyDescription": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "membersOnlyPreview": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "signInToRead": "Sign in to read the full content"
+  },
+  "forum": {
+    "title": "Forum",
+    "subtitle": "Join the discussion and share your thoughts",
+    "createPost": "New Post",
+    "noPosts": "No posts yet",
+    "pageInfo": "Showing {{start}}-{{end}} of {{total}}",
+    "previous": "Previous",
+    "next": "Next",
+    "lastReply": "Last reply",
+    "sortBy": "Sort by",
+    "category": {
+      "label": "Category",
+      "all": "All",
+      "general": "General",
+      "career": "Career",
+      "mentorship": "Mentorship",
+      "technology": "Technology",
+      "learning": "Learning",
+      "announcements": "Announcements"
+    },
+    "sort": {
+      "hot": "Hot",
+      "latest": "Latest",
+      "mostReplies": "Most Replies",
+      "mostViews": "Most Views"
+    },
+    "create": {
+      "title": "Create New Post",
+      "description": "Share your thoughts, questions, or insights with the community",
+      "backToForum": "Back to Forum",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Enter a descriptive title...",
+      "titleRequired": "Title is required",
+      "categoryLabel": "Category",
+      "typeLabel": "Post Type",
+      "contentLabel": "Content",
+      "contentPlaceholder": "Write your post content here...",
+      "contentRequired": "Content is required",
+      "submit": "Create Post",
+      "success": "Post created successfully",
+      "error": "Failed to create post"
+    }
   }
 }
