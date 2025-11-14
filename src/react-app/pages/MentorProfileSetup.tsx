@@ -13,6 +13,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
+import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { AvailabilityInput } from '../components/AvailabilityInput';
 import { createMentorProfile, getMentorProfileByUserId, updateMentorProfile } from '../services/mentorService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
@@ -251,6 +252,15 @@ export function MentorProfileSetup() {
                 <ExpertiseDomainPicker control={form.control as any} required={true} />
                 {form.formState.errors.expertise_domains && (
                   <p className="text-sm text-red-500">{form.formState.errors.expertise_domains.message}</p>
+                )}
+              </div>
+
+              {/* Section 2.5: Expertise Topics */}
+              <div className="space-y-6">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <ExpertiseTopicPicker control={form.control as any} required={true} />
+                {form.formState.errors.expertise_topics_preset && (
+                  <p className="text-sm text-red-500">{form.formState.errors.expertise_topics_preset.message}</p>
                 )}
               </div>
 

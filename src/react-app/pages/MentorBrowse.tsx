@@ -11,6 +11,7 @@ import { Label } from '../components/ui/label';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
+import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { MentorCard } from '../components/MentorCard';
 import { MentorCardSkeleton } from '../components/MentorCardSkeleton';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
@@ -167,6 +168,10 @@ export function MentorBrowse() {
 
               <div className="space-y-3">
                 <ExpertiseDomainPicker control={form.control} required={true} />
+              </div>
+
+              <div className="space-y-3">
+                <ExpertiseTopicPicker control={form.control} required={true} />
               </div>
 
               <div className="space-y-3">
