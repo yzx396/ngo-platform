@@ -248,7 +248,7 @@ function PostCardComponent({
                 onClick={handleLikeClick}
                 disabled={isLiking}
                 className="h-8 px-2 text-xs"
-                title={userHasLiked ? t('posts.unlike', 'Unlike') : t('posts.like', 'Like')}
+                title={userHasLiked ? t('comments.unlike', 'Unlike') : t('comments.like', 'Like')}
               >
                 {isLiking ? (
                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -259,17 +259,17 @@ function PostCardComponent({
                     }`}
                   />
                 )}
-                {t('posts.like', 'Like')}
+                {t('comments.like', 'Like')}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowComments(!showComments)}
                 className="h-8 px-2 text-xs"
-                title={t('posts.comment', 'Comment')}
+                title={t('comments.comment', 'Comment')}
               >
                 <MessageSquare className="h-4 w-4 mr-1 text-muted-foreground" />
-                {t('posts.comment', 'Comment')}
+                {t('comments.comment', 'Comment')}
               </Button>
             </>
           ) : null}
@@ -292,17 +292,17 @@ function PostCardComponent({
       {/* Comments Section */}
       {showComments && (
         <div className="px-6 py-4 border-t space-y-4 bg-white">
+          {commentsCount > 0 && (
+            <PostComments
+              postId={post.id}
+              onCommentDeleted={() => setCommentsCount((c) => Math.max(0, c - 1))}
+            />
+          )}
           {isAuthenticated && (
             <CommentForm
               postId={post.id}
               onCommentCreated={() => setCommentsCount((c) => c + 1)}
               placeholder={t('posts.addComment', 'Add a comment...')}
-            />
-          )}
-          {commentsCount > 0 && (
-            <PostComments
-              postId={post.id}
-              onCommentDeleted={() => setCommentsCount((c) => Math.max(0, c - 1))}
             />
           )}
         </div>

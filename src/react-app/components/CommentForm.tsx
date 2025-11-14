@@ -93,7 +93,7 @@ export function CommentForm({
         <RichTextEditor
           content={content}
           onChange={setContent}
-          placeholder={placeholder || t('posts.addComment', 'Add a comment...')}
+          placeholder={placeholder || t('comments.add', 'Add a comment...')}
           minHeight={isReply ? '100px' : '120px'}
           disabled={isSubmitting}
         />
@@ -128,7 +128,7 @@ export function CommentForm({
             ? t('common.loading', 'Loading...')
             : isReply
               ? t('comments.submitReply', 'Reply')
-              : t('posts.submitComment', 'Submit')}
+              : t('comments.submit', 'Submit')}
         </Button>
       </div>
     </form>

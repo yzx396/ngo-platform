@@ -58,9 +58,9 @@ export function BlogPointsInfoDialog({ open, onOpenChange }: BlogPointsInfoDialo
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>{t('points.blogRulesDialog.comment')}</span>
+                <span>{t('points.commonRules.comment')}</span>
                 <span className="font-medium text-blue-600">
-                  {t('points.blogRulesDialog.commentPoints')}
+                  {t('points.commonRules.commentPoints')}
                 </span>
               </div>
             </div>
@@ -69,29 +69,29 @@ export function BlogPointsInfoDialog({ open, onOpenChange }: BlogPointsInfoDialo
           {/* Receiving Engagement Section */}
           <section className="space-y-3">
             <h3 className="font-semibold text-base">
-              {t('points.blogRulesDialog.receivingEngagement')}
+              {t('points.commonRules.receivingEngagement')}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {t('points.blogRulesDialog.receivingEngagementDesc')}
+              {t('points.commonRules.receivingEngagementDesc')}
             </p>
             <div className="space-y-2 ml-4">
               <div className="flex justify-between text-sm">
                 <span>{t('points.blogRulesDialog.likeReceived')}</span>
                 <span className="font-medium text-green-600">
-                  {t('points.blogRulesDialog.likeReceivedPoints')}
+                  {t('points.commonRules.likeReceivedPoints')}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>{t('points.blogRulesDialog.commentReceived')}</span>
+                <span>{t('points.commonRules.commentReceived')}</span>
                 <span className="font-medium text-green-600">
-                  {t('points.blogRulesDialog.commentReceivedPoints')}
+                  {t('points.commonRules.commentReceivedPoints')}
                 </span>
               </div>
             </div>
 
             {/* Important Note */}
             <div className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800 border border-amber-200">
-              <p className="font-semibold mb-1">{t('points.blogRulesDialog.important')}</p>
+              <p className="font-semibold mb-1">{t('points.commonRules.important')}</p>
               <p>{t('points.blogRulesDialog.noPointsForLiking')}</p>
             </div>
           </section>
@@ -99,10 +99,10 @@ export function BlogPointsInfoDialog({ open, onOpenChange }: BlogPointsInfoDialo
           {/* Anti-Spam System Section */}
           <section className="space-y-3">
             <h3 className="font-semibold text-base">
-              {t('points.blogRulesDialog.antiSpam')}
+              {t('points.commonRules.antiSpam')}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {t('points.blogRulesDialog.antiSpamDesc')}
+              {t('points.commonRules.antiSpamDesc')}
             </p>
 
             {/* Blogs Per Hour */}
@@ -126,17 +126,17 @@ export function BlogPointsInfoDialog({ open, onOpenChange }: BlogPointsInfoDialo
             {/* Likes Per Hour */}
             <div className="ml-4 space-y-2">
               <p className="text-sm font-medium">
-                {t('points.blogRulesDialog.likesPerHour')}
+                {t('points.commonRules.likesPerHour')}
               </p>
               <div className="space-y-1 text-sm ml-2">
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.first5Likes')}</span>
+                  <span>{t('points.commonRules.first5Likes')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.next10Likes')}</span>
+                  <span>{t('points.commonRules.next10Likes')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.beyond15Likes')}</span>
+                  <span>{t('points.commonRules.beyond15Likes')}</span>
                 </div>
               </div>
             </div>
@@ -144,17 +144,17 @@ export function BlogPointsInfoDialog({ open, onOpenChange }: BlogPointsInfoDialo
             {/* Comments Per Hour */}
             <div className="ml-4 space-y-2">
               <p className="text-sm font-medium">
-                {t('points.blogRulesDialog.commentsPerHour')}
+                {t('points.commonRules.commentsPerHour')}
               </p>
               <div className="space-y-1 text-sm ml-2">
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.first10Comments')}</span>
+                  <span>{t('points.commonRules.first10Comments')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.next10Comments')}</span>
+                  <span>{t('points.commonRules.next10Comments')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.blogRulesDialog.beyond20Comments')}</span>
+                  <span>{t('points.commonRules.beyond20Comments')}</span>
                 </div>
               </div>
             </div>

@@ -8,6 +8,7 @@ import { handleApiError } from '../services/apiClient';
 import { formatPostTime } from '../../types/post';
 import type { BlogCommentWithReplies } from '../../types/blog';
 import { CommentForm } from './CommentForm';
+import { sanitizeHtml } from '../utils/blogUtils';
 
 interface BlogThreadedCommentProps {
   comment: BlogCommentWithReplies;
@@ -49,7 +50,7 @@ export function BlogThreadedComment({
   const canReply = !isDeleted && depth < maxDepth;
 
   const handleDelete = async () => {
-    if (!window.confirm(t('blogs.deleteCommentConfirm', 'Delete this comment?'))) {
+    if (!window.confirm(t('comments.deleteConfirm', 'Delete this comment?'))) {
       return;
     }
 
@@ -115,8 +116,8 @@ export function BlogThreadedComment({
                   onClick={handleDelete}
                   disabled={isDeleting}
                   className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                  title={t('blogs.delete', 'Delete')}
-                  aria-label={t('blogs.deleteComment', 'Delete comment')}
+                  title={t('comments.delete', 'Delete')}
+                  aria-label={t('comments.delete', 'Delete comment')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -124,13 +125,16 @@ export function BlogThreadedComment({
             </div>
 
             {/* Comment Content */}
-            <p
-              className={`text-sm whitespace-pre-wrap break-words ${
-                isDeleted ? 'text-muted-foreground italic' : 'text-foreground'
-              }`}
-            >
-              {comment.content}
-            </p>
+            {isDeleted ? (
+              <p className="text-sm text-muted-foreground italic whitespace-pre-wrap break-words">
+                {comment.content}
+              </p>
+            ) : (
+              <div
+                className="text-sm text-foreground prose prose-sm max-w-none break-words"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(comment.content) }}
+              />
+            )}
 
             {/* Reply button */}
             {canReply && (

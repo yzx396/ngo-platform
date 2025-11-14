@@ -309,19 +309,16 @@ export function BlogDetailPage() {
 
         {showComments && (
           <CardContent className="flex-1 space-y-6 border-t">
-            {/* Comment Form */}
-            {user && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">{t('blogs.addComment', 'Add a comment...')}</h3>
-                <CommentForm
-                  blogId={id}
-                  onCommentCreated={handleCommentCreated}
-                />
-              </div>
-            )}
-
             {/* Comments List */}
             {id && <BlogComments blogId={id} />}
+
+            {/* Comment Form */}
+            {user && (
+              <CommentForm
+                blogId={id}
+                onCommentCreated={handleCommentCreated}
+              />
+            )}
           </CardContent>
         )}
       </Card>

@@ -268,4 +268,20 @@ describe('BlogThreadedComment', () => {
     // Reply form should disappear
     expect(screen.queryByText(/Replying to John Doe/)).not.toBeInTheDocument();
   });
+
+  it('should render rich text HTML content properly', () => {
+    const richTextComment = {
+      ...mockComment,
+      content: '<p>Great blog post with <strong>bold</strong> text!</p><ul><li>Point 1</li><li>Point 2</li></ul>',
+    };
+    const { container } = render(
+      <BlogThreadedComment comment={richTextComment} blogId="blog-1" />
+    );
+
+    // Check that the HTML content is rendered (not as plain text)
+    const contentDiv = container.querySelector('div.prose');
+    expect(contentDiv).toBeInTheDocument();
+    expect(contentDiv?.innerHTML).toContain('bold');
+    expect(contentDiv?.innerHTML).toContain('Point 1');
+  });
 });

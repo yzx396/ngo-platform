@@ -50,7 +50,7 @@ export function ThreadedComment({
   const canReply = !isDeleted && depth < maxDepth;
 
   const handleDelete = async () => {
-    if (!window.confirm(t('posts.deleteCommentConfirm', 'Delete this comment?'))) {
+    if (!window.confirm(t('comments.deleteConfirm', 'Delete this comment?'))) {
       return;
     }
 
@@ -116,8 +116,8 @@ export function ThreadedComment({
                   onClick={handleDelete}
                   disabled={isDeleting}
                   className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                  title={t('posts.delete', 'Delete')}
-                  aria-label={t('posts.deleteComment', 'Delete comment')}
+                  title={t('comments.delete', 'Delete')}
+                  aria-label={t('comments.delete', 'Delete comment')}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

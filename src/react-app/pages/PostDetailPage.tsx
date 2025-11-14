@@ -290,17 +290,6 @@ export function PostDetailPage() {
 
         {showComments && (
           <CardContent className="flex-1 space-y-6 border-t">
-            {/* Comment Form */}
-            {user && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">{t('posts.addComment', 'Add a comment...')}</h3>
-                <CommentForm
-                  postId={id}
-                  onCommentCreated={handleCommentCreated}
-                />
-              </div>
-            )}
-
             {/* Comments List */}
             {id && (
               <PostComments
@@ -310,6 +299,14 @@ export function PostDetailPage() {
                     setPost({ ...post, comments_count: Math.max(0, post.comments_count - 1) });
                   }
                 }}
+              />
+            )}
+
+            {/* Comment Form */}
+            {user && (
+              <CommentForm
+                postId={id}
+                onCommentCreated={handleCommentCreated}
               />
             )}
           </CardContent>

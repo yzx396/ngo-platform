@@ -64,9 +64,9 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span>{t('points.rulesDialog.comment')}</span>
+                <span>{t('points.commonRules.comment')}</span>
                 <span className="font-medium text-blue-600">
-                  {t('points.rulesDialog.commentPoints')}
+                  {t('points.commonRules.commentPoints')}
                 </span>
               </div>
             </div>
@@ -75,7 +75,7 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
           {/* Receiving Engagement Section */}
           <section className="space-y-3">
             <h3 className="font-semibold text-base">
-              {t('points.rulesDialog.receivingEngagement')}
+              {t('points.commonRules.receivingEngagement')}
             </h3>
             <p className="text-sm text-muted-foreground">
               {t('points.rulesDialog.receivingEngagementDesc')}
@@ -84,20 +84,20 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
               <div className="flex justify-between text-sm">
                 <span>{t('points.rulesDialog.likeReceived')}</span>
                 <span className="font-medium text-green-600">
-                  {t('points.rulesDialog.likeReceivedPoints')}
+                  {t('points.commonRules.likeReceivedPoints')}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>{t('points.rulesDialog.commentReceived')}</span>
                 <span className="font-medium text-green-600">
-                  {t('points.rulesDialog.commentReceivedPoints')}
+                  {t('points.commonRules.commentReceivedPoints')}
                 </span>
               </div>
             </div>
 
             {/* Important Note */}
             <div className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800 border border-amber-200">
-              <p className="font-semibold mb-1">{t('points.rulesDialog.important')}</p>
+              <p className="font-semibold mb-1">{t('points.commonRules.important')}</p>
               <p>{t('points.rulesDialog.noPointsForLiking')}</p>
             </div>
           </section>
@@ -105,26 +105,26 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
           {/* Anti-Spam System Section */}
           <section className="space-y-3">
             <h3 className="font-semibold text-base">
-              {t('points.rulesDialog.antiSpam')}
+              {t('points.commonRules.antiSpam')}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {t('points.rulesDialog.antiSpamDesc')}
+              {t('points.commonRules.antiSpamDesc')}
             </p>
 
             {/* Likes Per Hour */}
             <div className="ml-4 space-y-2">
               <p className="text-sm font-medium">
-                {t('points.rulesDialog.likesPerHour')}
+                {t('points.commonRules.likesPerHour')}
               </p>
               <div className="space-y-1 text-sm ml-2">
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.first5Likes')}</span>
+                  <span>{t('points.commonRules.first5Likes')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.next10Likes')}</span>
+                  <span>{t('points.commonRules.next10Likes')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.beyond15Likes')}</span>
+                  <span>{t('points.commonRules.beyond15Likes')}</span>
                 </div>
               </div>
             </div>
@@ -132,17 +132,17 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
             {/* Comments Per Hour */}
             <div className="ml-4 space-y-2">
               <p className="text-sm font-medium">
-                {t('points.rulesDialog.commentsPerHour')}
+                {t('points.commonRules.commentsPerHour')}
               </p>
               <div className="space-y-1 text-sm ml-2">
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.first10Comments')}</span>
+                  <span>{t('points.commonRules.first10Comments')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.next10Comments')}</span>
+                  <span>{t('points.commonRules.next10Comments')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.beyond20Comments')}</span>
+                  <span>{t('points.commonRules.beyond20Comments')}</span>
                 </div>
               </div>
             </div>

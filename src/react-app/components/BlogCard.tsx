@@ -92,14 +92,14 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
               size="sm"
               onClick={handleLikeClick}
               className="h-8 px-2 text-xs"
-              title={blog.liked_by_user ? t('blogs.unlike', 'Unlike') : t('blogs.like', 'Like')}
+              title={blog.liked_by_user ? t('comments.unlike', 'Unlike') : t('comments.like', 'Like')}
             >
               <Heart
                 className={`h-4 w-4 mr-1 ${
                   blog.liked_by_user ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
                 }`}
               />
-              {t('blogs.like', 'Like')}
+              {t('comments.like', 'Like')}
             </Button>
 
             <Button
@@ -109,7 +109,7 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
               className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
             >
               <MessageCircle className="h-4 w-4 mr-1" />
-              {t('blogs.comment', 'Comment')}
+              {t('comments.comment', 'Comment')}
             </Button>
           </div>
 
@@ -132,15 +132,6 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
           {/* Comments section */}
           {showComments && (
             <div className="pt-3 border-t space-y-3 animate-in fade-in duration-300">
-              {user && (
-                <div className="bg-background rounded p-3">
-                  <CommentForm
-                    blogId={blog.id}
-                    onCommentCreated={handleCommentCreated}
-                    placeholder={t('posts.addComment', 'Add a comment...')}
-                  />
-                </div>
-              )}
               <div>
                 <BlogComments blogId={blog.id} compactMode={true} limit={10} />
               </div>
@@ -151,6 +142,15 @@ export function BlogCard({ blog, onLike, onUnlike, showActions = true }: BlogCar
                 >
                   {t('blogs.viewAllComments', 'View all comments')} →
                 </Link>
+              )}
+              {user && (
+                <div className="bg-background rounded p-3">
+                  <CommentForm
+                    blogId={blog.id}
+                    onCommentCreated={handleCommentCreated}
+                    placeholder={t('posts.addComment', 'Add a comment...')}
+                  />
+                </div>
               )}
             </div>
           )}
