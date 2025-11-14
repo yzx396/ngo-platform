@@ -1,2 +1,2 @@
 -- Drop expertise_topics_custom column from mentor_profiles
-ALTER TABLE mentor_profiles DROP COLUMN IF EXISTS expertise_topics_custom;
+ALTER TABLE mentor_profiles DROP COLUMN expertise_topics_custom;
