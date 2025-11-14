@@ -5,15 +5,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { createPost } from '../services/postService';
 import { ForumCategory, PostType } from '../../types/post';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
@@ -126,18 +118,19 @@ export function ForumCreatePostPage() {
               <Label htmlFor="category">
                 {t('forum.create.categoryLabel', 'Category')} <span className="text-red-500">*</span>
               </Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="category">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ForumCategory).map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {t(`forum.category.${cat}`, cat)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                id="category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                required
+              >
+                {Object.values(ForumCategory).map((cat) => (
+                  <option key={cat} value={cat}>
+                    {t(`forum.category.${cat}`, cat)}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Post Type */}
@@ -145,19 +138,19 @@ export function ForumCreatePostPage() {
               <Label htmlFor="postType">
                 {t('forum.create.typeLabel', 'Post Type')}
               </Label>
-              <Select value={postType} onValueChange={(value) => setPostType(value as PostType)}>
-                <SelectTrigger id="postType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PostType.General}>
-                    {t('postType.general', 'General')}
-                  </SelectItem>
-                  <SelectItem value={PostType.Discussion}>
-                    {t('postType.discussion', 'Discussion')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <select
+                id="postType"
+                value={postType}
+                onChange={(e) => setPostType(e.target.value as PostType)}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value={PostType.General}>
+                  {t('postType.general', 'General')}
+                </option>
+                <option value={PostType.Discussion}>
+                  {t('postType.discussion', 'Discussion')}
+                </option>
+              </select>
             </div>
 
             {/* Content */}

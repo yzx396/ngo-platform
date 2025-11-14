@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { ForumPostListItem } from '../components/ForumPostListItem';
 import { Button } from '../components/ui/button';
-import { getPosts } from '../services/postService';
 import { ForumCategory, ForumSortBy } from '../../types/post';
 import type { PostWithAuthor } from '../../types/post';
 import { ApiError } from '../services/apiClient';

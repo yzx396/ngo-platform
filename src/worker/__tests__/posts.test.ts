@@ -212,10 +212,25 @@ function createMockDb() {
           }
           // INSERT posts
           if (query.includes('INSERT INTO posts')) {
-            // The INSERT query has VALUES (?, ?, ?, ?, 0, 0, ?, ?)
-            // So we get 6 params: id, user_id, content, post_type, created_at, updated_at
-            const [id, user_id, content, post_type, created_at, updated_at] = params;
-            const post = { id, user_id, content, post_type, likes_count: 0, comments_count: 0, created_at, updated_at };
+            // The INSERT query has VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?)
+            // So we get 8 params: id, user_id, title, content, post_type, category, created_at, updated_at
+            const [id, user_id, title, content, post_type, category, created_at, updated_at] = params;
+            const post = {
+              id,
+              user_id,
+              title: title || null,
+              content,
+              post_type,
+              category: category || 'general',
+              likes_count: 0,
+              comments_count: 0,
+              views: 0,
+              is_pinned: 0,
+              last_reply_at: null,
+              last_reply_user_id: null,
+              created_at,
+              updated_at
+            };
             mockPosts.set(id, post);
             return { success: true, meta: { changes: 1 } };
           }
@@ -236,6 +251,17 @@ function createMockDb() {
                 updated.likes_count = (updated.likes_count as number || 0) + 1;
               } else if (query.includes('likes_count = MAX(0, likes_count - 1)')) {
                 updated.likes_count = Math.max(0, (updated.likes_count as number || 0) - 1);
+              } else if (query.includes('views = COALESCE(views, 0) + 1')) {
+                updated.views = (updated.views as number || 0) + 1;
+              } else if (query.includes('comments_count = comments_count + 1')) {
+                updated.comments_count = (updated.comments_count as number || 0) + 1;
+                // Also update last_reply_at and last_reply_user_id if present
+                if (query.includes('last_reply_at')) {
+                  updated.last_reply_at = params[0];
+                  updated.last_reply_user_id = params[1];
+                }
+              } else if (query.includes('is_pinned')) {
+                updated.is_pinned = params[0];
               } else {
                 // Handle regular parameterized updates
                 let paramIndex = 0;
@@ -649,8 +675,11 @@ describe('Posts System', () => {
         user_id: testUser.id,
         content: 'Hello world! This is my first post.',
         post_type: 'general',
+        category: 'general',
         likes_count: 0,
         comments_count: 0,
+        views: 0,
+        is_pinned: 0,
         created_at: expect.any(Number),
         updated_at: expect.any(Number),
       });
