@@ -83,16 +83,11 @@ export function MentorCard({
         )}
 
         {/* Expertise Topics */}
-        {(topicNames.length > 0 || (mentor.expertise_topics_custom && mentor.expertise_topics_custom.length > 0)) && (
+        {topicNames.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {topicNames.map((topic) => (
               <Badge key={topic} variant="outline" className="text-xs">
                 {t(`expertiseTopic.${topic.charAt(0).toLowerCase() + topic.slice(1)}`)}
-              </Badge>
-            ))}
-            {mentor.expertise_topics_custom && mentor.expertise_topics_custom.map((custom) => (
-              <Badge key={custom} variant="outline" className="text-xs bg-green-50 border-green-200">
-                {custom}
               </Badge>
             ))}
           </div>

@@ -46,7 +46,6 @@ export interface MentorProfile {
   payment_types: number; // Bit flags
   expertise_domains: number; // Bit flags - mentor's professional domains
   expertise_topics_preset: number; // Bit flags - predefined expertise topics
-  expertise_topics_custom: string[]; // Custom tags as array
   allow_reviews: boolean;
   allow_recording: boolean;
   linkedin_url: string | null; // LinkedIn profile URL

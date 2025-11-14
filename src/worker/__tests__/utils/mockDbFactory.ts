@@ -560,7 +560,6 @@ function createRunHandler(
         payment_types,
         expertise_domains,
         expertise_topics_preset,
-        expertise_topics_custom,
         allow_reviews,
         allow_recording,
         linkedin_url,
@@ -579,7 +578,6 @@ function createRunHandler(
         payment_types,
         expertise_domains,
         expertise_topics_preset,
-        expertise_topics_custom,
         allow_reviews,
         allow_recording,
         linkedin_url,
@@ -627,7 +625,6 @@ function createRunHandler(
             else if (field === 'payment_types') updated.payment_types = params[paramIndex++];
             else if (field === 'expertise_domains') updated.expertise_domains = params[paramIndex++];
             else if (field === 'expertise_topics_preset') updated.expertise_topics_preset = params[paramIndex++];
-            else if (field === 'expertise_topics_custom') updated.expertise_topics_custom = params[paramIndex++];
             else if (field === 'allow_reviews') updated.allow_reviews = Boolean(params[paramIndex++]);
             else if (field === 'allow_recording') updated.allow_recording = Boolean(params[paramIndex++]);
             else if (field === 'linkedin_url') updated.linkedin_url = params[paramIndex++];

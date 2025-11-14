@@ -21,7 +21,6 @@ const mockMentor: MentorProfile = {
   availability: 'Mon/Tue/Thu/Sat: 8pm-10pm PST, flexible',
   expertise_domains: ExpertiseDomain.TechnicalDevelopment | ExpertiseDomain.CareerDevelopment,
   expertise_topics_preset: ExpertiseTopic.CareerTransition | ExpertiseTopic.Leadership,
-  expertise_topics_custom: ['Startup Strategy', 'Product Marketing'],
   allow_reviews: true,
   allow_recording: true,
   created_at: 1704067200,
@@ -200,9 +199,5 @@ describe('MentorDetailPage', () => {
     // Check for preset topic translations
     expect(screen.getByText(/Career Transition/i)).toBeInTheDocument();
     expect(screen.getByText(/Leadership/i)).toBeInTheDocument();
-
-    // Check for custom topics
-    expect(screen.getByText('Startup Strategy')).toBeInTheDocument();
-    expect(screen.getByText('Product Marketing')).toBeInTheDocument();
   });
 });

@@ -13,7 +13,6 @@ import { Checkbox } from '../components/ui/checkbox';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
-import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { AvailabilityInput } from '../components/AvailabilityInput';
 import { createMentorProfile, getMentorProfileByUserId, updateMentorProfile } from '../services/mentorService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
@@ -28,12 +27,11 @@ const createMentorProfileSchema = (t: (key: string) => string) => z.object({
   nick_name: z.string().min(2, t('mentor.validationNickname')),
   bio: z.string().min(10, t('mentor.validationBio')),
   expertise_domains: z.number().min(1, t('mentor.validationExpertiseDomain')),
-  expertise_topics_preset: z.number().min(1, t('mentor.validationExpertiseTopic')),
+  expertise_topics_preset: z.number().int(),
   mentoring_levels: z.number().min(1, t('mentor.validationLevel')),
   availability: z.string().min(10, t('mentor.validationAvailability')),
   hourly_rate: z.number().min(1, t('mentor.validationRateRequired')),
   payment_types: z.number().min(1, t('mentor.validationPayment')),
-  expertise_topics_custom: z.array(z.string()),
   allow_reviews: z.boolean().refine(
     (val) => val === true,
     t('mentor.validationReviewsRequired')
@@ -75,7 +73,6 @@ export function MentorProfileSetup() {
       payment_types: 0,
       expertise_domains: 0,
       expertise_topics_preset: 0,
-      expertise_topics_custom: [],
       allow_reviews: false,
       allow_recording: false,
       linkedin_url: '',
@@ -104,7 +101,6 @@ export function MentorProfileSetup() {
             payment_types: profile.payment_types,
             expertise_domains: profile.expertise_domains,
             expertise_topics_preset: profile.expertise_topics_preset,
-            expertise_topics_custom: profile.expertise_topics_custom || [],
             allow_reviews: profile.allow_reviews,
             allow_recording: profile.allow_recording,
             linkedin_url: profile.linkedin_url || '',
@@ -249,17 +245,12 @@ export function MentorProfileSetup() {
                 </div>
               </div>
 
-              {/* Section 2: Expertise Domains and Topics */}
+              {/* Section 2: Expertise Domains */}
               <div className="space-y-6">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <ExpertiseDomainPicker control={form.control as any} required={true} />
                 {form.formState.errors.expertise_domains && (
                   <p className="text-sm text-red-500">{form.formState.errors.expertise_domains.message}</p>
-                )}
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <ExpertiseTopicPicker control={form.control as any} required={true} />
-                {form.formState.errors.expertise_topics_preset && (
-                  <p className="text-sm text-red-500">{form.formState.errors.expertise_topics_preset.message}</p>
                 )}
               </div>
 

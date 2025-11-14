@@ -408,22 +408,6 @@ function normalizeMentorProfile(profile: unknown): MentorProfile {
 }
 ```
 
-**JSON Field Parsing:**
-
-Some fields (like `expertise_topics_custom`) are stored as JSON strings. Always parse:
-
-```typescript
-const expertise_topics_custom: string[] = [];
-if (dbProfile.expertise_topics_custom) {
-  try {
-    const parsed = JSON.parse(dbProfile.expertise_topics_custom as string);
-    expertise_topics_custom = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    expertise_topics_custom = [];
-  }
-}
-```
-
 ### Error Handling Pattern
 
 API client automatically extracts error details:
@@ -477,7 +461,6 @@ mentoring_levels INTEGER (bit flags)
 availability TEXT (JSON)
 expertise_domain TEXT
 expertise_topics TEXT (JSON array)
-expertise_topics_custom TEXT (JSON array)
 linkedin_url TEXT
 available BOOLEAN
 accepting_new_mentees BOOLEAN

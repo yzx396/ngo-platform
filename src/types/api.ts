@@ -50,7 +50,6 @@ export interface CreateMentorProfileRequest {
   payment_types: number; // Bit flags
   expertise_domains?: number; // Bit flags - professional domains
   expertise_topics_preset?: number; // Bit flags - predefined expertise topics
-  expertise_topics_custom?: string[]; // Custom topic tags
   allow_reviews?: boolean;
   allow_recording?: boolean;
   linkedin_url?: string | null; // LinkedIn profile URL
@@ -65,7 +64,6 @@ export interface UpdateMentorProfileRequest {
   payment_types?: number;
   expertise_domains?: number;
   expertise_topics_preset?: number;
-  expertise_topics_custom?: string[];
   allow_reviews?: boolean;
   allow_recording?: boolean;
   linkedin_url?: string | null; // LinkedIn profile URL
@@ -77,7 +75,6 @@ export interface SearchMentorsRequest {
   payment_types?: number; // Bit flags to filter
   expertise_domains?: number; // Bit flags - filter by mentor's professional domains
   expertise_topics?: number; // Bit flags - filter by mentor's expertise topics (preset only)
-  expertise_topics_custom?: string[]; // Filter by custom topic tags
   hourly_rate_max?: number;
   hourly_rate_min?: number;
   nick_name?: string;

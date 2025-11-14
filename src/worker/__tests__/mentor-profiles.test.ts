@@ -311,11 +311,9 @@ describe('Mentor Profile CRUD API', () => {
       expect(data.payment_types).toBe(created.payment_types);
       expect(data.hourly_rate).toBe(created.hourly_rate);
 
-      // Verify new expertise fields are present and have correct types
+      // Verify expertise fields are present and have correct types
       expect(data.expertise_domains).toBe(0);
       expect(data.expertise_topics_preset).toBe(0);
-      expect(Array.isArray(data.expertise_topics_custom)).toBe(true);
-      expect(data.expertise_topics_custom.length).toBe(0);
     });
 
     it('should return 404 when profile does not exist', async () => {
@@ -390,7 +388,6 @@ describe('Mentor Profile CRUD API', () => {
       // Verify expertise fields are included and have correct types
       expect(data.expertise_domains).toBe(0);
       expect(data.expertise_topics_preset).toBe(0);
-      expect(Array.isArray(data.expertise_topics_custom)).toBe(true);
     });
   });
 

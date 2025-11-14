@@ -11,7 +11,6 @@ import { Label } from '../components/ui/label';
 import { MentoringLevelPicker } from '../components/MentoringLevelPicker';
 import { PaymentTypePicker } from '../components/PaymentTypePicker';
 import { ExpertiseDomainPicker } from '../components/ExpertiseDomainPicker';
-import { ExpertiseTopicPicker } from '../components/ExpertiseTopicPicker';
 import { MentorCard } from '../components/MentorCard';
 import { MentorCardSkeleton } from '../components/MentorCardSkeleton';
 import { RequestMentorshipDialog } from '../components/RequestMentorshipDialog';
@@ -48,7 +47,6 @@ export function MentorBrowse() {
       nick_name: '',
       expertise_domains: 0,
       expertise_topics_preset: 0,
-      expertise_topics_custom: [],
     },
   });
 
@@ -93,7 +91,6 @@ export function MentorBrowse() {
         hourly_rate_max: values.hourly_rate_max < 200 ? values.hourly_rate_max : undefined,
         expertise_domains: values.expertise_domains > 0 ? values.expertise_domains : undefined,
         expertise_topics: values.expertise_topics_preset > 0 ? values.expertise_topics_preset : undefined,
-        expertise_topics_custom: values.expertise_topics_custom && values.expertise_topics_custom.length > 0 ? values.expertise_topics_custom : undefined,
       });
       setMentors(data.mentors || []);
       setTotal(data.total || 0);
@@ -170,10 +167,6 @@ export function MentorBrowse() {
 
               <div className="space-y-3">
                 <ExpertiseDomainPicker control={form.control} required={true} />
-              </div>
-
-              <div className="space-y-3">
-                <ExpertiseTopicPicker control={form.control} required={true} />
               </div>
 
               <div className="space-y-3">

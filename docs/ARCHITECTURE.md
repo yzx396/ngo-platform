@@ -272,7 +272,6 @@ mentoring_levels INTEGER (bit flags)
 availability TEXT (JSON)
 expertise_domain TEXT
 expertise_topics TEXT (JSON array)
-expertise_topics_custom TEXT (JSON array)
 available BOOLEAN
 accepting_new_mentees BOOLEAN
 created_at INTEGER

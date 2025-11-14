@@ -63,7 +63,6 @@ interface MentorProfile {
   payment_types: number;
   expertise_domains: number;
   expertise_topics_preset: number;
-  expertise_topics_custom: string[];
   linkedin_url: string | null;
   allow_reviews: boolean;
   allow_recording: boolean;
@@ -115,7 +114,6 @@ function generateMentorProfiles(users: User[]): MentorProfile[] {
       payment_types: PaymentType.Venmo | PaymentType.Paypal | PaymentType.Zelle,
       expertise_domains: ExpertiseDomain.TechnicalDevelopment | ExpertiseDomain.CareerDevelopment,
       expertise_topics_preset: ExpertiseTopic.CareerTransition | ExpertiseTopic.TechnicalSkills | ExpertiseTopic.Leadership | ExpertiseTopic.InterviewPrep,
-      expertise_topics_custom: ['System Design', 'Cloud Architecture', 'Team Building'],
       linkedin_url: 'https://www.linkedin.com/in/sarah-chen-tech',
       allow_reviews: true,
       allow_recording: true,
@@ -133,7 +131,6 @@ function generateMentorProfiles(users: User[]): MentorProfile[] {
       payment_types: PaymentType.Paypal | PaymentType.Zelle | PaymentType.Alipay | PaymentType.Wechat,
       expertise_domains: ExpertiseDomain.ProductProjectManagement | ExpertiseDomain.ManagementStrategy | ExpertiseDomain.CareerDevelopment,
       expertise_topics_preset: ExpertiseTopic.CareerTransition | ExpertiseTopic.Leadership | ExpertiseTopic.Communication | ExpertiseTopic.StrategicPlanning | ExpertiseTopic.Fundraising,
-      expertise_topics_custom: ['Product Strategy', 'User Research', 'Go-to-Market', 'Startup Growth'],
       linkedin_url: 'https://www.linkedin.com/in/david-wang-product',
       allow_reviews: true,
       allow_recording: false,
@@ -176,8 +173,7 @@ function buildSQL(users: User[], profiles: MentorProfile[]): string {
 
   sql += '\n-- Insert mentor profiles\n';
   for (const profile of profiles) {
-    const customTopics = JSON.stringify(profile.expertise_topics_custom).replace(/'/g, "''");
-    sql += `INSERT INTO mentor_profiles (id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, expertise_topics_custom, linkedin_url, allow_reviews, allow_recording, created_at, updated_at) VALUES (`;
+    sql += `INSERT INTO mentor_profiles (id, user_id, nick_name, bio, mentoring_levels, availability, hourly_rate, payment_types, expertise_domains, expertise_topics_preset, linkedin_url, allow_reviews, allow_recording, created_at, updated_at) VALUES (`;
     sql += `'${profile.id}', `;
     sql += `'${profile.user_id}', `;
     sql += `'${profile.nick_name.replace(/'/g, "''")}', `;
@@ -188,7 +184,6 @@ function buildSQL(users: User[], profiles: MentorProfile[]): string {
     sql += `${profile.payment_types}, `;
     sql += `${profile.expertise_domains}, `;
     sql += `${profile.expertise_topics_preset}, `;
-    sql += `'${customTopics}', `;
     sql += `${profile.linkedin_url ? `'${profile.linkedin_url}'` : 'NULL'}, `;
     sql += `${profile.allow_reviews ? 1 : 0}, `;
     sql += `${profile.allow_recording ? 1 : 0}, `;

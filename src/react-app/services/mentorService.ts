@@ -76,7 +76,6 @@ export async function searchMentors(filters: {
   payment_types?: number;
   expertise_domains?: number;
   expertise_topics?: number;
-  expertise_topics_custom?: string[];
   hourly_rate_min?: number;
   hourly_rate_max?: number;
   nick_name?: string;
@@ -97,9 +96,6 @@ export async function searchMentors(filters: {
   }
   if (filters.expertise_topics && filters.expertise_topics > 0) {
     params.set('expertise_topics', filters.expertise_topics.toString());
-  }
-  if (filters.expertise_topics_custom && filters.expertise_topics_custom.length > 0) {
-    params.set('expertise_topics_custom', filters.expertise_topics_custom.join(','));
   }
   if (filters.hourly_rate_min !== undefined && filters.hourly_rate_min > 0) {
     params.set('hourly_rate_min', filters.hourly_rate_min.toString());
