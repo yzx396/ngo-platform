@@ -8,7 +8,9 @@ The Points System tracks user points and calculates leaderboard rankings. Points
 
 **Key Design Decisions:**
 - **No Rank Column**: Rank is calculated on-the-fly using SQL window functions, avoiding expensive updates when points change
-- **Auto-initialization**: Points records are created automatically on first access (GET endpoint)
+- **Initial Points on Registration**: New users receive 20 initial points upon account creation as a welcome bonus to encourage engagement
+- **Eager Initialization**: Points records are created during user registration (both direct signup and Google OAuth)
+- **Fallback Auto-initialization**: If a legacy user without a points record is accessed, points are auto-initialized on first access
 - **Consistent Timestamps**: Uses Unix timestamps (seconds) for consistency with existing schema
 - **Type Safety**: Shared types between frontend and backend in `src/types/points.ts`
 
@@ -47,7 +49,7 @@ created_at INTEGER (Unix timestamp)
 
 ### GET /api/v1/users/:id/points (Public)
 
-Returns user points with calculated rank. Auto-creates points record (with 0 points) if doesn't exist.
+Returns user points with calculated rank. For new users, a points record is created during registration with 20 initial points. For legacy users without a points record, one is auto-created with a fallback value on first access.
 
 **Response:**
 ```typescript
@@ -146,11 +148,40 @@ The following action types are logged in `point_actions_log`:
 
 **Important:** Point awarding is handled silently - if point system fails, the blog/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
 
+## Initial Points on Registration
+
+When a new user joins the platform (either through direct signup or Google OAuth), they automatically receive **20 initial points** as a welcome bonus.
+
+### Implementation
+
+**User Registration (Direct Signup):**
+- `POST /api/v1/users` endpoint creates a user and immediately inserts a `user_points` record with 20 points
+
+**Google OAuth:**
+- OAuth callback creates user and inserts `user_points` record with 20 points when `isNewUser` flag is true
+
+**Backfill for Legacy Users:**
+- Existing users created before this feature was added can be backfilled via migration `0021_backfill_initial_points.sql`
+- This migration creates points records for all users who don't have one yet, awarding 20 points to each
+
+### Configuration
+
+The initial points value is controlled by the `INITIAL_POINTS` constant in `src/types/points.ts`:
+
+```typescript
+export const INITIAL_POINTS = 20;
+```
+
+To change the welcome bonus, modify this constant and redeploy.
+
 ## Constants
 
 Located in `src/types/points.ts`:
 
 ```typescript
+// Initial points awarded to new users on registration
+INITIAL_POINTS = 20
+
 // Content creation points
 POINTS_FOR_CREATE_DISCUSSION_POST = 15
 POINTS_FOR_CREATE_GENERAL_POST = 10

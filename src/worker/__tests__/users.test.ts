@@ -65,6 +65,35 @@ describe('User CRUD API', () => {
       expect(data.created_at).toBe(data.updated_at); // Should be same on creation
     });
 
+    it('should create initial points record for new user', async () => {
+      const userData = {
+        email: 'points@example.com',
+        name: 'Points User',
+      };
+
+      const req = new Request('http://localhost/api/v1/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+
+      const res = await app.fetch(req, mockEnv);
+      await expectCreated(res);
+
+      // Verify that user_points insert was called with INITIAL_POINTS (20)
+      // The mock database should have been called for the user_points insert
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockDbPrepare = mockDb.prepare as any;
+
+      // Find the user_points INSERT call
+      const userPointsCall = mockDbPrepare.mock.calls.find((call: string[]) =>
+        call[0].includes('INSERT INTO user_points')
+      );
+
+      expect(userPointsCall).toBeDefined();
+      expect(userPointsCall?.[0]).toContain('INSERT INTO user_points (id, user_id, points, updated_at)');
+    });
+
     it('should return 400 when email is missing', async () => {
       const req = new Request('http://localhost/api/v1/users', {
         method: 'POST',

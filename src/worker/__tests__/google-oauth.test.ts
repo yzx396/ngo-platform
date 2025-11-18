@@ -97,18 +97,21 @@ describe('findOrCreateUserFromGoogle', () => {
         prepare: vi.fn().mockReturnValue(mockStatement),
       };
 
-      const user = await findOrCreateUserFromGoogle(
+      const result = await findOrCreateUserFromGoogle(
         googleProfile,
         mockDb as unknown as D1Database
       );
 
       // Verify user was created
-      expect(user.email).toBe(googleProfile.email);
-      expect(user.name).toBe(googleProfile.name);
-      expect(user.google_id).toBe(googleProfile.sub);
-      expect(user.id).toBeTruthy();
-      expect(user.created_at).toBeTruthy();
-      expect(user.updated_at).toBeTruthy();
+      expect(result.user.email).toBe(googleProfile.email);
+      expect(result.user.name).toBe(googleProfile.name);
+      expect(result.user.google_id).toBe(googleProfile.sub);
+      expect(result.user.id).toBeTruthy();
+      expect(result.user.created_at).toBeTruthy();
+      expect(result.user.updated_at).toBeTruthy();
+
+      // Verify this is a new user (isNewUser flag)
+      expect(result.isNewUser).toBe(true);
 
       // Verify INSERT query was called
       const insertCall = mockDb.prepare.mock.calls.find((call) =>
@@ -134,14 +137,15 @@ describe('findOrCreateUserFromGoogle', () => {
         prepare: vi.fn().mockReturnValue(mockStatement),
       };
 
-      const user = await findOrCreateUserFromGoogle(
+      const result = await findOrCreateUserFromGoogle(
         googleProfile,
         mockDb as unknown as D1Database
       );
 
       // Name should be derived from email (before @)
-      expect(user.name).toBe('testuser');
-      expect(user.email).toBe(googleProfile.email);
+      expect(result.user.name).toBe('testuser');
+      expect(result.user.email).toBe(googleProfile.email);
+      expect(result.isNewUser).toBe(true);
     });
   });
 
@@ -172,14 +176,15 @@ describe('findOrCreateUserFromGoogle', () => {
         prepare: vi.fn().mockReturnValue(mockStatement),
       };
 
-      const user = await findOrCreateUserFromGoogle(
+      const result = await findOrCreateUserFromGoogle(
         googleProfile,
         mockDb as unknown as D1Database
       );
 
       // Should return the existing user
-      expect(user).toEqual(existingUser);
-      expect(user.id).toBe('user-abc-123');
+      expect(result.user).toEqual(existingUser);
+      expect(result.user.id).toBe('user-abc-123');
+      expect(result.isNewUser).toBe(false);
 
       // Should NOT call INSERT (user already exists)
       const insertCall = mockDb.prepare.mock.calls.find((call) =>
@@ -220,15 +225,16 @@ describe('findOrCreateUserFromGoogle', () => {
         prepare: vi.fn().mockReturnValue(mockStatement),
       };
 
-      const user = await findOrCreateUserFromGoogle(
+      const result = await findOrCreateUserFromGoogle(
         googleProfile,
         mockDb as unknown as D1Database
       );
 
       // Should link Google ID to existing user
-      expect(user.id).toBe('user-legacy-789');
-      expect(user.google_id).toBe('google-new-456');
-      expect(user.email).toBe('existing@example.com');
+      expect(result.user.id).toBe('user-legacy-789');
+      expect(result.user.google_id).toBe('google-new-456');
+      expect(result.user.email).toBe('existing@example.com');
+      expect(result.isNewUser).toBe(false); // Existing user, not new
 
       // Should call UPDATE to add google_id
       const updateCall = mockDb.prepare.mock.calls.find((call) =>
@@ -292,15 +298,16 @@ describe('findOrCreateUserFromGoogle', () => {
         prepare: vi.fn().mockReturnValue(mockStatement),
       };
 
-      const user = await findOrCreateUserFromGoogle(
+      const result = await findOrCreateUserFromGoogle(
         validProfile,
         mockDb as unknown as D1Database
       );
 
-      expect(user).toBeTruthy();
-      expect(user.google_id).toBe('google-valid-789');
-      expect(user.email).toBe('valid@example.com');
-      expect(user.name).toBe('Valid User');
+      expect(result).toBeTruthy();
+      expect(result.user.google_id).toBe('google-valid-789');
+      expect(result.user.email).toBe('valid@example.com');
+      expect(result.user.name).toBe('Valid User');
+      expect(result.isNewUser).toBe(true);
     });
   });
 

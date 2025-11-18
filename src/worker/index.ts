@@ -203,6 +203,14 @@ app.post("/api/v1/users", async (c) => {
       .bind(id, body.email, body.name, timestamp, timestamp)
       .run();
 
+    // Award initial points to new user
+    await c.env.platform_db
+      .prepare(
+        "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)"
+      )
+      .bind(generateId(), id, INITIAL_POINTS, timestamp)
+      .run();
+
     const user: User = {
       id,
       email: body.email,
@@ -2045,7 +2053,18 @@ app.get("/api/v1/auth/google/callback", async (c) => {
     );
 
     // Find or create user
-    const user = await findOrCreateUserFromGoogle(googleProfile, c.env.platform_db);
+    const { user, isNewUser } = await findOrCreateUserFromGoogle(googleProfile, c.env.platform_db);
+
+    // Award initial points to new users
+    if (isNewUser) {
+      const timestamp = getTimestamp();
+      await c.env.platform_db
+        .prepare(
+          "INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)"
+        )
+        .bind(generateId(), user.id, INITIAL_POINTS, timestamp)
+        .run();
+    }
 
     // Fetch user's role
     const roleRecord = await c.env.platform_db

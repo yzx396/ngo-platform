@@ -106,8 +106,9 @@ export function formatRank(rank: number | undefined): string {
 
 /**
  * Initial points for new users
+ * Awarded upon registration as a welcome bonus to encourage engagement
  */
-export const INITIAL_POINTS = 0;
+export const INITIAL_POINTS = 20;
 
 /**
  * Maximum reasonable points (for validation)

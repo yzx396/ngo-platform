@@ -177,12 +177,21 @@ export async function getGoogleUserProfile(
 }
 
 /**
+ * Result from finding or creating a user
+ */
+interface FindOrCreateUserResult {
+  user: User;
+  isNewUser: boolean;
+}
+
+/**
  * Finds or creates user from Google profile
+ * Returns both the user and a flag indicating if it's a newly created user
  */
 export async function findOrCreateUserFromGoogle(
   googleProfile: GoogleUserProfile,
   db: D1Database
-): Promise<User> {
+): Promise<FindOrCreateUserResult> {
   // Validate required fields from Google profile
   // D1 does not accept undefined values in .bind(), so we must validate first
   if (!googleProfile.sub) {
@@ -199,7 +208,7 @@ export async function findOrCreateUserFromGoogle(
     .first<User>();
 
   if (existing) {
-    return existing;
+    return { user: existing, isNewUser: false };
   }
 
   // Check if email already exists
@@ -217,9 +226,12 @@ export async function findOrCreateUserFromGoogle(
       .run();
 
     return {
-      ...emailExists,
-      google_id: googleProfile.sub,
-      updated_at: now,
+      user: {
+        ...emailExists,
+        google_id: googleProfile.sub,
+        updated_at: now,
+      },
+      isNewUser: false,
     };
   }
 
@@ -237,12 +249,15 @@ export async function findOrCreateUserFromGoogle(
     .run();
 
   return {
-    id: userId,
-    email: googleProfile.email,
-    name: userName,
-    google_id: googleProfile.sub,
-    created_at: now,
-    updated_at: now,
+    user: {
+      id: userId,
+      email: googleProfile.email,
+      name: userName,
+      google_id: googleProfile.sub,
+      created_at: now,
+      updated_at: now,
+    },
+    isNewUser: true,
   };
 }
 
