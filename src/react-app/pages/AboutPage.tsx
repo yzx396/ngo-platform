@@ -109,57 +109,95 @@ export function AboutPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">
-          {t('about.title', 'About Lead Forward')}
-        </h1>
-        <p className="text-muted-foreground max-w-3xl">
-          {t('about.subtitle', 'Building a global community dedicated to leadership development and mentorship')}
-        </p>
+    <div className="space-y-16 sm:space-y-20">
+      {/* Hero Section */}
+      <div className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-4 sm:px-6 py-16 sm:py-20 rounded-b-[3rem] overflow-hidden">
+        {/* Warm gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/8 to-secondary/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,oklch(0.75_0.12_85/0.15),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,oklch(0.88_0.08_145/0.12),transparent_50%)]" />
+
+        {/* Content */}
+        <div className="relative space-y-6 max-w-4xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight">
+            {t('about.title', 'About Lead Forward')}
+          </h1>
+          <p className="text-xl sm:text-2xl text-foreground/80 leading-relaxed max-w-3xl">
+            {t('about.subtitle', 'Building a global community dedicated to leadership development and mentorship')}
+          </p>
+        </div>
       </div>
 
-      {/* Our Vision Section */}
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.vision.title', 'Our Vision')}</h2>
-        <p className="text-muted-foreground leading-relaxed max-w-3xl">
-          {t('about.vision.content', 'Become the Leader You Aspire to Be.')}
-        </p>
-      </div>
+      {/* Vision & Mission - Side by side with warm accents */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Vision */}
+        <div className="relative bg-gradient-to-br from-accent/5 to-accent/10 border-l-4 border-l-accent rounded-xl p-8 sm:p-10 space-y-4">
+          <div className="absolute top-6 right-6 w-16 h-16 rounded-full bg-accent/10" />
+          <div className="relative">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">{t('about.vision.title', 'Our Vision')}</h2>
+            <p className="text-lg text-foreground/90 leading-relaxed mt-4">
+              {t('about.vision.content', 'Become the Leader You Aspire to Be.')}
+            </p>
+          </div>
+        </div>
 
-      {/* Our Mission Section */}
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.mission.title', 'Our Mission')}</h2>
-        <p className="text-muted-foreground leading-relaxed max-w-3xl">
-          {t('about.mission.content', 'At Lead Forward, we believe that everyone deserves access to mentorship and leadership development. Our mission is to create a global community where individuals can connect, learn, and grow together through meaningful mentorship relationships and shared learning experiences.')}
-        </p>
+        {/* Mission */}
+        <div className="relative bg-gradient-to-br from-secondary/5 to-secondary/10 border-l-4 border-l-secondary rounded-xl p-8 sm:p-10 space-y-4">
+          <div className="absolute top-6 right-6 w-16 h-16 rounded-full bg-secondary/10" />
+          <div className="relative">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">{t('about.mission.title', 'Our Mission')}</h2>
+            <p className="text-base text-foreground/90 leading-relaxed mt-4">
+              {t('about.mission.content', 'At Lead Forward, we believe that everyone deserves access to mentorship and leadership development. Our mission is to create a global community where individuals can connect, learn, and grow together through meaningful mentorship relationships and shared learning experiences.')}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* What We Do Section */}
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.whatWeDo.title', 'What We Do')}</h2>
-        <p className="text-muted-foreground max-w-3xl leading-relaxed">
-          {t('about.whatWeDo.description', 'Each month, we organize leadership activities designed to help members practice specific leadership skills, receive feedback, and grow as leaders. These activities are carefully structured to address different aspects of leadership in diverse settings.')}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {activities.map((activity) => {
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <h2 className="text-3xl sm:text-4xl font-bold">{t('about.whatWeDo.title', 'What We Do')}</h2>
+          <p className="text-muted-foreground max-w-3xl leading-relaxed text-lg">
+            {t('about.whatWeDo.description', 'Each month, we organize leadership activities designed to help members practice specific leadership skills, receive feedback, and grow as leaders. These activities are carefully structured to address different aspects of leadership in diverse settings.')}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activities.map((activity, index) => {
             const IconComponent = activity.icon;
+            const accentColors = [
+              'border-l-primary bg-primary/5',
+              'border-l-accent bg-accent/5',
+              'border-l-secondary bg-secondary/5',
+              'border-l-primary bg-primary/5',
+              'border-l-accent bg-accent/5',
+              'border-l-secondary bg-secondary/5',
+            ];
+            const iconColors = [
+              'text-primary bg-primary/10',
+              'text-accent-foreground bg-accent/10',
+              'text-secondary-foreground bg-secondary/10',
+              'text-primary bg-primary/10',
+              'text-accent-foreground bg-accent/10',
+              'text-secondary-foreground bg-secondary/10',
+            ];
+
             return (
               <div
                 key={activity.id}
-                className="bg-card border rounded-lg p-6 space-y-3 hover:shadow-md transition-shadow"
+                className={`group relative bg-card border-l-4 ${accentColors[index]} rounded-xl p-6 space-y-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
               >
-                <IconComponent className="h-8 w-8 text-primary" />
-                <h3 className="font-semibold text-lg">{activity.title}</h3>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${iconColors[index]} group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className="h-6 w-6" strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-lg">{activity.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{activity.description}</p>
               </div>
             );
           })}
         </div>
-        <div className="pt-4">
+        <div className="pt-2">
           <Link to="/login">
-            <Button>
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all">
               {t('common.startExploring', 'Start Exploring Mentors')}
             </Button>
           </Link>
@@ -167,18 +205,38 @@ export function AboutPage() {
       </div>
 
       {/* Values Section */}
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.values.title', 'Our Core Values')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {values.map((value) => {
+      <div className="space-y-8">
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-bold">{t('about.values.title', 'Our Core Values')}</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            The principles that guide everything we do
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {values.map((value, index) => {
             const IconComponent = value.icon;
+            const gradients = [
+              'from-primary/5 to-primary/10 border-primary/20',
+              'from-accent/5 to-accent/10 border-accent/20',
+              'from-secondary/5 to-secondary/10 border-secondary/20',
+              'from-primary/5 to-primary/10 border-primary/20',
+            ];
+            const iconBgs = [
+              'bg-primary/10 text-primary',
+              'bg-accent/10 text-accent-foreground',
+              'bg-secondary/10 text-secondary-foreground',
+              'bg-primary/10 text-primary',
+            ];
+
             return (
               <div
                 key={value.id}
-                className="bg-card border rounded-lg p-6 space-y-3 hover:shadow-md transition-shadow"
+                className={`group relative bg-gradient-to-br ${gradients[index]} border rounded-xl p-6 space-y-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
               >
-                <IconComponent className="h-8 w-8 text-primary" />
-                <h3 className="font-semibold text-lg">{value.title}</h3>
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${iconBgs[index]} group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className="h-6 w-6" strokeWidth={1.5} />
+                </div>
+                <h3 className="font-bold text-lg">{value.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{value.description}</p>
               </div>
             );
@@ -187,9 +245,14 @@ export function AboutPage() {
       </div>
 
       {/* Our Founders Section */}
-      <div className="space-y-4">
-        <h2 className="text-3xl font-bold">{t('about.founders.title', 'Our Founders')}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-8">
+        <div className="text-center space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-bold">{t('about.founders.title', 'Our Founders')}</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Experienced leaders dedicated to empowering the next generation
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {founders.map((founder) => (
             <FounderCard
               key={founder.id}
@@ -201,18 +264,25 @@ export function AboutPage() {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="border-t pt-8 space-y-4">
-        <h2 className="text-2xl font-bold">{t('about.joinUs.title', 'Join Our Community')}</h2>
-        <p className="text-muted-foreground max-w-3xl">
-          {t('about.joinUs.description', 'Whether you are looking to mentor others or seeking guidance, there is a place for you in our community. Start your leadership journey with Lead Forward today.')}
-        </p>
-        <div className="pt-4">
-          <Link to="/login">
-            <Button size="lg">
-              {t('common.signIn')}
-            </Button>
-          </Link>
+      {/* CTA Section - Warm gradient background */}
+      <div className="relative -mx-4 sm:-mx-6 px-4 sm:px-6 py-16 sm:py-20 rounded-3xl overflow-hidden">
+        {/* Warm gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-accent/10 to-secondary/15" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,oklch(0.75_0.12_85/0.1),transparent_70%)]" />
+
+        {/* Content */}
+        <div className="relative text-center space-y-6 max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold">{t('about.joinUs.title', 'Join Our Community')}</h2>
+          <p className="text-foreground/90 text-lg leading-relaxed">
+            {t('about.joinUs.description', 'Whether you are looking to mentor others or seeking guidance, there is a place for you in our community. Start your leadership journey with Lead Forward today.')}
+          </p>
+          <div className="pt-4">
+            <Link to="/login">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6 shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                {t('common.signIn')}
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

@@ -1,35 +1,68 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Import warm, friendly display font - DM Sans */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400;1,9..40,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @theme {
-  --radius: 0.5rem;
+  /* Organic, friendly border radius - increased for warmth */
+  --radius: 0.75rem;
 
-  /* Light mode colors */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
+  /* Warm & Community-Focused Color Palette (OKLCH) */
+
+  /* Backgrounds - Warm off-white with subtle peach tint */
+  --color-background: oklch(0.99 0.01 60);
+  --color-foreground: oklch(0.25 0.02 40);
+
+  /* Cards - Soft white with warm undertone */
+  --color-card: oklch(1 0.005 60);
+  --color-card-foreground: oklch(0.25 0.02 40);
+
+  /* Popovers - Clean white */
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.52 0.18 245);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.92 0.05 245);
-  --color-secondary-foreground: oklch(0.30 0.10 245);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.52 0.18 245);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.708 0 0);
+  --color-popover-foreground: oklch(0.25 0.02 40);
 
-  /* Radius variants */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Primary - Warm Terracotta/Coral (earthy, welcoming) */
+  --color-primary: oklch(0.62 0.15 35);
+  --color-primary-foreground: oklch(0.99 0.01 60);
+
+  /* Secondary - Soft Sage Green (natural, growth) */
+  --color-secondary: oklch(0.88 0.08 145);
+  --color-secondary-foreground: oklch(0.35 0.08 145);
+
+  /* Muted - Warm light gray with peach hint */
+  --color-muted: oklch(0.96 0.015 60);
+  --color-muted-foreground: oklch(0.55 0.02 40);
+
+  /* Accent - Warm Amber/Honey (energizing, positive) */
+  --color-accent: oklch(0.75 0.12 85);
+  --color-accent-foreground: oklch(0.30 0.05 85);
+
+  /* Destructive - Soft coral red (less harsh) */
+  --color-destructive: oklch(0.60 0.18 25);
+  --color-destructive-foreground: oklch(0.99 0.01 60);
+
+  /* Borders - Warm neutral with subtle color */
+  --color-border: oklch(0.90 0.02 60);
+  --color-input: oklch(0.90 0.02 60);
+  --color-ring: oklch(0.62 0.15 35);
+
+  /* Organic radius scale - more rounded for friendliness */
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 0.25rem);
+  --radius-xl: calc(var(--radius) + 0.5rem);
+  --radius-2xl: calc(var(--radius) + 1rem);
+
+  /* Extended warm color palette for variety */
+  --color-warm-peach: oklch(0.85 0.10 50);
+  --color-warm-clay: oklch(0.55 0.12 40);
+  --color-soft-mint: oklch(0.92 0.06 155);
+  --color-honey: oklch(0.80 0.15 90);
+
+  /* Shadows with warm tint */
+  --shadow-warm: 0 2px 8px oklch(0.62 0.15 35 / 0.08);
+  --shadow-warm-lg: 0 8px 24px oklch(0.62 0.15 35 / 0.12);
 }
 
 @layer base {
@@ -39,31 +72,246 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     margin: 0;
     padding: 0;
+    /* Subtle texture for warmth */
+    background-image:
+      radial-gradient(circle at 20% 50%, oklch(0.75 0.12 85 / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, oklch(0.88 0.08 145 / 0.03) 0%, transparent 50%);
+  }
+
+  /* Display font for headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    font-weight: 700;
+  }
+
+  /* Smooth font rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Dark mode */
+/* Dark mode - Warm tones maintained */
 .dark {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.205 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.205 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.68 0.15 245);
-  --color-primary-foreground: oklch(0.145 0 0);
-  --color-secondary: oklch(0.30 0.10 245);
-  --color-secondary-foreground: oklch(0.90 0.05 245);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.68 0.15 245);
-  --color-accent-foreground: oklch(0.145 0 0);
-  --color-destructive: oklch(0.704 0.191 22.216);
-  --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(1 0 0 / 10%);
-  --color-input: oklch(1 0 0 / 15%);
-  --color-ring: oklch(0.556 0 0);
+  /* Deep warm charcoal background */
+  --color-background: oklch(0.18 0.02 40);
+  --color-foreground: oklch(0.96 0.01 60);
+
+  /* Cards - Slightly lighter warm charcoal */
+  --color-card: oklch(0.23 0.02 40);
+  --color-card-foreground: oklch(0.96 0.01 60);
+
+  /* Popovers */
+  --color-popover: oklch(0.23 0.02 40);
+  --color-popover-foreground: oklch(0.96 0.01 60);
+
+  /* Primary - Brightened terracotta for dark mode */
+  --color-primary: oklch(0.70 0.16 35);
+  --color-primary-foreground: oklch(0.18 0.02 40);
+
+  /* Secondary - Soft sage with more luminance */
+  --color-secondary: oklch(0.40 0.10 145);
+  --color-secondary-foreground: oklch(0.88 0.08 145);
+
+  /* Muted - Warm mid-gray */
+  --color-muted: oklch(0.32 0.02 40);
+  --color-muted-foreground: oklch(0.65 0.02 60);
+
+  /* Accent - Warm honey/amber */
+  --color-accent: oklch(0.72 0.14 85);
+  --color-accent-foreground: oklch(0.20 0.02 85);
+
+  /* Destructive - Softened coral red */
+  --color-destructive: oklch(0.65 0.18 25);
+  --color-destructive-foreground: oklch(0.96 0.01 60);
+
+  /* Borders - Warm with subtle color */
+  --color-border: oklch(0.35 0.02 40);
+  --color-input: oklch(0.35 0.02 40);
+  --color-ring: oklch(0.70 0.16 35);
+
+  /* Warm shadows for dark mode */
+  --shadow-warm: 0 2px 8px oklch(0 0 0 / 0.3);
+  --shadow-warm-lg: 0 8px 24px oklch(0 0 0 / 0.4);
+}
+
+/* Delightful Micro-interactions & Animations */
+
+/* Fade in animation for page loads */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide in from bottom */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale in animation */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Gentle bounce */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Shimmer effect for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Pulse glow effect */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--color-primary);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px var(--color-primary);
+  }
+}
+
+/* Utility classes for animations */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+.animate-bounce-gentle {
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* Staggered animation delays for lists */
+.animate-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.animate-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.animate-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.animate-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+/* Smooth transitions for interactive elements */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -10px var(--color-primary);
+}
+
+/* Focus ring with warm color */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Selection color - warm */
+::selection {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+::-moz-selection {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+/* Scrollbar styling - warm and organic */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-muted);
+  border-radius: var(--radius-lg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-muted);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

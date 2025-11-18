@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { formatPoints, formatRank, getPointsColor } from '../../types/points';
+import { formatPoints, formatRank } from '../../types/points';
+import { Sparkles } from 'lucide-react';
 
 interface UserPointsBadgeProps {
   /**
@@ -34,9 +35,9 @@ interface UserPointsBadgeProps {
 }
 
 /**
- * UserPointsBadge Component
+ * UserPointsBadge Component - Warm & Delightful Design
  * Displays user points with optional rank
- * Responsive design with color coding based on points amount
+ * Features gradient background and sparkle icon
  */
 export function UserPointsBadge({
   points,
@@ -48,23 +49,23 @@ export function UserPointsBadge({
 }: UserPointsBadgeProps) {
   const { t } = useTranslation();
 
-  // Get color based on points
-  const pointsColor = getPointsColor(points);
-
   // Size classes
   const sizeClasses = {
-    sm: 'text-sm px-2 py-1',
-    md: 'text-base px-3 py-2',
-    lg: 'text-lg px-4 py-3',
+    sm: 'text-xs px-2.5 py-1',
+    md: 'text-sm px-3 py-1.5',
+    lg: 'text-base px-4 py-2',
   };
 
-  // Base classes
-  const baseClasses = `font-semibold ${sizeClasses[variant]} ${pointsColor}`;
+  const iconSizes = {
+    sm: 'h-3.5 w-3.5',
+    md: 'h-4 w-4',
+    lg: 'h-5 w-5',
+  };
 
-  // Badge styling
+  // Badge styling with warm gradient
   const badgeClasses = showBadge
-    ? 'inline-flex items-center gap-1.5 rounded-full bg-opacity-10 bg-gray-200'
-    : 'inline-flex items-center gap-1.5';
+    ? 'inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent/15 via-primary/10 to-secondary/15 border border-accent/20 font-bold text-accent-foreground shadow-sm'
+    : 'inline-flex items-center gap-1.5 font-semibold text-accent-foreground';
 
   // Format points display
   const formattedPoints = formatPoints(points);
@@ -74,20 +75,18 @@ export function UserPointsBadge({
 
   return (
     <div
-      className={`${badgeClasses} ${baseClasses} ${className}`}
+      className={`${badgeClasses} ${sizeClasses[variant]} ${className} group transition-all hover:shadow-md hover:scale-105`}
       aria-label={`${formattedPoints} ${t('points.label', 'Points')}${formattedRank ? ` - ${t('points.rank', 'Rank')}: ${formattedRank}` : ''}`}
     >
-      {/* Points Icon (simple star or circle icon) */}
-      <span aria-hidden="true" className="inline-block w-4 h-4">
-        ⭐
-      </span>
+      {/* Points Icon - Sparkles */}
+      <Sparkles className={`${iconSizes[variant]} text-accent group-hover:rotate-12 transition-transform`} aria-hidden="true" />
 
       {/* Points Value */}
       <span className="font-bold">{formattedPoints}</span>
 
       {/* Points Label (abbreviated in small variant) */}
       {variant !== 'sm' && (
-        <span className="ml-0.5">
+        <span className="ml-0.5 font-medium">
           {t('points.label', 'Points')}
         </span>
       )}
@@ -95,8 +94,8 @@ export function UserPointsBadge({
       {/* Rank Badge (if visible) */}
       {formattedRank && (
         <>
-          <span className="text-gray-400 mx-1">•</span>
-          <span className="text-xs font-bold uppercase tracking-wide">
+          <span className="w-1 h-1 rounded-full bg-accent/40 mx-1" />
+          <span className="text-xs font-bold tracking-wide">
             #{formattedRank}
           </span>
         </>

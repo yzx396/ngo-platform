@@ -86,17 +86,17 @@ describe('UserPointsBadge Component', () => {
       const { container: smContainer } = render(
         <UserPointsBadge points={100} variant="sm" />
       );
-      expect(smContainer.firstChild).toHaveClass('text-sm');
+      expect(smContainer.firstChild).toHaveClass('text-xs');
 
       const { container: mdContainer } = render(
         <UserPointsBadge points={100} variant="md" />
       );
-      expect(mdContainer.firstChild).toHaveClass('text-base');
+      expect(mdContainer.firstChild).toHaveClass('text-sm');
 
       const { container: lgContainer } = render(
         <UserPointsBadge points={100} variant="lg" />
       );
-      expect(lgContainer.firstChild).toHaveClass('text-lg');
+      expect(lgContainer.firstChild).toHaveClass('text-base');
     });
 
     it('should apply badge styling when showBadge is true', () => {
@@ -120,30 +120,13 @@ describe('UserPointsBadge Component', () => {
       expect(container.firstChild).toHaveClass('custom-class');
     });
 
-    it('should apply correct color classes based on points', () => {
-      // Low points (gray)
-      const { container: lowContainer } = render(
-        <UserPointsBadge points={50} />
+    it('should apply warm gradient styling for badges', () => {
+      const { container } = render(
+        <UserPointsBadge points={100} showBadge={true} />
       );
-      expect(lowContainer.firstChild).toHaveClass('text-gray-500');
-
-      // Medium points (orange)
-      const { container: medContainer } = render(
-        <UserPointsBadge points={150} />
-      );
-      expect(medContainer.firstChild).toHaveClass('text-orange-500');
-
-      // High points (blue)
-      const { container: highContainer } = render(
-        <UserPointsBadge points={500} />
-      );
-      expect(highContainer.firstChild).toHaveClass('text-blue-500');
-
-      // Very high points (gold/yellow)
-      const { container: veryHighContainer } = render(
-        <UserPointsBadge points={1500} />
-      );
-      expect(veryHighContainer.firstChild).toHaveClass('text-yellow-500');
+      // New design uses gradient background and warm colors
+      expect(container.firstChild).toHaveClass('bg-gradient-to-r');
+      expect(container.firstChild).toHaveClass('text-accent-foreground');
     });
   });
 
@@ -209,8 +192,8 @@ describe('UserPointsBadge Component', () => {
       const { container } = render(
         <UserPointsBadge points={100} variant="md" />
       );
-      // Component should scale with variant
-      expect(container.firstChild).toHaveClass('text-base');
+      // Component should scale with variant (md uses text-sm in new design)
+      expect(container.firstChild).toHaveClass('text-sm');
     });
 
     it('should maintain layout in different sizes', () => {

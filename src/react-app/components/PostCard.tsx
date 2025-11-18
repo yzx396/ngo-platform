@@ -149,19 +149,19 @@ function PostCardComponent({
   }, [isAuthenticated, isLiking, userHasLiked, likesCount, post.id, onLikesChange, t]);
 
   return (
-    <Card className="flex flex-col h-full hover:shadow-md transition-shadow">
+    <Card className="group flex flex-col h-full border-l-4 border-l-accent hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
       {/* Header: Author, Post Type, and Menu */}
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <h3 className="font-semibold text-base">
+            <h3 className="font-bold text-base text-foreground">
               {post.author_name || 'Anonymous'}
             </h3>
-            <p className="text-xs text-muted-foreground">{timeAgo}</p>
+            <p className="text-xs text-muted-foreground font-medium">{timeAgo}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {post.post_type && (
-              <Badge variant={getBadgeVariant(post.post_type)}>
+              <Badge variant={getBadgeVariant(post.post_type)} className="font-medium">
                 {t(`postType.${post.post_type}`, postTypeLabel)}
               </Badge>
             )}
@@ -171,7 +171,7 @@ function PostCardComponent({
                   ref={triggerRef}
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 hover:bg-muted"
                   onClick={() => setMenuOpen(!menuOpen)}
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -179,14 +179,14 @@ function PostCardComponent({
                 {menuOpen && (
                   <div
                     ref={menuRef}
-                    className="absolute right-0 z-50 min-w-[160px] overflow-hidden rounded-md border bg-white p-1 text-foreground shadow-md"
+                    className="absolute right-0 z-50 min-w-[160px] overflow-hidden rounded-lg border border-border bg-card p-1 text-foreground shadow-lg"
                   >
                     <button
                       onClick={() => {
                         onEdit?.(post);
                         setMenuOpen(false);
                       }}
-                      className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100"
+                      className="relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted focus:bg-muted font-medium"
                     >
                       <Edit2 className="mr-2 h-4 w-4" />
                       {t('posts.edit')}
@@ -194,7 +194,7 @@ function PostCardComponent({
                     <button
                       onClick={handleDelete}
                       disabled={isDeleting}
-                      className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-red-50 focus:bg-red-50 disabled:opacity-50 disabled:pointer-events-none text-red-600"
+                      className="relative flex w-full cursor-pointer select-none items-center rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-destructive/10 focus:bg-destructive/10 disabled:opacity-50 disabled:pointer-events-none text-destructive font-medium"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       {t('posts.delete')}
@@ -237,9 +237,9 @@ function PostCardComponent({
       </CardContent>
 
       {/* Footer: Engagement Actions and Counts */}
-      <div className="px-6 py-3 border-t bg-muted/50">
+      <div className="px-6 py-3 border-t border-border/50 bg-muted/30">
         {/* Engagement buttons */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-3 mb-2">
           {isAuthenticated ? (
             <>
               <Button
@@ -247,15 +247,15 @@ function PostCardComponent({
                 size="sm"
                 onClick={handleLikeClick}
                 disabled={isLiking}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-3 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
                 title={userHasLiked ? t('comments.unlike', 'Unlike') : t('comments.like', 'Like')}
               >
                 {isLiking ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
                 ) : (
                   <Heart
-                    className={`h-4 w-4 mr-1 ${
-                      userHasLiked ? 'fill-red-500 text-red-500' : 'text-muted-foreground'
+                    className={`h-4 w-4 mr-1.5 transition-all ${
+                      userHasLiked ? 'fill-primary text-primary scale-110' : 'text-muted-foreground'
                     }`}
                   />
                 )}
@@ -265,10 +265,10 @@ function PostCardComponent({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowComments(!showComments)}
-                className="h-8 px-2 text-xs"
+                className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 title={t('comments.comment', 'Comment')}
               >
-                <MessageSquare className="h-4 w-4 mr-1 text-muted-foreground" />
+                <MessageSquare className="h-4 w-4 mr-1.5" />
                 {t('comments.comment', 'Comment')}
               </Button>
             </>
@@ -277,12 +277,12 @@ function PostCardComponent({
 
         {/* Engagement counts */}
         <div className="text-xs text-muted-foreground flex gap-4">
-          <span>
+          <span className="font-medium">
             {t('posts.likes', { defaultValue: '{{count}} likes', count: likesCount })}
           </span>
           <button
             onClick={() => setShowComments(!showComments)}
-            className="hover:text-foreground cursor-pointer"
+            className="hover:text-foreground cursor-pointer font-medium transition-colors"
           >
             {t('posts.comments', { defaultValue: '{{count}} comments', count: commentsCount })}
           </button>
@@ -291,7 +291,7 @@ function PostCardComponent({
 
       {/* Comments Section */}
       {showComments && (
-        <div className="px-6 py-4 border-t space-y-4 bg-white">
+        <div className="px-6 py-4 border-t border-border/50 space-y-4 bg-card">
           {commentsCount > 0 && (
             <PostComments
               postId={post.id}
@@ -299,11 +299,13 @@ function PostCardComponent({
             />
           )}
           {isAuthenticated && (
-            <CommentForm
-              postId={post.id}
-              onCommentCreated={() => setCommentsCount((c) => c + 1)}
-              placeholder={t('posts.addComment', 'Add a comment...')}
-            />
+            <div className="bg-background rounded-lg p-3 border border-border/50">
+              <CommentForm
+                postId={post.id}
+                onCommentCreated={() => setCommentsCount((c) => c + 1)}
+                placeholder={t('posts.addComment', 'Add a comment...')}
+              />
+            </div>
           )}
         </div>
       )}

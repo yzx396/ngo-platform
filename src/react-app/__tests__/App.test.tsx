@@ -15,6 +15,10 @@ vi.mock('../services/forumService', () => ({
       { id: 'cat-1', name: 'General Discussion', description: 'General discussion' },
       { id: 'cat-2', name: 'Announcements', description: 'Announcements' },
     ]),
+    getAllCategories: vi.fn().mockResolvedValue([
+      { id: 'cat-1', name: 'General Discussion', description: 'General discussion', parent_id: null },
+      { id: 'cat-2', name: 'Announcements', description: 'Announcements', parent_id: null },
+    ]),
   },
 }));
 

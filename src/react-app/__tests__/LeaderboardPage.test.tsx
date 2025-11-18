@@ -115,11 +115,11 @@ describe('LeaderboardPage', () => {
     );
 
     await waitFor(() => {
-      // Check for the gold, silver, and bronze medal emojis for top 3 positions
-      const goldMedal = screen.queryByText('🥇');
-      const silverMedal = screen.queryByText('🥈');
-      const bronzeMedal = screen.queryByText('🥉');
-      expect([goldMedal, silverMedal, bronzeMedal].filter(Boolean).length).toBeGreaterThanOrEqual(3);
+      // Check for numeric rank indicators in gradient circles for top 3 positions
+      const rank1 = screen.queryByText('1');
+      const rank2 = screen.queryByText('2');
+      const rank3 = screen.queryByText('3');
+      expect([rank1, rank2, rank3].filter(Boolean).length).toBeGreaterThanOrEqual(3);
     });
   });
 

@@ -92,8 +92,10 @@ export default function VoteButtons({
       <button
         onClick={() => handleVote('upvote')}
         disabled={loading}
-        className={`${buttonSizes[size]} rounded hover:bg-gray-100 transition-colors ${
-          userVote === 'upvote' ? 'text-green-600 bg-green-50' : 'text-gray-600'
+        className={`${buttonSizes[size]} rounded-lg transition-all ${
+          userVote === 'upvote'
+            ? 'text-primary bg-primary/10 border border-primary/20 scale-110'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         } disabled:opacity-50`}
         title="Upvote"
       >
@@ -111,15 +113,17 @@ export default function VoteButtons({
         </svg>
       </button>
 
-      <span className="font-semibold min-w-[2ch] text-center">
+      <span className="font-bold min-w-[2ch] text-center text-foreground">
         {upvoteCount - downvoteCount}
       </span>
 
       <button
         onClick={() => handleVote('downvote')}
         disabled={loading}
-        className={`${buttonSizes[size]} rounded hover:bg-gray-100 transition-colors ${
-          userVote === 'downvote' ? 'text-red-600 bg-red-50' : 'text-gray-600'
+        className={`${buttonSizes[size]} rounded-lg transition-all ${
+          userVote === 'downvote'
+            ? 'text-destructive bg-destructive/10 border border-destructive/20 scale-110'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         } disabled:opacity-50`}
         title="Downvote"
       >

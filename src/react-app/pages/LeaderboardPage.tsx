@@ -136,54 +136,79 @@ export function LeaderboardPage() {
 
       {/* User's rank info (if logged in and on leaderboard) */}
       {user && userRank && (
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm font-medium">
-            {t('leaderboard.yourRank', 'Your rank: {{rank}}', {
-              rank: `#${userRank}`,
-            })}
-          </p>
+        <div className="relative bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10 border border-primary/20 rounded-xl p-5 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,oklch(0.75_0.12_85/0.08),transparent_50%)]" />
+          <div className="relative">
+            <p className="text-base font-bold text-foreground flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/20 text-primary text-sm">
+                #{userRank}
+              </span>
+              {t('leaderboard.yourRank', 'Your rank: {{rank}}', {
+                rank: `#${userRank}`,
+              })}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Leaderboard Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border border-border rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
             {/* Table Header */}
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-muted/30 border-b border-border">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-sm">{t('leaderboard.rank', 'Rank')}</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm">{t('common.name', 'Name')}</th>
-                <th className="px-4 py-3 text-right font-semibold text-sm">{t('points.label', 'Points')}</th>
+                <th className="px-5 py-4 text-left font-bold text-sm">{t('leaderboard.rank', 'Rank')}</th>
+                <th className="px-5 py-4 text-left font-bold text-sm">{t('common.name', 'Name')}</th>
+                <th className="px-5 py-4 text-right font-bold text-sm">{t('points.label', 'Points')}</th>
               </tr>
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-border/50">
               {users.map((entry, index) => {
                 const isCurrentUser = user?.id === entry.user_id;
+                const isTopThree = entry.rank <= 3;
                 const rowClass = isCurrentUser
-                  ? 'bg-yellow-50 dark:bg-yellow-950/20 hover:bg-yellow-100 dark:hover:bg-yellow-950/30'
-                  : index % 2 === 0
-                    ? 'bg-background hover:bg-muted/50'
-                    : 'bg-muted/20 hover:bg-muted/30';
+                  ? 'bg-primary/5 hover:bg-primary/10 border-l-4 border-l-primary'
+                  : isTopThree
+                    ? 'bg-accent/5 hover:bg-accent/10'
+                    : index % 2 === 0
+                      ? 'bg-background hover:bg-muted/30'
+                      : 'bg-muted/10 hover:bg-muted/20';
 
                 return (
-                  <tr key={entry.user_id} className={`transition-colors ${rowClass}`}>
-                    {/* Rank */}
-                    <td className="px-4 py-3 font-bold text-lg">
-                      {entry.rank === 1 && <span className="text-yellow-500">🥇</span>}
-                      {entry.rank === 2 && <span className="text-gray-400">🥈</span>}
-                      {entry.rank === 3 && <span className="text-orange-600">🥉</span>}
-                      {entry.rank > 3 && <span className="text-muted-foreground">#{entry.rank}</span>}
+                  <tr key={entry.user_id} className={`transition-all duration-200 ${rowClass}`}>
+                    {/* Rank with styled medals */}
+                    <td className="px-5 py-4">
+                      {entry.rank === 1 && (
+                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-accent via-accent/80 to-accent/60 text-accent-foreground font-bold text-lg shadow-md">
+                          1
+                        </div>
+                      )}
+                      {entry.rank === 2 && (
+                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-muted-foreground/30 via-muted-foreground/20 to-muted-foreground/10 text-foreground font-bold text-lg shadow-sm">
+                          2
+                        </div>
+                      )}
+                      {entry.rank === 3 && (
+                        <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 via-primary/30 to-primary/20 text-primary font-bold text-lg shadow-sm">
+                          3
+                        </div>
+                      )}
+                      {entry.rank > 3 && (
+                        <span className="text-muted-foreground font-semibold text-base">#{entry.rank}</span>
+                      )}
                     </td>
 
                     {/* Name */}
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{entry.name}</span>
+                        <span className={`font-semibold ${isTopThree || isCurrentUser ? 'text-foreground' : ''}`}>
+                          {entry.name}
+                        </span>
                         {isCurrentUser && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                          <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-bold">
                             {t('common.you', 'You')}
                           </span>
                         )}
@@ -191,7 +216,7 @@ export function LeaderboardPage() {
                     </td>
 
                     {/* Points */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-5 py-4 text-right">
                       <UserPointsBadge
                         points={entry.points}
                         rank={entry.rank}
