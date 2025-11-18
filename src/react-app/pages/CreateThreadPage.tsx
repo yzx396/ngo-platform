@@ -25,7 +25,7 @@ export default function CreateThreadPage() {
     const loadCategories = async () => {
       try {
         setLoadingCategories(true);
-        const cats = await forumService.getCategories();
+        const cats = await forumService.getAllCategories();
         setCategories(cats);
         // Auto-select if categoryId is provided
         if (urlCategoryId) {
@@ -49,6 +49,27 @@ export default function CreateThreadPage() {
     const translated = t(translationKey, { defaultValue: cat.name });
     return translated === translationKey ? cat.name : translated;
   };
+
+  // Group categories by parent for hierarchical display
+  const groupedCategories = categories.reduce(
+    (acc, cat) => {
+      if (cat.parent_id === null) {
+        // Parent category
+        acc.parents.push(cat);
+      } else {
+        // Child category
+        if (!acc.childrenByParent[cat.parent_id]) {
+          acc.childrenByParent[cat.parent_id] = [];
+        }
+        acc.childrenByParent[cat.parent_id].push(cat);
+      }
+      return acc;
+    },
+    { parents: [], childrenByParent: {} } as {
+      parents: ForumCategory[];
+      childrenByParent: Record<string, ForumCategory[]>;
+    }
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,11 +153,22 @@ export default function CreateThreadPage() {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">{t('forums.categoryPlaceholder')}</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {getCategoryName(cat)}
-                  </option>
-                ))}
+                {groupedCategories.parents
+                  .sort((a, b) => a.display_order - b.display_order)
+                  .map((parent) => {
+                    const children = groupedCategories.childrenByParent[parent.id] || [];
+                    return (
+                      <optgroup key={parent.id} label={getCategoryName(parent)}>
+                        {children
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((child) => (
+                            <option key={child.id} value={child.id}>
+                              {getCategoryName(child)}
+                            </option>
+                          ))}
+                      </optgroup>
+                    );
+                  })}
               </select>
               {categories.length === 0 && !loadingCategories && (
                 <p className="text-xs text-red-500 mt-1">{t('forums.noCategoriesFound')}</p>

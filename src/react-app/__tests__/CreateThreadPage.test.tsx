@@ -10,7 +10,7 @@ import { UserRole } from '../../types/role';
 // Mock the forum service
 vi.mock('../services/forumService', () => ({
   forumService: {
-    getCategories: vi.fn(),
+    getAllCategories: vi.fn(),
     createThread: vi.fn(),
   },
 }));
@@ -64,6 +64,7 @@ afterAll(() => {
 });
 
 const mockCategories = [
+  // Parent categories
   {
     id: 'cat_career',
     name: 'Career Development',
@@ -84,6 +85,41 @@ const mockCategories = [
     icon: '🤝',
     display_order: 2,
     thread_count: 50,
+    created_at: 1700000000,
+  },
+  // Child categories under Career Development
+  {
+    id: 'cat_career_job',
+    name: 'Job Search & Applications',
+    slug: 'job-search-applications',
+    description: 'Job hunting tips and application help',
+    parent_id: 'cat_career',
+    icon: '🔍',
+    display_order: 1,
+    thread_count: 45,
+    created_at: 1700000000,
+  },
+  {
+    id: 'cat_career_transition',
+    name: 'Career Transitions',
+    slug: 'career-transitions',
+    description: 'Changing careers and industries',
+    parent_id: 'cat_career',
+    icon: '🔄',
+    display_order: 2,
+    thread_count: 30,
+    created_at: 1700000000,
+  },
+  // Child categories under Mentorship
+  {
+    id: 'cat_mentor_qa',
+    name: 'Mentor Q&A',
+    slug: 'mentor-qa',
+    description: 'Questions and answers about mentorship',
+    parent_id: 'cat_mentorship',
+    icon: '❓',
+    display_order: 1,
+    thread_count: 25,
     created_at: 1700000000,
   },
 ];
@@ -111,7 +147,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should render back button with ArrowLeft icon', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -126,7 +162,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should render title and description with i18n', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -139,7 +175,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should wrap form in Card component', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -155,7 +191,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should display category dropdown when no categoryId in URL', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -167,20 +203,22 @@ describe('CreateThreadPage', () => {
   });
 
   it('should load and display all categories in dropdown', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
-      expect(screen.getByText('Mentorship')).toBeInTheDocument();
+      // Check that child categories appear as selectable options
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Career Transitions' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Mentor Q&A' })).toBeInTheDocument();
     });
   });
 
   it('should disable submit button when category not selected', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -207,7 +245,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should successfully create thread with selected category', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
     vi.mocked(forumServiceModule.forumService.createThread).mockResolvedValue({
@@ -219,7 +257,7 @@ describe('CreateThreadPage', () => {
         name: 'Test User',
         email: 'test@example.com',
       },
-      category_id: 'cat_career',
+      category_id: 'cat_career_job',
       created_at: 1700000000,
       updated_at: 1700000000,
       vote_count: 0,
@@ -232,12 +270,12 @@ describe('CreateThreadPage', () => {
 
     // Wait for categories to load
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
-    // Select category
+    // Select child category
     const categorySelect = screen.getByRole('combobox');
-    await user.selectOptions(categorySelect, 'cat_career');
+    await user.selectOptions(categorySelect, 'cat_career_job');
 
     // Fill in title
     const titleInput = screen.getByPlaceholderText(/how to negotiate salary/i);
@@ -253,18 +291,18 @@ describe('CreateThreadPage', () => {
     const submitButton = screen.getByRole('button', { name: /create thread/i });
     await user.click(submitButton);
 
-    // Check that createThread was called
+    // Check that createThread was called with child category
     await waitFor(() => {
       expect(forumServiceModule.forumService.createThread).toHaveBeenCalledWith(
         expect.objectContaining({
-          category_id: 'cat_career',
+          category_id: 'cat_career_job',
         })
       );
     });
   });
 
   it('should show loading state with Loader2 while fetching categories', () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockImplementationOnce(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockImplementationOnce(
       () => new Promise(() => {}) // Never resolves
     );
 
@@ -277,7 +315,7 @@ describe('CreateThreadPage', () => {
 
   it('should handle category loading errors gracefully with styled error', async () => {
     const errorMessage = 'Failed to load categories';
-    vi.mocked(forumServiceModule.forumService.getCategories).mockRejectedValueOnce(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockRejectedValueOnce(
       new Error(errorMessage)
     );
 
@@ -295,7 +333,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should disable submit button when title is empty', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -303,12 +341,12 @@ describe('CreateThreadPage', () => {
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     // Select category and content only, don't fill title
     const categorySelect = screen.getByRole('combobox');
-    await user.selectOptions(categorySelect, 'cat_career');
+    await user.selectOptions(categorySelect, 'cat_career_job');
 
     await user.type(
       screen.getByPlaceholderText(/provide details and context/i),
@@ -321,7 +359,7 @@ describe('CreateThreadPage', () => {
   });
 
   it('should disable submit button when content is empty', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -329,12 +367,12 @@ describe('CreateThreadPage', () => {
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     // Select category and title only, don't fill content
     const categorySelect = screen.getByRole('combobox');
-    await user.selectOptions(categorySelect, 'cat_career');
+    await user.selectOptions(categorySelect, 'cat_career_job');
 
     await user.type(screen.getByPlaceholderText(/how to negotiate salary/i), 'Title');
 
@@ -344,14 +382,14 @@ describe('CreateThreadPage', () => {
   });
 
   it('should navigate to category page after successful creation', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
     vi.mocked(forumServiceModule.forumService.createThread).mockResolvedValue({
       id: 'thread_123',
       title: 'Test Thread',
       content: 'Content',
-      category_id: 'cat_career',
+      category_id: 'cat_career_job',
       author: { id: 'user_123', name: 'Test User', email: 'test@example.com' },
       created_at: 1700000000,
       updated_at: 1700000000,
@@ -364,11 +402,11 @@ describe('CreateThreadPage', () => {
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     const categorySelect = screen.getByRole('combobox');
-    await user.selectOptions(categorySelect, 'cat_career');
+    await user.selectOptions(categorySelect, 'cat_career_job');
 
     await user.type(screen.getByPlaceholderText(/how to negotiate salary/i), 'Title');
     await user.type(screen.getByPlaceholderText(/provide details and context/i), 'Content');
@@ -378,12 +416,12 @@ describe('CreateThreadPage', () => {
 
     // Should navigate to category page
     await waitFor(() => {
-      expect(window.location.pathname).toContain('/forums/category/cat_career');
+      expect(window.location.pathname).toContain('/forums/category/cat_career_job');
     });
   });
 
   it('should navigate to forums home when canceling', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
@@ -391,7 +429,7 @@ describe('CreateThreadPage', () => {
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     // Click cancel button
@@ -405,14 +443,14 @@ describe('CreateThreadPage', () => {
   });
 
   it('should show character count for title', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     // Check that character count display exists (it shows "0/255 characters" initially)
@@ -420,18 +458,65 @@ describe('CreateThreadPage', () => {
   });
 
   it('should show character count for content', async () => {
-    vi.mocked(forumServiceModule.forumService.getCategories).mockResolvedValue(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
       mockCategories
     );
 
     renderWithRouter(<CreateThreadPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Career Development')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
     });
 
     // Check that character count display exists (shows "0 characters" initially)
     const characterCounts = screen.getAllByText(/characters/);
     expect(characterCounts.length).toBeGreaterThan(0);
+  });
+
+  it('should group subcategories under parent optgroups', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockCategories
+    );
+
+    renderWithRouter(<CreateThreadPage />);
+
+    await waitFor(() => {
+      // Check that optgroups exist for parent categories
+      const categorySelect = screen.getByRole('combobox');
+      const optgroups = categorySelect.querySelectorAll('optgroup');
+      expect(optgroups.length).toBeGreaterThan(0);
+
+      // Verify parent categories appear as optgroup labels
+      const careerOptgroup = Array.from(optgroups).find(
+        (optgroup) => optgroup.label === 'Career Development'
+      );
+      expect(careerOptgroup).toBeDefined();
+
+      const mentorshipOptgroup = Array.from(optgroups).find(
+        (optgroup) => optgroup.label === 'Mentorship'
+      );
+      expect(mentorshipOptgroup).toBeDefined();
+    });
+  });
+
+  it('should only allow selection of subcategories not parents', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockCategories
+    );
+
+    renderWithRouter(<CreateThreadPage />);
+
+    await waitFor(() => {
+      // Parent categories should NOT be selectable options (only optgroup labels)
+      const parentOptions = screen.queryAllByRole('option').filter(
+        (option) => option.textContent === 'Career Development' || option.textContent === 'Mentorship'
+      );
+      expect(parentOptions.length).toBe(0);
+
+      // Child categories should be selectable options
+      expect(screen.getByRole('option', { name: 'Job Search & Applications' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Career Transitions' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Mentor Q&A' })).toBeInTheDocument();
+    });
   });
 });
