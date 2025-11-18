@@ -138,7 +138,7 @@ export default function CreateThreadPage() {
 
       {/* Form Card */}
       <Card>
-        <CardContent>
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Category Selection */}
             <div className="space-y-2">

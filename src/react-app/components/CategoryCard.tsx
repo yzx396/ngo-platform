@@ -36,7 +36,7 @@ const CategoryCard = memo(function CategoryCard({ category }: CategoryCardProps)
       to={`/forums/category/${category.id}`}
       className="block rounded-lg border overflow-hidden transition-all hover:shadow-md hover:border-primary/50"
     >
-      <div className="p-6 flex flex-col md:flex-row items-start justify-between gap-4">
+      <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Left side: Icon, Name, Description */}
         <div className="flex-1 flex items-start gap-3">
           {category.icon && (
