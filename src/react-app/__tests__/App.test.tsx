@@ -1,14 +1,30 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import App from '../App';
 
-// Mock the feature service
+// Mock the feature service - default to no features enabled
 vi.mock('../services/featureService', () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue({}),
 }));
 
+// Mock the forum service
+vi.mock('../services/forumService', () => ({
+  forumService: {
+    getCategories: vi.fn().mockResolvedValue([
+      { id: 'cat-1', name: 'General Discussion', description: 'General discussion' },
+      { id: 'cat-2', name: 'Announcements', description: 'Announcements' },
+    ]),
+  },
+}));
+
 describe('App', () => {
+  beforeEach(() => {
+    // Mock fetch to return 401 for auth endpoint (unauthenticated)
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
+  });
   describe('Rendering', () => {
     it('should render without crashing', async () => {
       await act(async () => {
@@ -22,10 +38,10 @@ describe('App', () => {
         render(<App />);
       });
       await waitFor(() => {
-        // Home redirects to /feed which shows FeedPage
-        // Check for Feed heading or content
+        // Home redirects to /forums which shows ForumHomePage
+        // Check for Forums heading
         expect(
-          screen.getByRole('heading', { name: /Feed|Community/i, level: 1 })
+          screen.getByRole('heading', { name: /Forums|Lead Forward/i, level: 1 })
         ).toBeInTheDocument();
       }, { timeout: 3000 });
     });
@@ -58,12 +74,15 @@ describe('App', () => {
       });
       // Wait for HomePage to load
       await waitFor(() => {
-        // Check for Feed link in sidebar (public)
-        const feedLinks = screen.getAllByRole('link', { name: /Feed/i });
-        expect(feedLinks.length).toBeGreaterThan(0);
-        // Note: Leaderboard is hidden when feature flag is disabled (default in tests)
+        // Feed link is hidden when feature flag is disabled (default in tests)
+        const feedLinks = screen.queryAllByRole('link', { name: /Feed/i });
+        expect(feedLinks.length).toBe(0);
+        // Note: Leaderboard is also hidden when feature flag is disabled (default in tests)
         const leaderboardLinks = screen.queryAllByRole('link', { name: /Leaderboard/i });
         expect(leaderboardLinks.length).toBe(0);
+        // Forums should always be visible
+        const forumsLinks = screen.getAllByRole('link', { name: /Forums/i });
+        expect(forumsLinks.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
   });

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { LeaderboardPage } from '../LeaderboardPage';
 import type { LeaderboardEntry } from '../../../types/api';
 
@@ -53,6 +53,16 @@ vi.mock('../../services/pointsService', () => ({
 import { getLeaderboard } from '../../services/pointsService';
 
 const mockGetLeaderboard = getLeaderboard as ReturnType<typeof vi.fn>;
+
+const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+afterEach(() => {
+  consoleErrorSpy.mockClear();
+});
+
+afterAll(() => {
+  consoleErrorSpy.mockRestore();
+});
 
 describe('LeaderboardPage', () => {
   beforeEach(() => {

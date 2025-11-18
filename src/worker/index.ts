@@ -33,6 +33,7 @@ import type { Post } from "../types/post";
 import { normalizePost, normalizePostCommentWithAuthor } from "../types/post";
 import type { Blog, BlogWithLikeStatus } from "../types/blog";
 import { normalizeBlog, normalizeBlogCommentWithAuthor } from "../types/blog";
+import type { CreateThreadRequest } from "../types/forum";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -56,6 +57,13 @@ import {
   POINTS_FOR_BLOG_FEATURED,
   POINTS_FOR_RECEIVING_LIKE,
   POINTS_FOR_RECEIVING_COMMENT,
+  // Forum points (imported for future use)
+  // POINTS_FOR_CREATE_THREAD,
+  // POINTS_FOR_CREATE_REPLY,
+  // POINTS_FOR_RECEIVING_UPVOTE_THREAD,
+  // POINTS_FOR_RECEIVING_UPVOTE_REPLY,
+  // POINTS_FOR_THREAD_SOLVED,
+  // POINTS_FOR_REPLY_MARKED_SOLUTION,
   LIKES_RECEIVED_FULL_POINTS_THRESHOLD,
   LIKES_RECEIVED_REDUCED_POINTS_THRESHOLD,
   LIKES_RECEIVED_REDUCED_MULTIPLIER,
@@ -84,6 +92,33 @@ interface Env {
 }
 
 /**
+ * Database result types for forum queries
+ * Using Partial to handle optional fields from DB results
+ */
+interface DbThread {
+  id?: string;
+  user_id?: string;
+  upvote_count?: number;
+  downvote_count?: number;
+  reply_count?: number;
+  created_at?: number;
+  view_count?: number;
+}
+
+interface DbReply {
+  thread_id?: string;
+  user_id?: string;
+}
+
+interface DbVote {
+  vote_type?: string;
+}
+
+interface DbUserRole {
+  role?: string;
+}
+
+/**
  * Custom Hono context type with auth payload
  */
 type HonoContext = {
@@ -94,6 +129,38 @@ type HonoContext = {
 };
 
 const app = new Hono<HonoContext>();
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Calculate hot score for forum thread using Reddit-style algorithm
+ * Formula: (upvotes - downvotes + reply_count * 0.5) / ((hours_since_creation + 2) ^ 1.5)
+ * 
+ * @param upvotes - Number of upvotes
+ * @param downvotes - Number of downvotes
+ * @param replyCount - Number of replies
+ * @param createdAt - Unix timestamp (seconds)
+ * @returns Hot score
+ */
+function calculateHotScore(
+  upvotes: number,
+  downvotes: number,
+  replyCount: number,
+  createdAt: number
+): number {
+  const now = Math.floor(Date.now() / 1000);
+  const hoursOld = (now - createdAt) / 3600;
+  
+  // Base score: net votes + reply bonus
+  const score = upvotes - downvotes + replyCount * 0.5;
+  
+  // Time decay: older content gets lower scores
+  const ageMultiplier = Math.pow(hoursOld + 2, 1.5);
+  
+  return score / ageMultiplier;
+}
 
 // Apply authentication middleware to all routes
 app.use(authMiddleware);
@@ -3825,6 +3892,1519 @@ app.patch("/api/v1/blogs/:id/feature", requireAuth, requireAdmin, async (c) => {
   } catch (err) {
     console.error("Error featuring blog:", err);
     return c.json({ error: "Failed to feature blog" }, 500);
+  }
+});
+
+// ============================================================================
+// Forum Replies API
+// ============================================================================
+
+/**
+ * GET /api/v1/forums/threads/:id/replies - Get replies for a thread
+ * Query params:
+ *   - limit: (optional) Number of replies per page (default 50, max 200)
+ *   - offset: (optional) Pagination offset (default 0)
+ */
+app.get("/api/v1/forums/threads/:id/replies", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("id");
+  const limit = Math.min(parseInt(c.req.query("limit") || "50"), 200);
+  const offset = parseInt(c.req.query("offset") || "0");
+
+  try {
+    const query = `
+      SELECT
+        r.*,
+        u.name as author_name,
+        u.email as author_email
+      FROM forum_replies r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.thread_id = ?
+      ORDER BY r.created_at ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM forum_replies WHERE thread_id = ?
+    `;
+
+    const [repliesResult, countResult] = await Promise.all([
+      db.prepare(query).bind(threadId, limit, offset).all(),
+      db.prepare(countQuery).bind(threadId).first(),
+    ]);
+
+    if (!repliesResult.success) {
+      return c.json({ error: "Failed to fetch replies" }, 500);
+    }
+
+    return c.json({
+      replies: repliesResult.results,
+      total: (countResult?.total as number) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching replies:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * POST /api/v1/forums/threads/:threadId/replies - Create a reply
+ * Body:
+ *   - content: (required) Reply content text
+ *   - parent_reply_id: (optional) ID of parent reply for nested replies
+ */
+app.post("/api/v1/forums/threads/:threadId/replies", async (c) => {
+  const db = c.env.platform_db;
+  const auth = c.get("user") as AuthPayload | undefined;
+
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const threadId = c.req.param("threadId");
+  const { content, parent_reply_id } = await c.req.json() as {
+    content?: string;
+    parent_reply_id?: string;
+  };
+
+  // Validate content
+  if (!content || content.trim().length === 0) {
+    return c.json({ error: "Content is required" }, 400);
+  }
+
+  try {
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+
+    // Verify parent reply exists if provided
+    if (parent_reply_id) {
+      const parentReply = await db
+        .prepare("SELECT id FROM forum_replies WHERE id = ? AND thread_id = ?")
+        .bind(parent_reply_id, threadId)
+        .first();
+
+      if (!parentReply) {
+        return c.json({ error: "Parent reply not found" }, 404);
+      }
+    }
+
+    const replyId = `reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    const result = await db
+      .prepare(`
+        INSERT INTO forum_replies (
+          id, thread_id, user_id, content, parent_reply_id,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        replyId,
+        threadId,
+        auth.userId,
+        content.trim(),
+        parent_reply_id || null,
+        now,
+        now
+      )
+      .run();
+
+    if (!result.success) {
+      return c.json({ error: "Failed to create reply" }, 500);
+    }
+
+    // Increment thread reply_count
+    await db
+      .prepare(`
+        UPDATE forum_threads
+        SET reply_count = reply_count + 1, last_activity_at = ?
+        WHERE id = ?
+      `)
+      .bind(now, threadId)
+      .run();
+
+    // Fetch the created reply with user info
+    const reply = await db
+      .prepare(`
+        SELECT
+          r.*,
+          u.name as author_name,
+          u.email as author_email
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      `)
+      .bind(replyId)
+      .first();
+
+    return c.json({ reply }, 201);
+  } catch (err) {
+    console.error("Error creating reply:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/forums/replies/:replyId - Get a single reply with nested replies
+ */
+app.get("/api/v1/forums/replies/:replyId", async (c) => {
+  const db = c.env.platform_db;
+  const replyId = c.req.param("replyId");
+
+  try {
+    const reply = await db
+      .prepare(`
+        SELECT
+          r.*,
+          u.name as author_name,
+          u.email as author_email
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      `)
+      .bind(replyId)
+      .first();
+
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+
+    // Fetch nested replies (children)
+    const nestedReplies = await db
+      .prepare(`
+        SELECT
+          r.*,
+          u.name as author_name,
+          u.email as author_email
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.parent_reply_id = ?
+        ORDER BY r.created_at ASC
+      `)
+      .bind(replyId)
+      .all();
+
+    return c.json({
+      reply: {
+        ...reply,
+        nested_replies: nestedReplies.results || [],
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching reply:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * PUT /api/v1/forums/replies/:replyId - Update a reply
+ * Body:
+ *   - content: (required) Updated reply content
+ */
+app.put("/api/v1/forums/replies/:replyId", async (c) => {
+  const db = c.env.platform_db;
+  const auth = c.get("user") as AuthPayload | undefined;
+
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const replyId = c.req.param("replyId");
+  const { content } = await c.req.json() as { content?: string };
+
+  if (!content || content.trim().length === 0) {
+    return c.json({ error: "Content is required" }, 400);
+  }
+
+  try {
+    // Verify reply exists and user is author
+    const reply = await db
+      .prepare("SELECT user_id FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first() as { user_id: string } | null;
+
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+
+    if (reply.user_id !== auth.userId) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    await db
+      .prepare("UPDATE forum_replies SET content = ?, updated_at = ? WHERE id = ?")
+      .bind(content.trim(), now, replyId)
+      .run();
+
+    const updated = await db
+      .prepare(`
+        SELECT
+          r.*,
+          u.name as author_name,
+          u.email as author_email
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      `)
+      .bind(replyId)
+      .first();
+
+    return c.json({ reply: updated });
+  } catch (err) {
+    console.error("Error updating reply:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * DELETE /api/v1/forums/replies/:replyId - Delete a reply
+ */
+app.delete("/api/v1/forums/replies/:replyId", async (c) => {
+  const db = c.env.platform_db;
+  const auth = c.get("user") as AuthPayload | undefined;
+
+  if (!auth) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const replyId = c.req.param("replyId");
+
+  try {
+    // Verify reply exists and user is author
+    const reply = await db
+      .prepare("SELECT user_id, thread_id FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first() as { user_id: string; thread_id: string } | null;
+
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+
+    if (reply.user_id !== auth.userId) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const threadId = reply.thread_id;
+
+    // Delete the reply
+    await db
+      .prepare("DELETE FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .run();
+
+    // Decrement thread reply_count
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .prepare(
+        "UPDATE forum_threads SET reply_count = MAX(0, reply_count - 1), last_activity_at = ? WHERE id = ?"
+      )
+      .bind(now, threadId)
+      .run();
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting reply:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// Forum Threads API
+// ============================================================================
+
+/**
+ * GET /api/v1/forums/threads - Get threads in a category
+ * Query params:
+ *   - category_id: (required) Category ID to fetch threads from
+ *   - limit: (optional) Number of threads per page (default 20, max 100)
+ *   - offset: (optional) Pagination offset (default 0)
+ *   - sort: (optional) Sort order: 'hot' (default), 'new', 'top'
+ *   - tag: (optional) Filter by tag name
+ */
+app.get("/api/v1/forums/threads", async (c) => {
+  const db = c.env.platform_db;
+  const categoryId = c.req.query("category_id");
+  const limit = Math.min(parseInt(c.req.query("limit") || "20"), 100);
+  const offset = parseInt(c.req.query("offset") || "0");
+  const sort = c.req.query("sort") || "hot";
+  const tag = c.req.query("tag");
+
+  if (!categoryId) {
+    return c.json({ error: "category_id parameter is required" }, 400);
+  }
+
+  // Validate sort parameter
+  if (!['hot', 'new', 'top'].includes(sort)) {
+    return c.json({ error: "Invalid sort parameter. Must be 'hot', 'new', or 'top'" }, 400);
+  }
+
+  try {
+    // Determine sort order
+    let orderBy = '';
+    switch (sort) {
+      case 'hot':
+        orderBy = 't.hot_score DESC';
+        break;
+      case 'new':
+        orderBy = 't.created_at DESC';
+        break;
+      case 'top':
+        orderBy = '(t.upvote_count - t.downvote_count) DESC';
+        break;
+    }
+
+    // Build query with optional tag filter
+    let query = `
+      SELECT
+        t.*,
+        u.name as author_name,
+        u.email as author_email
+      FROM forum_threads t
+      JOIN users u ON t.user_id = u.id
+    `;
+    
+    if (tag) {
+      query += `
+      JOIN forum_thread_tags tt ON t.id = tt.thread_id AND tt.tag_name = ?
+      `;
+    }
+    
+    query += `
+      WHERE t.category_id = ?
+      ORDER BY t.is_pinned DESC, ${orderBy}
+      LIMIT ? OFFSET ?
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*) as total FROM forum_threads WHERE category_id = ?
+    `;
+
+    // Bind parameters based on whether tag filter is present
+    const [threadsResult, countResult] = await Promise.all([
+      tag 
+        ? db.prepare(query).bind(tag, categoryId, limit, offset).all()
+        : db.prepare(query).bind(categoryId, limit, offset).all(),
+      db.prepare(countQuery).bind(categoryId).first(),
+    ]);
+
+    if (!threadsResult.success) {
+      return c.json({ error: "Failed to fetch threads" }, 500);
+    }
+
+    return c.json({
+      threads: threadsResult.results,
+      total: (countResult?.total as number) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching threads:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/forums/threads/:id - Get a single thread
+ */
+app.get("/api/v1/forums/threads/:id", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("id");
+
+  const query = `
+    SELECT
+      t.*,
+      u.name as author_name,
+      u.email as author_email
+    FROM forum_threads t
+    JOIN users u ON t.user_id = u.id
+    WHERE t.id = ?
+  `;
+
+  try {
+    const result = await db.prepare(query).bind(threadId).first();
+
+    if (!result) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+
+    return c.json({ thread: result });
+  } catch (err) {
+    console.error("Error fetching thread:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// Forum Categories API
+// ============================================================================
+
+/**
+ * GET /api/v1/forums/categories - Get all top-level or child categories
+ * Query params:
+ *   - parent_id: (optional) Filter by parent category ID
+ */
+app.get("/api/v1/forums/categories", async (c) => {
+  const db = c.env.platform_db;
+  const parentId = c.req.query("parent_id");
+
+  let query = `
+    SELECT
+      c.*,
+      COALESCE(COUNT(t.id), 0) as thread_count
+    FROM forum_categories c
+    LEFT JOIN forum_threads t ON c.id = t.category_id
+  `;
+
+  if (parentId) {
+    query += ` WHERE c.parent_id = ?`;
+  } else {
+    query += ` WHERE c.parent_id IS NULL`;
+  }
+
+  query += ` GROUP BY c.id ORDER BY c.display_order ASC`;
+
+  try {
+    const result = parentId
+      ? await db.prepare(query).bind(parentId).all()
+      : await db.prepare(query).all();
+
+    if (!result.success) {
+      return c.json({ error: "Failed to fetch categories" }, 500);
+    }
+
+    // If filtering by parent_id and no results, return 404
+    if (parentId && result.results.length === 0) {
+      return c.json({ error: "Parent category not found" }, 404);
+    }
+
+    return c.json({ categories: result.results });
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+/**
+ * GET /api/v1/forums/categories/:id - Get a single category
+ */
+app.get("/api/v1/forums/categories/:id", async (c) => {
+  const db = c.env.platform_db;
+  const categoryId = c.req.param("id");
+
+  const query = `
+    SELECT
+      c.*,
+      COALESCE(COUNT(t.id), 0) as thread_count
+    FROM forum_categories c
+    LEFT JOIN forum_threads t ON c.id = t.category_id
+    WHERE c.id = ?
+    GROUP BY c.id
+  `;
+
+  try {
+    const result = await db.prepare(query).bind(categoryId).first();
+
+    if (!result) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+
+    return c.json({ category: result });
+  } catch (err) {
+    console.error("Error fetching category:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/threads - Create a new thread
+// ============================================================================
+
+app.post("/api/v1/forums/threads", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.get("user");
+
+  try {
+    const body = await c.req.json() as CreateThreadRequest;
+
+    // Validate required fields
+    if (!body.category_id || !body.title || !body.content) {
+      return c.json({ error: "Missing required fields: category_id, title, content" }, 400);
+    }
+
+    // Validate title and content are not empty
+    if (body.title.trim() === "" || body.content.trim() === "") {
+      return c.json({ error: "Title and content cannot be empty" }, 400);
+    }
+
+    // Verify category exists
+    const categoryCheck = await db
+      .prepare("SELECT id FROM forum_categories WHERE id = ?")
+      .bind(body.category_id)
+      .first();
+
+    if (!categoryCheck) {
+      return c.json({ error: "Category not found" }, 404);
+    }
+
+    // Generate thread ID
+    const threadId = `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+
+    // Insert thread
+    const insertResult = await db
+      .prepare(`
+        INSERT INTO forum_threads (
+          id, category_id, user_id, title, content, status,
+          is_pinned, view_count, reply_count, upvote_count,
+          downvote_count, hot_score, last_activity_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        threadId,
+        body.category_id,
+        user.userId,
+        body.title,
+        body.content,
+        "open",
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        now,
+        now,
+        now
+      )
+      .run();
+
+    if (!insertResult.success) {
+      console.error("Error inserting thread:", insertResult);
+      return c.json({ error: "Failed to create thread" }, 500);
+    }
+
+    // Return created thread
+    const thread = {
+      id: threadId,
+      category_id: body.category_id,
+      user_id: user.userId,
+      title: body.title,
+      content: body.content,
+      status: "open",
+      is_pinned: 0,
+      view_count: 0,
+      reply_count: 0,
+      upvote_count: 0,
+      downvote_count: 0,
+      hot_score: 0,
+      last_activity_at: now,
+      created_at: now,
+      updated_at: now,
+    };
+
+    return c.json({ thread, message: "Thread created successfully" }, 201);
+  } catch (err) {
+    console.error("Error creating thread:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/threads/:threadId/view - Track thread view
+// ============================================================================
+
+app.post("/api/v1/forums/threads/:threadId/view", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  const user = c.get("user");
+  
+  try {
+    // Get IP address from Cloudflare headers
+    const ipAddress = c.req.header("CF-Connecting-IP") || null;
+    
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id, view_count FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Check if view already exists (prevent duplicates)
+    let existingView = null;
+    
+    if (user) {
+      // Check by user_id
+      existingView = await db
+        .prepare("SELECT id FROM forum_thread_views WHERE thread_id = ? AND user_id = ?")
+        .bind(threadId, user.userId)
+        .first();
+    } else if (ipAddress) {
+      // Check by IP address
+      existingView = await db
+        .prepare("SELECT id FROM forum_thread_views WHERE thread_id = ? AND ip_address = ? AND user_id IS NULL")
+        .bind(threadId, ipAddress)
+        .first();
+    }
+    
+    // If view doesn't exist, create it
+    if (!existingView) {
+      const viewId = `view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = Math.floor(Date.now() / 1000);
+      
+      await db
+        .prepare(`
+          INSERT INTO forum_thread_views (id, thread_id, user_id, ip_address, created_at)
+          VALUES (?, ?, ?, ?, ?)
+        `)
+        .bind(viewId, threadId, user?.userId || null, ipAddress, now)
+        .run();
+      
+      // Increment view_count on thread
+      await db
+        .prepare("UPDATE forum_threads SET view_count = view_count + 1 WHERE id = ?")
+        .bind(threadId)
+        .run();
+    }
+    
+    // Get updated view count
+    const updatedThread = await db
+      .prepare("SELECT view_count FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    return c.json({ 
+      view_count: (updatedThread as DbThread | null)?.view_count || 0,
+      new_view: !existingView
+    });
+  } catch (err) {
+    console.error("Error tracking view:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// GET /api/v1/forums/threads/:threadId/views - Get view statistics
+// ============================================================================
+
+app.get("/api/v1/forums/threads/:threadId/views", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  
+  try {
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id, view_count FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Get unique view count
+    const uniqueViews = await db
+      .prepare("SELECT COUNT(*) as count FROM forum_thread_views WHERE thread_id = ?")
+      .bind(threadId)
+      .first();
+    
+    return c.json({
+      total_views: (thread as Record<string, unknown>)?.view_count || 0,
+      unique_views: (uniqueViews as Record<string, unknown>)?.count || 0
+    });
+  } catch (err) {
+    console.error("Error fetching view statistics:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/threads/:threadId/vote - Vote on a thread
+// ============================================================================
+
+app.post("/api/v1/forums/threads/:threadId/vote", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  const user = c.get("user");
+  
+  try {
+    const { vote_type } = await c.req.json() as { vote_type: string };
+    
+    // Validate vote_type
+    if (vote_type !== 'upvote' && vote_type !== 'downvote') {
+      return c.json({ error: "Invalid vote_type. Must be 'upvote' or 'downvote'" }, 400);
+    }
+    
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id, upvote_count, downvote_count FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Check if user already voted
+    const existingVote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('thread', threadId, user.userId)
+      .first();
+    
+    if (existingVote) {
+      const existingVoteType = (existingVote as DbVote).vote_type;
+      
+      if (existingVoteType === vote_type) {
+        // Remove vote (toggle off)
+        await db
+          .prepare("DELETE FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+          .bind('thread', threadId, user.userId)
+          .run();
+        
+        // Decrement vote count
+        const countField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+        await db
+          .prepare(`UPDATE forum_threads SET ${countField} = MAX(0, ${countField} - 1) WHERE id = ?`)
+          .bind(threadId)
+          .run();
+      } else {
+        // Change vote
+        await db
+          .prepare("UPDATE forum_votes SET vote_type = ? WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+          .bind(vote_type, 'thread', threadId, user.userId)
+          .run();
+        
+        // Update counts
+        const incrementField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+        const decrementField = vote_type === 'upvote' ? 'downvote_count' : 'upvote_count';
+        await db
+          .prepare(`UPDATE forum_threads SET ${incrementField} = ${incrementField} + 1, ${decrementField} = MAX(0, ${decrementField} - 1) WHERE id = ?`)
+          .bind(threadId)
+          .run();
+      }
+    } else {
+      // Create new vote
+      const voteId = `vote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = Math.floor(Date.now() / 1000);
+      
+      await db
+        .prepare("INSERT INTO forum_votes (id, votable_type, votable_id, user_id, vote_type, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(voteId, 'thread', threadId, user.userId, vote_type, now)
+        .run();
+      
+      // Increment vote count
+      const countField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+      await db
+        .prepare(`UPDATE forum_threads SET ${countField} = ${countField} + 1 WHERE id = ?`)
+        .bind(threadId)
+        .run();
+    }
+    
+    // Get updated vote counts and user's current vote
+    const updatedThread = await db
+      .prepare("SELECT upvote_count, downvote_count FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    const currentVote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('thread', threadId, user.userId)
+      .first();
+    
+    // Recalculate hot score
+    const threadData = await db.prepare("SELECT reply_count, created_at FROM forum_threads WHERE id = ?").bind(threadId).first() as DbThread | null;
+    const hotScore = calculateHotScore(
+      (updatedThread as DbThread | null)?.upvote_count || 0,
+      (updatedThread as DbThread | null)?.downvote_count || 0,
+      threadData?.reply_count || 0,
+      threadData?.created_at || 0
+    );
+    
+    await db
+      .prepare("UPDATE forum_threads SET hot_score = ? WHERE id = ?")
+      .bind(hotScore, threadId)
+      .run();
+    
+    return c.json({
+      upvote_count: (updatedThread as DbThread | null)?.upvote_count || 0,
+      downvote_count: (updatedThread as DbThread | null)?.downvote_count || 0,
+      user_vote: currentVote ? (currentVote as DbVote).vote_type : null,
+      hot_score: hotScore
+    });
+  } catch (err) {
+    console.error("Error voting on thread:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// GET /api/v1/forums/threads/:threadId/vote - Get user's vote on a thread
+// ============================================================================
+
+app.get("/api/v1/forums/threads/:threadId/vote", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  const user = c.get("user");
+  
+  try {
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    if (!user) {
+      return c.json({ user_vote: null });
+    }
+    
+    // Get user's vote
+    const vote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('thread', threadId, user.userId)
+      .first();
+    
+    return c.json({
+      user_vote: vote ? (vote as DbVote).vote_type : null
+    });
+  } catch (err) {
+    console.error("Error fetching user vote:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/replies/:replyId/vote - Vote on a reply
+// ============================================================================
+
+app.post("/api/v1/forums/replies/:replyId/vote", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const replyId = c.req.param("replyId");
+  const user = c.get("user");
+  
+  try {
+    const { vote_type } = await c.req.json() as { vote_type: string };
+    
+    // Validate vote_type
+    if (vote_type !== 'upvote' && vote_type !== 'downvote') {
+      return c.json({ error: "Invalid vote_type. Must be 'upvote' or 'downvote'" }, 400);
+    }
+    
+    // Verify reply exists
+    const reply = await db
+      .prepare("SELECT id, upvote_count, downvote_count FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first();
+    
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+    
+    // Check if user already voted
+    const existingVote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('reply', replyId, user.userId)
+      .first();
+    
+    if (existingVote) {
+      const existingVoteType = (existingVote as DbVote).vote_type;
+      
+      if (existingVoteType === vote_type) {
+        // Remove vote (toggle off)
+        await db
+          .prepare("DELETE FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+          .bind('reply', replyId, user.userId)
+          .run();
+        
+        // Decrement vote count
+        const countField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+        await db
+          .prepare(`UPDATE forum_replies SET ${countField} = MAX(0, ${countField} - 1) WHERE id = ?`)
+          .bind(replyId)
+          .run();
+      } else {
+        // Change vote
+        await db
+          .prepare("UPDATE forum_votes SET vote_type = ? WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+          .bind(vote_type, 'reply', replyId, user.userId)
+          .run();
+        
+        // Update counts
+        const incrementField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+        const decrementField = vote_type === 'upvote' ? 'downvote_count' : 'upvote_count';
+        await db
+          .prepare(`UPDATE forum_replies SET ${incrementField} = ${incrementField} + 1, ${decrementField} = MAX(0, ${decrementField} - 1) WHERE id = ?`)
+          .bind(replyId)
+          .run();
+      }
+    } else {
+      // Create new vote
+      const voteId = `vote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = Math.floor(Date.now() / 1000);
+      
+      await db
+        .prepare("INSERT INTO forum_votes (id, votable_type, votable_id, user_id, vote_type, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(voteId, 'reply', replyId, user.userId, vote_type, now)
+        .run();
+      
+      // Increment vote count
+      const countField = vote_type === 'upvote' ? 'upvote_count' : 'downvote_count';
+      await db
+        .prepare(`UPDATE forum_replies SET ${countField} = ${countField} + 1 WHERE id = ?`)
+        .bind(replyId)
+        .run();
+    }
+    
+    // Get updated vote counts and user's current vote
+    const updatedReply = await db
+      .prepare("SELECT upvote_count, downvote_count FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first();
+    
+    const currentVote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('reply', replyId, user.userId)
+      .first();
+    
+    return c.json({
+      upvote_count: (updatedReply as DbThread | null)?.upvote_count || 0,
+      downvote_count: (updatedReply as DbThread | null)?.downvote_count || 0,
+      user_vote: currentVote ? (currentVote as DbVote).vote_type : null
+    });
+  } catch (err) {
+    console.error("Error voting on reply:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// GET /api/v1/forums/replies/:replyId/vote - Get user's vote on a reply
+// ============================================================================
+
+app.get("/api/v1/forums/replies/:replyId/vote", async (c) => {
+  const db = c.env.platform_db;
+  const replyId = c.req.param("replyId");
+  const user = c.get("user");
+  
+  try {
+    // Verify reply exists
+    const reply = await db
+      .prepare("SELECT id FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first();
+    
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+    
+    if (!user) {
+      return c.json({ user_vote: null });
+    }
+    
+    // Get user's vote
+    const vote = await db
+      .prepare("SELECT vote_type FROM forum_votes WHERE votable_type = ? AND votable_id = ? AND user_id = ?")
+      .bind('reply', replyId, user.userId)
+      .first();
+    
+    return c.json({
+      user_vote: vote ? (vote as DbVote).vote_type : null
+    });
+  } catch (err) {
+    console.error("Error fetching user vote:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/threads/:threadId/calculate-hot-score - Recalculate hot score
+// ============================================================================
+
+app.post("/api/v1/forums/threads/:threadId/calculate-hot-score", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  
+  try {
+    // Get thread data
+    const thread = await db
+      .prepare("SELECT upvote_count, downvote_count, reply_count, created_at FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Calculate hot score
+    const threadData = thread as DbThread;
+    const hotScore = calculateHotScore(
+      threadData.upvote_count || 0,
+      threadData.downvote_count || 0,
+      threadData.reply_count || 0,
+      threadData.created_at || 0
+    );
+    
+    // Update thread with new hot score
+    await db
+      .prepare("UPDATE forum_threads SET hot_score = ? WHERE id = ?")
+      .bind(hotScore, threadId)
+      .run();
+    
+    return c.json({ hot_score: hotScore });
+  } catch (err) {
+    console.error("Error calculating hot score:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// PATCH /api/v1/forums/threads/:threadId/status - Update thread status
+// ============================================================================
+
+app.patch("/api/v1/forums/threads/:threadId/status", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  const user = c.get("user");
+  
+  try {
+    const { status } = await c.req.json() as { status: string };
+    
+    // Validate status
+    if (!['open', 'solved', 'closed'].includes(status)) {
+      return c.json({ error: "Invalid status. Must be 'open', 'solved', or 'closed'" }, 400);
+    }
+    
+    // Verify thread exists and user is author
+    const thread = await db
+      .prepare("SELECT user_id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    if ((thread as DbThread).user_id !== user.userId) {
+      return c.json({ error: "Forbidden. Only thread author can update status" }, 403);
+    }
+    
+    // Update status
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .prepare("UPDATE forum_threads SET status = ?, updated_at = ? WHERE id = ?")
+      .bind(status, now, threadId)
+      .run();
+    
+    // Get updated thread
+    const updatedThread = await db
+      .prepare(`
+        SELECT t.*, u.name as author_name
+        FROM forum_threads t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.id = ?
+      `)
+      .bind(threadId)
+      .first();
+    
+    return c.json({ thread: updatedThread });
+  } catch (err) {
+    console.error("Error updating thread status:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/replies/:replyId/mark-solution - Mark reply as solution
+// ============================================================================
+
+app.post("/api/v1/forums/replies/:replyId/mark-solution", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const replyId = c.req.param("replyId");
+  const user = c.get("user");
+  
+  try {
+    // Get reply and thread info
+    const reply = await db
+      .prepare("SELECT thread_id FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first();
+    
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+    
+    const threadId = (reply as DbReply).thread_id;
+    
+    // Verify user is thread author
+    const thread = await db
+      .prepare("SELECT user_id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    if ((thread as DbThread).user_id !== user.userId) {
+      return c.json({ error: "Forbidden. Only thread author can mark solutions" }, 403);
+    }
+    
+    // Unmark any existing solutions for this thread
+    await db
+      .prepare("UPDATE forum_replies SET is_solution = 0 WHERE thread_id = ? AND is_solution = 1")
+      .bind(threadId)
+      .run();
+    
+    // Mark this reply as solution
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .prepare("UPDATE forum_replies SET is_solution = 1, updated_at = ? WHERE id = ?")
+      .bind(now, replyId)
+      .run();
+    
+    // Update thread status to solved
+    await db
+      .prepare("UPDATE forum_threads SET status = ?, updated_at = ? WHERE id = ?")
+      .bind('solved', now, threadId)
+      .run();
+    
+    // Get updated reply
+    const updatedReply = await db
+      .prepare(`
+        SELECT r.*, u.name as user_name
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      `)
+      .bind(replyId)
+      .first();
+    
+    return c.json({ 
+      reply: updatedReply,
+      thread_status: 'solved'
+    });
+  } catch (err) {
+    console.error("Error marking solution:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// DELETE /api/v1/forums/replies/:replyId/mark-solution - Unmark reply as solution
+// ============================================================================
+
+app.delete("/api/v1/forums/replies/:replyId/mark-solution", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const replyId = c.req.param("replyId");
+  const user = c.get("user");
+  
+  try {
+    // Get reply and thread info
+    const reply = await db
+      .prepare("SELECT thread_id FROM forum_replies WHERE id = ?")
+      .bind(replyId)
+      .first();
+    
+    if (!reply) {
+      return c.json({ error: "Reply not found" }, 404);
+    }
+    
+    const threadId = (reply as DbReply).thread_id;
+    
+    // Verify user is thread author
+    const thread = await db
+      .prepare("SELECT user_id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    if ((thread as DbThread).user_id !== user.userId) {
+      return c.json({ error: "Forbidden. Only thread author can unmark solutions" }, 403);
+    }
+    
+    // Unmark reply as solution
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .prepare("UPDATE forum_replies SET is_solution = 0, updated_at = ? WHERE id = ?")
+      .bind(now, replyId)
+      .run();
+    
+    // Update thread status back to open
+    await db
+      .prepare("UPDATE forum_threads SET status = ?, updated_at = ? WHERE id = ?")
+      .bind('open', now, threadId)
+      .run();
+    
+    // Get updated reply
+    const updatedReply = await db
+      .prepare(`
+        SELECT r.*, u.name as user_name
+        FROM forum_replies r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.id = ?
+      `)
+      .bind(replyId)
+      .first();
+    
+    return c.json({ 
+      reply: updatedReply,
+      thread_status: 'open'
+    });
+  } catch (err) {
+    console.error("Error unmarking solution:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// PATCH /api/v1/forums/threads/:threadId/pin - Pin/unpin thread (Admin only)
+// ============================================================================
+
+app.patch("/api/v1/forums/threads/:threadId/pin", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  
+  try {
+    const { is_pinned } = await c.req.json() as { is_pinned: boolean };
+    
+    // Validate is_pinned
+    if (typeof is_pinned !== 'boolean') {
+      return c.json({ error: "is_pinned must be a boolean" }, 400);
+    }
+    
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Update pin status
+    const now = Math.floor(Date.now() / 1000);
+    await db
+      .prepare("UPDATE forum_threads SET is_pinned = ?, updated_at = ? WHERE id = ?")
+      .bind(is_pinned ? 1 : 0, now, threadId)
+      .run();
+    
+    // Get updated thread
+    const updatedThread = await db
+      .prepare(`
+        SELECT t.*, u.name as author_name
+        FROM forum_threads t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.id = ?
+      `)
+      .bind(threadId)
+      .first();
+    
+    return c.json({ thread: updatedThread });
+  } catch (err) {
+    console.error("Error pinning/unpinning thread:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// POST /api/v1/forums/threads/:threadId/tags - Add tag to thread
+// ============================================================================
+
+app.post("/api/v1/forums/threads/:threadId/tags", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  
+  try {
+    const { tag_name } = await c.req.json() as { tag_name: string };
+    
+    // Normalize tag name (lowercase, replace spaces with hyphens)
+    const normalizedTag = tag_name.trim().toLowerCase().replace(/\s+/g, '-');
+    
+    // Validate tag name
+    if (!normalizedTag || normalizedTag.length === 0) {
+      return c.json({ error: "Tag name cannot be empty" }, 400);
+    }
+    
+    if (normalizedTag.length > 50) {
+      return c.json({ error: "Tag name too long (max 50 characters)" }, 400);
+    }
+    
+    if (!/^[a-z0-9-]+$/.test(normalizedTag)) {
+      return c.json({ error: "Tag name can only contain lowercase letters, numbers, and hyphens" }, 400);
+    }
+    
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Check for duplicate
+    const existing = await db
+      .prepare("SELECT id FROM forum_thread_tags WHERE thread_id = ? AND tag_name = ?")
+      .bind(threadId, normalizedTag)
+      .first();
+    
+    if (existing) {
+      return c.json({ error: "Tag already exists on this thread" }, 409);
+    }
+    
+    // Create tag
+    const tagId = `tag_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Math.floor(Date.now() / 1000);
+    
+    await db
+      .prepare("INSERT INTO forum_thread_tags (id, thread_id, tag_name, created_at) VALUES (?, ?, ?, ?)")
+      .bind(tagId, threadId, normalizedTag, now)
+      .run();
+    
+    const tag = {
+      id: tagId,
+      thread_id: threadId,
+      tag_name: normalizedTag,
+      created_at: now
+    };
+    
+    return c.json({ tag }, 201);
+  } catch (err) {
+    console.error("Error adding tag:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// GET /api/v1/forums/threads/:threadId/tags - Get tags for a thread
+// ============================================================================
+
+app.get("/api/v1/forums/threads/:threadId/tags", async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  
+  try {
+    // Verify thread exists
+    const thread = await db
+      .prepare("SELECT id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Get tags
+    const tags = await db
+      .prepare("SELECT * FROM forum_thread_tags WHERE thread_id = ? ORDER BY created_at DESC")
+      .bind(threadId)
+      .all();
+    
+    return c.json({ tags: tags.results || [] });
+  } catch (err) {
+    console.error("Error fetching tags:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// DELETE /api/v1/forums/threads/:threadId/tags/:tagName - Remove tag from thread
+// ============================================================================
+
+app.delete("/api/v1/forums/threads/:threadId/tags/:tagName", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const threadId = c.req.param("threadId");
+  const tagName = c.req.param("tagName");
+  const user = c.get("user");
+  
+  try {
+    // Verify thread exists and get author
+    const thread = await db
+      .prepare("SELECT user_id FROM forum_threads WHERE id = ?")
+      .bind(threadId)
+      .first();
+    
+    if (!thread) {
+      return c.json({ error: "Thread not found" }, 404);
+    }
+    
+    // Check if user is thread author or admin
+    const userRole = await db
+      .prepare("SELECT role FROM user_roles WHERE user_id = ?")
+      .bind(user.userId)
+      .first();
+    
+    const isAdmin = userRole && (userRole as DbUserRole).role === 'admin';
+    const isAuthor = (thread as DbThread).user_id === user.userId;
+    
+    if (!isAuthor && !isAdmin) {
+      return c.json({ error: "Forbidden. Only thread author or admin can remove tags" }, 403);
+    }
+    
+    // Check tag exists
+    const tag = await db
+      .prepare("SELECT id FROM forum_thread_tags WHERE thread_id = ? AND tag_name = ?")
+      .bind(threadId, tagName)
+      .first();
+    
+    if (!tag) {
+      return c.json({ error: "Tag not found" }, 404);
+    }
+    
+    // Delete tag
+    await db
+      .prepare("DELETE FROM forum_thread_tags WHERE thread_id = ? AND tag_name = ?")
+      .bind(threadId, tagName)
+      .run();
+    
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error removing tag:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// GET /api/v1/forums/tags/popular - Get popular tags
+// ============================================================================
+
+app.get("/api/v1/forums/tags/popular", async (c) => {
+  const db = c.env.platform_db;
+  const limit = Math.min(parseInt(c.req.query("limit") || "20"), 100);
+  
+  try {
+    const tags = await db
+      .prepare(`
+        SELECT tag_name, COUNT(*) as count
+        FROM forum_thread_tags
+        GROUP BY tag_name
+        ORDER BY count DESC
+        LIMIT ?
+      `)
+      .bind(limit)
+      .all();
+    
+    return c.json({ tags: tags.results || [] });
+  } catch (err) {
+    console.error("Error fetching popular tags:", err);
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
 

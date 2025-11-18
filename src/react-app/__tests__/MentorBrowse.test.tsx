@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MentorBrowse } from '../pages/MentorBrowse';
 import { AuthProvider } from '../context/AuthContext';
@@ -58,6 +58,10 @@ const mockMentor: MentorProfile = {
 describe('MentorBrowse', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock fetch to return 401 for auth endpoint (unauthenticated)
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
     vi.mocked(mentorService.searchMentors).mockResolvedValue({
       mentors: [mockMentor],
       total: 1,
@@ -176,7 +180,9 @@ describe('MentorBrowse', () => {
       });
 
       const requestButton = screen.getByRole('button', { name: /^request$/i });
-      fireEvent.click(requestButton);
+      await act(async () => {
+        fireEvent.click(requestButton);
+      });
 
       // Should not redirect to login
       expect(mockNavigate).not.toHaveBeenCalledWith('/login', expect.any(Object));

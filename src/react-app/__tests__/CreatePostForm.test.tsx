@@ -1,9 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach, afterAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreatePostForm } from '../components/CreatePostForm';
 import * as postService from '../services/postService';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
+
+// Suppress console.error output from expected error paths
+const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+afterEach(() => {
+  consoleErrorSpy.mockClear();
+});
+
+afterAll(() => {
+  consoleErrorSpy.mockRestore();
+});
 
 // Mock the post service
 vi.mock('../services/postService');

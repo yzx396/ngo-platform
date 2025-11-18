@@ -298,7 +298,9 @@ describe('AuthContext', () => {
         </BrowserRouter>
       );
 
-      const user = await authUtilsRef.current?.getUser();
+      const user = await act(async () => {
+        return await authUtilsRef.current?.getUser();
+      });
 
       expect(user).toBeNull();
     });

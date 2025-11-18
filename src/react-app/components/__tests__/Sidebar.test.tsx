@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import type { RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -16,99 +17,157 @@ vi.mock('../../services/featureService', () => ({
  * Test suite for Sidebar component
  */
 describe('Sidebar', () => {
-  const renderSidebar = (initialPath = '/') => {
-    return render(
-      <AuthProvider>
-        <FeatureProvider>
-          <I18nextProvider i18n={i18n}>
-            <MemoryRouter initialEntries={[initialPath]}>
-              <Sidebar />
-            </MemoryRouter>
-          </I18nextProvider>
-        </FeatureProvider>
-      </AuthProvider>
-    );
+  const renderSidebar = async (initialPath = '/'): Promise<RenderResult> => {
+    let rendered: RenderResult | undefined;
+    await act(async () => {
+      rendered = render(
+        <AuthProvider>
+          <FeatureProvider>
+            <I18nextProvider i18n={i18n}>
+              <MemoryRouter initialEntries={[initialPath]}>
+                <Sidebar />
+              </MemoryRouter>
+            </I18nextProvider>
+          </FeatureProvider>
+        </AuthProvider>
+      );
+    });
+    return rendered!;
   };
 
   beforeEach(() => {
-    i18n.changeLanguage('en');
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
   });
 
-  it('should render sidebar with Feed section', () => {
-    renderSidebar();
-
-    const feedLink = screen.getByRole('link', { name: /feed/i });
-    expect(feedLink).toBeInTheDocument();
+  beforeEach(async () => {
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
   });
 
-  it('should render Feed link (challenges and blogs hidden when features disabled)', () => {
-    renderSidebar();
+    it('should render sidebar with Feed section', async () => {
+      await renderSidebar();
 
-    // Feed is always visible
-    expect(screen.getByRole('link', { name: /feed/i })).toBeInTheDocument();
+      // Forums link should always be visible
+      const forumsLink = screen.getByRole('link', { name: /forums/i });
+      expect(forumsLink).toBeInTheDocument();
+    });
 
-    // Challenges and blogs are hidden when feature flags are disabled (default in tests)
-    expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
-  });
+    it('should hide Feed link when feed feature is disabled (default)', async () => {
+      await renderSidebar();
 
-  it('should not render Browse Mentors link when not authenticated', () => {
-    // Ensure no auth token - Browse Mentors requires authentication
-    // Auth uses cookies now, not localStorage
-    renderSidebar();
+      // Feed is hidden when feature flag is disabled (default in tests)
+      expect(screen.queryByRole('link', { name: /feed/i })).not.toBeInTheDocument();
 
-    // Browse Mentors link should NOT be visible for unauthenticated users
-    const browseMentorsLinks = screen.queryAllByRole('link', { name: /browse mentors/i });
-    expect(browseMentorsLinks).toHaveLength(0);
+      // Forums should always be visible
+      expect(screen.getByRole('link', { name: /forums/i })).toBeInTheDocument();
 
-    // Leaderboard is also hidden when feature flag is disabled (default in tests)
-    expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
-  });
+      // Challenges and blogs are hidden when feature flags are disabled (default in tests)
+      expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
+    });
 
-  it('should conditionally show Member Area section based on auth state', () => {
-    // Initial render - depends on auth context initialization
-    renderSidebar();
+    it('should not render Browse Mentors link when not authenticated', async () => {
+      // Ensure no auth token - Browse Mentors requires authentication
+      // Auth uses cookies now, not localStorage
+      await renderSidebar();
 
-    // The Sidebar component correctly checks isAuthenticated from useAuth hook
-    // This test verifies the component renders without errors
-    const asideElement = document.querySelector('aside');
-    expect(asideElement).toBeInTheDocument();
-  });
+      // Browse Mentors link should NOT be visible for unauthenticated users
+      const browseMentorsLinks = screen.queryAllByRole('link', { name: /browse mentors/i });
+      expect(browseMentorsLinks).toHaveLength(0);
 
-  it('should render all navigation elements correctly', () => {
-    renderSidebar();
+      // Leaderboard is also hidden when feature flag is disabled (default in tests)
+      expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
+    });
 
-    // Verify the sidebar is rendered
-    const asideElement = document.querySelector('aside');
-    expect(asideElement).toHaveClass('w-64');
-  });
+    it('should conditionally show Member Area section based on auth state', async () => {
+      // Initial render - depends on auth context initialization
+      await renderSidebar();
 
-  it('should set aria-current="page" for active links', () => {
-    renderSidebar('/feed');
+      // The Sidebar component correctly checks isAuthenticated from useAuth hook
+      // This test verifies the component renders without errors
+      const asideElement = document.querySelector('aside');
+      expect(asideElement).toBeInTheDocument();
+    });
 
-    // When on /feed path, Feed button (child of link) should be active
-    const feedButton = screen.getByRole('button', { name: /feed/i });
-    expect(feedButton).toHaveAttribute('aria-current', 'page');
-  });
+    it('should render all navigation elements correctly', async () => {
+      await renderSidebar();
 
-  it('should support Chinese translations', () => {
-    i18n.changeLanguage('zh-CN');
-    renderSidebar();
+      // Verify the sidebar is rendered
+      const asideElement = document.querySelector('aside');
+      expect(asideElement).toHaveClass('w-64');
+    });
 
-    // Feed should be "动态" in Chinese
-    const feedLink = screen.getByRole('link', { name: /动态/i });
-    expect(feedLink).toBeInTheDocument();
-  });
+    it('should set aria-current="page" for active links', async () => {
+      await renderSidebar('/forums');
 
-  it('should render navigation links with proper href attributes', () => {
-    renderSidebar();
+      // When on /forums path, Forums button (child of link) should be active
+      const forumsButton = screen.getByRole('button', { name: /forums/i });
+      expect(forumsButton).toHaveAttribute('aria-current', 'page');
+    });
 
-    // Feed is always visible
-    expect(screen.getByRole('link', { name: /feed/i })).toHaveAttribute('href', '/feed');
+    it('should support Chinese translations', async () => {
+      await act(async () => {
+        await i18n.changeLanguage('zh-CN');
+      });
+      await renderSidebar();
 
-    // Challenges, blogs, and leaderboard are hidden when feature flags are disabled (default in tests)
-    expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
-  });
+      // Forums should be "论坛" in Chinese
+      const forumsLink = screen.getByRole('link', { name: /论坛/i });
+      expect(forumsLink).toBeInTheDocument();
+    });
+
+    it('should render navigation links with proper href attributes', async () => {
+      await renderSidebar();
+
+      // Feed is hidden when feature flag is disabled (default in tests)
+      expect(screen.queryByRole('link', { name: /feed/i })).not.toBeInTheDocument();
+
+      // Forums should always be visible
+      expect(screen.getByRole('link', { name: /forums/i })).toHaveAttribute('href', '/forums');
+
+      // Challenges, blogs, and leaderboard are hidden when feature flags are disabled (default in tests)
+      expect(screen.queryByRole('link', { name: /challenges/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /blogs/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /leaderboard/i })).not.toBeInTheDocument();
+    });
+
+    it('should render Forums link in Feed section', async () => {
+      await renderSidebar();
+
+      // Forums should always be visible
+      const forumsLink = screen.getByRole('link', { name: /forums/i });
+      expect(forumsLink).toBeInTheDocument();
+      expect(forumsLink).toHaveAttribute('href', '/forums');
+    });
+
+    it('should set aria-current="page" for Forums link when active', async () => {
+      await renderSidebar('/forums');
+
+      // When on /forums path, Forums button should be active
+      const forumsButton = screen.getByRole('button', { name: /forums/i });
+      expect(forumsButton).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('should display Forums link in Chinese as 论坛', async () => {
+      await act(async () => {
+        await i18n.changeLanguage('zh-CN');
+      });
+      await renderSidebar();
+
+      // Forums should be "论坛" in Chinese
+      const forumsLink = screen.getByRole('link', { name: /论坛/i });
+      expect(forumsLink).toBeInTheDocument();
+    });
+
+    it('should render Forums link with correct icon', async () => {
+      await renderSidebar();
+
+      // Find the Forums button and check for the icon
+      const forumsButton = screen.getByRole('button', { name: /forums/i });
+      expect(forumsButton.textContent).toContain('💬');
+    });
 });

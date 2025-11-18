@@ -78,10 +78,19 @@ export function Sidebar() {
 
   // Feed section - filtered by feature flags
   const feedLinks: NavLink[] = [
+    ...(isFeatureEnabled('feed')
+      ? [
+          {
+            href: '/feed',
+            label: t('navigation.feed', 'Feed'),
+            icon: '📰',
+          },
+        ]
+      : []),
     {
-      href: '/feed',
-      label: t('navigation.feed', 'Feed'),
-      icon: '📰',
+      href: '/forums',
+      label: t('navigation.forums', 'Forums'),
+      icon: '💬',
     },
     ...(isFeatureEnabled('challenges')
       ? [

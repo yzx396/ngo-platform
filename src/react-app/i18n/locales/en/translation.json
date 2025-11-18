@@ -36,6 +36,7 @@
   },
   "navigation": {
     "feed": "Feed",
+    "forums": "Forums",
     "challenges": "Challenges",
     "blogs": "Blogs",
     "memberArea": "Member Area",
@@ -664,5 +665,93 @@
     "membersOnlyDescription": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "membersOnlyPreview": "Non-members will see a preview and be prompted to sign in to read the full content.",
     "signInToRead": "Sign in to read the full content"
+  },
+  "forums": {
+    "title": "Forums",
+    "subtitle": "Connect, learn, and grow with the community",
+    "createThread": "Create Thread",
+    "backToForums": "Back to Forums",
+    "createNewThread": "Create New Thread",
+    "createDescription": "Share your question or topic with the community",
+    "noCategoriesFound": "No categories available",
+    "loadError": "Failed to load categories",
+    "loadingCategories": "Loading categories...",
+    "loadingForums": "Loading forums...",
+    "loadingSubcategories": "Loading subcategories...",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "Select a category...",
+    "categoryRequired": "Please select a category",
+    "titleLabel": "Thread Title",
+    "titlePlaceholder": "e.g., How to negotiate salary?",
+    "titleRequired": "Title is required",
+    "contentLabel": "Thread Content",
+    "contentPlaceholder": "Provide details and context for your question or discussion...",
+    "contentRequired": "Content is required",
+    "characters": "characters",
+    "creating": "Creating...",
+    "threads": "threads",
+    "noSubcategories": "No subcategories",
+    "categories": {
+      "career-development": {
+        "name": "Career Development",
+        "description": "Professional growth and career advice"
+      },
+      "job-search": {
+        "name": "Job Search & Applications",
+        "description": "Tips, resume reviews, interview prep"
+      },
+      "career-transitions": {
+        "name": "Career Transitions",
+        "description": "Changing careers, pivoting industries"
+      },
+      "skill-development": {
+        "name": "Skill Development",
+        "description": "Learning new skills, certifications"
+      },
+      "mentorship": {
+        "name": "Mentorship",
+        "description": "Finding and working with mentors"
+      },
+      "finding-mentor": {
+        "name": "Finding a Mentor",
+        "description": "How to find and approach mentors"
+      },
+      "mentor-stories": {
+        "name": "Mentoring Success Stories",
+        "description": "Share your mentorship journey"
+      },
+      "mentor-qa": {
+        "name": "Mentor Q&A",
+        "description": "Ask experienced mentors anything"
+      },
+      "community": {
+        "name": "Community",
+        "description": "General discussions and networking"
+      },
+      "general-discussion": {
+        "name": "General Discussion",
+        "description": "General discussions"
+      },
+      "events": {
+        "name": "Events & Meetups",
+        "description": "Community events and meetups"
+      },
+      "achievements": {
+        "name": "Community Achievements",
+        "description": "Celebrate community wins"
+      },
+      "help": {
+        "name": "Help & Support",
+        "description": "Platform help and feedback"
+      },
+      "platform-help": {
+        "name": "Platform Help",
+        "description": "Questions about using the platform"
+      },
+      "feature-requests": {
+        "name": "Feature Requests",
+        "description": "Suggest new features"
+      }
+    }
   }
 }

@@ -11,7 +11,7 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FeatureRoute } from './components/FeatureRoute';
 import { AuthProvider } from './context/AuthContext';
-import { FeatureProvider } from './context/FeatureContext';
+import { FeatureProvider, useFeatures } from './context/FeatureContext';
 
 // Lazy load pages for route-based code splitting
 // Each page loads only when the user navigates to that route
@@ -34,6 +34,10 @@ const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage').then(m => ({ 
 const CreateBlogPage = lazy(() => import('./pages/CreateBlogPage').then(m => ({ default: m.CreateBlogPage })));
 const MyBlogsPage = lazy(() => import('./pages/MyBlogsPage').then(m => ({ default: m.MyBlogsPage })));
 const PostDetailPage = lazy(() => import('./pages/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
+const ForumHomePage = lazy(() => import('./pages/ForumHomePage'));
+const ForumCategoryPage = lazy(() => import('./pages/ForumCategoryPage'));
+const ThreadDetailPage = lazy(() => import('./pages/ThreadDetailPage'));
+const CreateThreadPage = lazy(() => import('./pages/CreateThreadPage'));
 
 /**
  * Loading fallback component for Suspense
@@ -46,6 +50,16 @@ function LoadingFallback() {
       {t('common.loading')}
     </div>
   );
+}
+
+/**
+ * Dynamic root redirect based on feed feature flag
+ * Redirects to /feed if enabled, /forums if disabled
+ */
+function RootRedirect() {
+  const { isFeatureEnabled } = useFeatures();
+  const destination = isFeatureEnabled('feed') ? '/feed' : '/forums';
+  return <Navigate to={destination} replace />;
 }
 
 /**
@@ -87,11 +101,25 @@ function AppContent() {
         {!isAuthPage && (
           <Layout>
             <Routes>
-              {/* Redirect root to feed page */}
-              <Route path="/" element={<Navigate to="/feed" replace />} />
+              {/* Root redirect - dynamic based on feed feature flag */}
+              <Route path="/" element={<RootRedirect />} />
 
-              {/* Feed Page - Main page showing community posts */}
-              <Route path="/feed" element={<FeedPage />} />
+              {/* Forum Pages - Main forum with categories and threads */}
+              <Route path="/forums" element={<ForumHomePage />} />
+              <Route path="/forums/create" element={<ProtectedRoute><CreateThreadPage /></ProtectedRoute>} />
+              <Route path="/forums/category/:categoryId" element={<ForumCategoryPage />} />
+              <Route path="/forums/category/:categoryId/create" element={<ProtectedRoute><CreateThreadPage /></ProtectedRoute>} />
+              <Route path="/forums/threads/:threadId" element={<ThreadDetailPage />} />
+
+              {/* Feed Page - Feature-gated */}
+              <Route 
+                path="/feed" 
+                element={
+                  <FeatureRoute featureKey="feed" redirectTo="/forums">
+                    <FeedPage />
+                  </FeatureRoute>
+                } 
+              />
 
               {/* Post Detail Page - View individual post with comments */}
               <Route path="/posts/:id" element={<PostDetailPage />} />

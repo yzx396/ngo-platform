@@ -36,6 +36,7 @@
   },
   "navigation": {
     "feed": "动态",
+    "forums": "论坛",
     "challenges": "挑战",
     "blogs": "博客",
     "memberArea": "会员中心",
@@ -664,5 +665,93 @@
     "membersOnlyDescription": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "membersOnlyPreview": "非会员将看到预览版本，并被提示登录以阅读全部内容。",
     "signInToRead": "登录以阅读全部内容"
+  },
+  "forums": {
+    "title": "论坛",
+    "subtitle": "与社区一起联系、学习和成长",
+    "createThread": "创建帖子",
+    "backToForums": "返回论坛",
+    "createNewThread": "创建新帖子",
+    "createDescription": "与社区分享您的问题或话题",
+    "noCategoriesFound": "暂无分类",
+    "loadError": "加载分类失败",
+    "loadingCategories": "加载分类中...",
+    "loadingForums": "加载论坛中...",
+    "loadingSubcategories": "加载子分类中...",
+    "categoryLabel": "分类",
+    "categoryPlaceholder": "选择一个分类...",
+    "categoryRequired": "请选择一个分类",
+    "titleLabel": "帖子标题",
+    "titlePlaceholder": "例如：如何谈判薪资？",
+    "titleRequired": "标题为必填项",
+    "contentLabel": "帖子内容",
+    "contentPlaceholder": "提供问题或讨论的详细信息和背景...",
+    "contentRequired": "内容为必填项",
+    "characters": "个字符",
+    "creating": "创建中...",
+    "threads": "个帖子",
+    "noSubcategories": "无子分类",
+    "categories": {
+      "career-development": {
+        "name": "职业发展",
+        "description": "职业成长和职业建议"
+      },
+      "job-search": {
+        "name": "求职与申请",
+        "description": "求职技巧、简历审查、面试准备"
+      },
+      "career-transitions": {
+        "name": "职业转型",
+        "description": "转换职业、行业转型"
+      },
+      "skill-development": {
+        "name": "技能提升",
+        "description": "学习新技能、考取证书"
+      },
+      "mentorship": {
+        "name": "导师指导",
+        "description": "寻找和与导师合作"
+      },
+      "finding-mentor": {
+        "name": "寻找导师",
+        "description": "如何寻找和联系导师"
+      },
+      "mentor-stories": {
+        "name": "导师成功案例",
+        "description": "分享您的导师指导历程"
+      },
+      "mentor-qa": {
+        "name": "导师问答",
+        "description": "向经验丰富的导师提问"
+      },
+      "community": {
+        "name": "社区",
+        "description": "一般讨论和社交"
+      },
+      "general-discussion": {
+        "name": "通用讨论",
+        "description": "一般性讨论"
+      },
+      "events": {
+        "name": "活动与聚会",
+        "description": "社区活动和聚会"
+      },
+      "achievements": {
+        "name": "社区成就",
+        "description": "庆祝社区胜利"
+      },
+      "help": {
+        "name": "帮助与支持",
+        "description": "平台帮助和反馈"
+      },
+      "platform-help": {
+        "name": "平台帮助",
+        "description": "关于使用平台的问题"
+      },
+      "feature-requests": {
+        "name": "功能请求",
+        "description": "建议新功能"
+      }
+    }
   }
 }

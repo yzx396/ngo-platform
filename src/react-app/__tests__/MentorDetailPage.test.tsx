@@ -30,6 +30,10 @@ const mockMentor: MentorProfile = {
 describe('MentorDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
   });
 
   it('should display mentor full information', async () => {

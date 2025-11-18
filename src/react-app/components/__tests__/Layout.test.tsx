@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../i18n';
 import { AuthProvider } from '../../context/AuthContext';
 import { FeatureProvider } from '../../context/FeatureContext';
@@ -16,6 +16,13 @@ vi.mock('../../services/featureService', () => ({
  * Test suite for Layout component
  */
 describe('Layout', () => {
+  beforeEach(() => {
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
+  });
+
   const renderLayout = (children = 'Test Content') => {
     return render(
       <AuthProvider>

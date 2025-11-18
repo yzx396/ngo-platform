@@ -128,6 +128,17 @@ export const POINTS_FOR_CREATE_COMMENT = 5; // Creating comment
 export const POINTS_FOR_CREATE_BLOG = 10; // Creating blog post
 export const POINTS_FOR_BLOG_FEATURED = 50; // Bonus when admin features a blog
 
+// Forum points
+export const POINTS_FOR_CREATE_THREAD = 15; // Creating forum thread (same as discussion post)
+export const POINTS_FOR_CREATE_REPLY = 5; // Creating forum reply (same as comment)
+export const POINTS_FOR_RECEIVING_UPVOTE_THREAD = 3; // Thread author receives upvote (higher than like)
+export const POINTS_FOR_RECEIVING_UPVOTE_REPLY = 2; // Reply author receives upvote
+export const POINTS_FOR_THREAD_SOLVED = 10; // Bonus when thread marked as solved
+export const POINTS_FOR_REPLY_MARKED_SOLUTION = 20; // Reward for providing the solution
+export const POINTS_FOR_THREAD_100_VIEWS = 5; // Milestone: 100 views
+export const POINTS_FOR_THREAD_500_VIEWS = 15; // Milestone: 500 views
+export const POINTS_FOR_THREAD_1000_VIEWS = 30; // Milestone: 1000+ views
+
 // Points awarded to content authors for receiving engagement
 export const POINTS_FOR_RECEIVING_LIKE = 2; // Post author receives when someone likes their post
 export const POINTS_FOR_RECEIVING_COMMENT = 3; // Post author receives when someone comments on their post

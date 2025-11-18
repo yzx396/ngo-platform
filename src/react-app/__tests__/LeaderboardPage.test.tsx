@@ -33,6 +33,10 @@ const mockLeaderboardData: Record<string, unknown> = {
 describe('LeaderboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
     const mock = pointsService.getLeaderboard as unknown as ReturnType<typeof vi.fn>;
     mock.mockResolvedValue(mockLeaderboardData);
   });

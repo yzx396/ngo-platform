@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { FeedPage } from '../pages/FeedPage';
 import * as postService from '../services/postService';
@@ -54,6 +54,17 @@ vi.mock('sonner', () => ({
   },
 }));
 
+// Mock FeatureContext - feed feature enabled for FeedPage tests
+vi.mock('../context/FeatureContext', () => ({
+  useFeatures: () => ({
+    isFeatureEnabled: (key: string) => key === 'feed',
+    features: { feed: true },
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+
 // Mock postService
 vi.mock('../services/postService');
 
@@ -83,19 +94,39 @@ const mockPosts: (Post & { author_name?: string })[] = [
 ];
 
 // Helper function to render FeedPage with AuthProvider and Router
-function renderFeedPage() {
-  return render(
-    <MemoryRouter>
-      <AuthProvider>
-        <FeedPage />
-      </AuthProvider>
-    </MemoryRouter>
-  );
+async function renderFeedPage() {
+  let rendered;
+  await act(async () => {
+    rendered = render(
+      <MemoryRouter>
+        <AuthProvider>
+          <FeedPage />
+        </AuthProvider>
+      </MemoryRouter>
+    );
+  });
+  return rendered!;
 }
 
 describe('FeedPage Component', () => {
+  beforeAll(() => {
+    window.scrollTo = vi.fn();
+  });
+  const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+  afterEach(() => {
+    consoleErrorSpy.mockClear();
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
   });
 
   describe('Rendering', () => {
@@ -107,7 +138,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('Community Feed')).toBeInTheDocument();
@@ -122,7 +153,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('First post')).toBeInTheDocument();
@@ -130,12 +161,12 @@ describe('FeedPage Component', () => {
       });
     });
 
-    it('should display loading state initially', () => {
+    it('should display loading state initially', async () => {
       vi.mocked(postService.getPosts).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
-      renderFeedPage();
+      await renderFeedPage();
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
@@ -148,7 +179,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('No posts yet')).toBeInTheDocument();
@@ -160,7 +191,7 @@ describe('FeedPage Component', () => {
         new Error('Failed to fetch posts')
       );
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         // Check if try again button is displayed (which shows error state)
@@ -178,7 +209,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         const nextButton = screen.queryByText('Next');
@@ -194,7 +225,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('Next')).toBeInTheDocument();
@@ -209,7 +240,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         const prevButton = screen.getByText('Previous') as HTMLButtonElement;
@@ -243,7 +274,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         // First render should show pagination
@@ -282,7 +313,7 @@ describe('FeedPage Component', () => {
           offset: 20,
         });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText('First post')).toBeInTheDocument();
@@ -307,7 +338,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(screen.getByText(/Showing 1-20 of 50/)).toBeInTheDocument();
@@ -324,7 +355,7 @@ describe('FeedPage Component', () => {
         offset: 0,
       });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0, undefined);
@@ -346,7 +377,7 @@ describe('FeedPage Component', () => {
           offset: 20,
         });
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         expect(vi.mocked(postService.getPosts)).toHaveBeenCalledWith(20, 0, undefined);
@@ -368,7 +399,7 @@ describe('FeedPage Component', () => {
         new Error('Network error')
       );
 
-      renderFeedPage();
+      await renderFeedPage();
 
       await waitFor(() => {
         const retryButton = screen.getByText('Try Again');

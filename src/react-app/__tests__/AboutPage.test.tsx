@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
 import i18n from '../i18n';
@@ -9,6 +9,10 @@ describe('AboutPage', () => {
   beforeEach(() => {
     // Reset to English before each test
     i18n.changeLanguage('en');
+    // Mock fetch for AuthProvider
+    global.fetch = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
+    );
   });
   it('should render the about page title', () => {
     render(
@@ -203,7 +207,9 @@ describe('AboutPage', () => {
     expect(screen.getByText('Lead Forward')).toBeInTheDocument();
 
     // Switch to Chinese
-    await i18n.changeLanguage('zh-CN');
+    await act(async () => {
+      await i18n.changeLanguage('zh-CN');
+    });
 
     rerender(
       <BrowserRouter>

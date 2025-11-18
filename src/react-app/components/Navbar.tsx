@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
@@ -23,8 +23,13 @@ export function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  // Determine home link based on feed feature flag
+  const homeLink = useMemo(() => {
+    return isFeatureEnabled('feed') ? '/feed' : '/forums';
+  }, [isFeatureEnabled]);
+
   const navLinks = [
-    { href: '/feed', label: t('common.home') },
+    { href: homeLink, label: t('common.home') },
     { href: '/events', label: t('events.title', 'Events') },
     { href: '/blogs', label: t('navigation.blogs', 'Blogs') },
     ...(isFeatureEnabled('leaderboard')

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, afterAll } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EditPostDialog } from '../components/EditPostDialog';
 import * as postService from '../services/postService';
@@ -43,7 +43,17 @@ vi.mock('../components/RichTextEditor', () => ({
   ),
 }));
 
-describe('EditPostDialog Component', () => {
+  const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+  afterEach(() => {
+    consoleErrorSpy.mockClear();
+  });
+
+  afterAll(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  describe('EditPostDialog Component', () => {
   const mockPost = {
     id: 'post-1',
     user_id: 'user-1',
@@ -69,7 +79,7 @@ describe('EditPostDialog Component', () => {
   };
 
   // Setup and cleanup for window.confirm mocking
-  afterEach(() => {
+    afterEach(() => {
     vi.restoreAllMocks();
   });
 
