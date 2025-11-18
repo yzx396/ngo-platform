@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { Loader2 } from 'lucide-react';
 import { forumService } from '../services/forumService';
 import { ForumCategory, GetThreadsResponse } from '../../types/forum';
 import ThreadCard from '../components/ThreadCard';
 
 const THREADS_PER_PAGE = 20;
 
+/**
+ * ForumCategoryPage Component
+ * Displays threads in a specific forum category
+ * Styling matches EventsPage layout
+ */
 export default function ForumCategoryPage() {
   const { t } = useTranslation();
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -38,7 +44,7 @@ export default function ForumCategoryPage() {
         const result = await forumService.getThreads(categoryId, THREADS_PER_PAGE, offset);
         setData(result);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load threads';
+        const message = err instanceof Error ? err.message : t('forums.errorLoadingCategory');
         setError(message);
         console.error('Error loading category data:', err);
       } finally {
@@ -47,7 +53,7 @@ export default function ForumCategoryPage() {
     };
 
     loadData();
-  }, [categoryId, currentPage]);
+  }, [categoryId, currentPage, t]);
 
   // Get translated category name and description, fallback to database values
   const getCategoryName = (cat: ForumCategory) => {
@@ -65,9 +71,9 @@ export default function ForumCategoryPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-8">
-        <div className="text-center py-12">
-          <p className="text-gray-600">Loading category...</p>
+      <div className="space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       </div>
     );
@@ -75,9 +81,9 @@ export default function ForumCategoryPage() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto p-8">
+      <div className="space-y-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">Error: {error}</p>
+          <p className="text-red-600">{t('forums.errorPrefix')} {error}</p>
         </div>
       </div>
     );
@@ -85,55 +91,63 @@ export default function ForumCategoryPage() {
 
   if (!category) {
     return (
-      <div className="max-w-6xl mx-auto p-8">
+      <div className="space-y-8">
         <div className="text-center py-12">
-          <p className="text-gray-500">Category not found</p>
+          <p className="text-muted-foreground">{t('forums.categoryNotFound')}</p>
         </div>
       </div>
     );
   }
 
   const totalPages = Math.ceil(data.total / THREADS_PER_PAGE);
+  const startIndex = data.threads.length > 0 ? (currentPage - 1) * THREADS_PER_PAGE + 1 : 0;
+  const endIndex = Math.min(currentPage * THREADS_PER_PAGE, data.total);
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="mb-8">
-        <Link to="/forums" className="text-blue-600 hover:text-blue-700 text-sm mb-4 inline-block">
-          ← Back to Forums
+      <div className="space-y-2">
+        <Link 
+          to="/forums" 
+          className="text-primary hover:text-primary/80 text-sm inline-block mb-2 transition-colors"
+        >
+          ← {t('forums.backToForums')}
         </Link>
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3">
           {category.icon && <span className="text-3xl">{category.icon}</span>}
-          <h1 className="text-4xl font-bold">{getCategoryName(category)}</h1>
+          <h1 className="text-3xl font-bold">{getCategoryName(category)}</h1>
         </div>
         {category.description && (
-          <p className="text-gray-600 mt-2">{getCategoryDescription(category)}</p>
+          <p className="text-muted-foreground">{getCategoryDescription(category)}</p>
         )}
       </div>
 
-      {/* Controls */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-gray-600">
-          Showing {data.threads.length > 0 ? (currentPage - 1) * THREADS_PER_PAGE + 1 : 0} to{' '}
-          {Math.min(currentPage * THREADS_PER_PAGE, data.total)} of {data.total} threads
+      {/* Stats and Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="text-sm text-muted-foreground">
+          {t('forums.showingThreads', {
+            start: startIndex,
+            end: endIndex,
+            total: data.total,
+          })}
         </div>
         <button
           onClick={() => navigate(`/forums/category/${categoryId}/create`)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
-          New Thread
+          {t('forums.newThread')}
         </button>
       </div>
 
-      {/* Threads */}
-      <div className="space-y-4 mb-8">
+      {/* Threads Grid */}
+      <div className="grid gap-4">
         {data.threads.length > 0 ? (
           data.threads.map(thread => (
             <ThreadCard key={thread.id} thread={thread} />
           ))
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500">No threads in this category yet</p>
+            <p className="text-muted-foreground">{t('forums.noThreadsYet')}</p>
           </div>
         )}
       </div>
@@ -144,9 +158,9 @@ export default function ForumCategoryPage() {
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Previous
+            {t('forums.previous')}
           </button>
 
           <div className="flex gap-1">
@@ -154,10 +168,10 @@ export default function ForumCategoryPage() {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`px-3 py-2 rounded-lg transition ${
+                className={`px-3 py-2 rounded-lg transition-colors ${
                   currentPage === page
-                    ? 'bg-blue-600 text-white'
-                    : 'border hover:bg-gray-50'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border hover:bg-accent'
                 }`}
               >
                 {page}
@@ -168,9 +182,9 @@ export default function ForumCategoryPage() {
           <button
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Next
+            {t('forums.next')}
           </button>
         </div>
       )}

@@ -7,10 +7,15 @@ import { ForumCategory } from '../../types/forum';
 import CategoryCard from '../components/CategoryCard';
 import { ForumControls } from '../components/ForumControls';
 
+/**
+ * ForumHomePage Component
+ * Displays all forum categories grouped by parent category
+ * Similar layout to EventsPage - showing all categories at once without expand/collapse
+ */
 export default function ForumHomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<ForumCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,8 +24,9 @@ export default function ForumHomePage() {
       try {
         setLoading(true);
         setError(null);
-        const cats = await forumService.getCategories();
-        setCategories(cats);
+        // Fetch ALL categories at once (parents + children)
+        const cats = await forumService.getAllCategories();
+        setAllCategories(cats);
       } catch (err) {
         const message = err instanceof Error ? err.message : t('forums.loadError');
         setError(message);
@@ -33,8 +39,18 @@ export default function ForumHomePage() {
     loadCategories();
   }, [t]);
 
+  // Get translated category name, fallback to database value
+  const getCategoryName = (cat: ForumCategory) => {
+    const translationKey = `forums.categories.${cat.slug}.name`;
+    const translated = t(translationKey, { defaultValue: cat.name });
+    return translated === translationKey ? cat.name : translated;
+  };
+
+  // Group categories by parent
+  const parentCategories = allCategories.filter(c => c.parent_id === null);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1">
@@ -61,18 +77,42 @@ export default function ForumHomePage() {
       )}
 
       {/* Empty State */}
-      {!loading && !error && categories.length === 0 && (
+      {!loading && !error && allCategories.length === 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">{t('forums.noCategoriesFound')}</p>
         </div>
       )}
 
-      {/* Categories List */}
-      {!loading && !error && categories.length > 0 && (
-        <div className="space-y-4">
-          {categories.map(category => (
-            <CategoryCard key={category.id} category={category} />
-          ))}
+      {/* Categories Grouped by Parent */}
+      {!loading && !error && parentCategories.length > 0 && (
+        <div className="space-y-8">
+          {parentCategories.map(parent => {
+            // Get children for this parent
+            const children = allCategories.filter(c => c.parent_id === parent.id);
+
+            return (
+              <div key={parent.id} className="space-y-4">
+                {/* Parent Category Header */}
+                <h2 className="text-2xl font-semibold flex items-center gap-3">
+                  {parent.icon && <span className="text-3xl">{parent.icon}</span>}
+                  <span>{getCategoryName(parent)}</span>
+                </h2>
+
+                {/* Child Categories Grid */}
+                {children.length > 0 ? (
+                  <div className="grid gap-4">
+                    {children.map(child => (
+                      <CategoryCard key={child.id} category={child} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground pl-12">
+                    {t('forums.noSubcategories')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

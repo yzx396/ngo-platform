@@ -691,6 +691,18 @@
     "creating": "Creating...",
     "threads": "threads",
     "noSubcategories": "No subcategories",
+    "newThread": "New Thread",
+    "viewCategory": "View Category",
+    "categoryNotFound": "Category not found",
+    "loadingCategory": "Loading category...",
+    "errorLoadingCategory": "Error loading category",
+    "errorPrefix": "Error:",
+    "showingThreads": "Showing {{start}} to {{end}} of {{total}} threads",
+    "noThreadsYet": "No threads in this category yet",
+    "page": "Page",
+    "previous": "Previous",
+    "next": "Next",
+    "lastActivity": "Last activity",
     "categories": {
       "career-development": {
         "name": "Career Development",

@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ForumThreadWithAuthor } from '../../types/forum';
 import { formatPostTime } from '../../types/post';
 
@@ -7,7 +8,13 @@ interface ThreadCardProps {
   thread: ForumThreadWithAuthor;
 }
 
+/**
+ * ThreadCard Component
+ * Displays a forum thread in a card format
+ * Styling matches EventCard from EventsPage
+ */
 const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
+  const { t } = useTranslation();
   const isPinned = thread.is_pinned ? true : false;
   const timeAgo = formatPostTime(thread.created_at);
   const lastActivityTime = formatPostTime(thread.last_activity_at);
@@ -21,13 +28,15 @@ const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
   return (
     <Link
       to={`/forums/threads/${thread.id}`}
-      className="block border rounded-lg p-4 hover:shadow-md transition-shadow hover:bg-gray-50"
+      className="block rounded-lg border overflow-hidden transition-all hover:shadow-md hover:border-primary/50"
     >
-      <div className="flex items-start gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
+      <div className="p-6 flex flex-col md:flex-row gap-4">
+        {/* Main Content */}
+        <div className="flex-1 space-y-3">
+          {/* Title and Badges */}
+          <div className="flex flex-wrap items-start gap-2">
             {isPinned && <span className="text-lg">📌</span>}
-            <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600">
+            <h3 className="text-lg font-semibold text-gray-900 hover:text-primary transition-colors flex-1">
               {thread.title}
             </h3>
             {thread.status !== 'open' && (
@@ -37,13 +46,18 @@ const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
             )}
           </div>
 
-          <p className="text-sm text-gray-600 mb-2">
+          {/* Author and Time */}
+          <div className="text-sm text-muted-foreground">
             By <span className="font-medium">{thread.author_name}</span> • {timeAgo}
+          </div>
+
+          {/* Content Preview */}
+          <p className="text-sm text-gray-700 line-clamp-2">
+            {thread.content}
           </p>
 
-          <p className="text-sm text-gray-700 line-clamp-2 mb-3">{thread.content}</p>
-
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          {/* Stats */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
               <span>👁️</span>
               <span>{thread.view_count.toLocaleString()}</span>
@@ -65,9 +79,14 @@ const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
           </div>
         </div>
 
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm text-gray-500">Last activity</div>
-          <div className="text-xs text-gray-600">{lastActivityTime}</div>
+        {/* Right Side: Last Activity */}
+        <div className="flex-shrink-0 text-right md:w-32">
+          <div className="text-xs text-muted-foreground mb-1">
+            {t('forums.lastActivity')}
+          </div>
+          <div className="text-xs text-gray-600">
+            {lastActivityTime}
+          </div>
         </div>
       </div>
     </Link>

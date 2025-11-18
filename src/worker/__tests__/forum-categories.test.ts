@@ -94,6 +94,23 @@ function createMockDb() {
         }),
       })),
       all: vi.fn(async () => {
+        // SELECT all categories (include_all=true)
+        if (
+          query.includes('forum_categories') &&
+          !query.includes('WHERE')
+        ) {
+          const results = Array.from(categories.values())
+            .sort((a, b) => {
+              // Sort by parent_id (nulls first), then by display_order
+              if (a.parent_id === null && b.parent_id !== null) return -1;
+              if (a.parent_id !== null && b.parent_id === null) return 1;
+              if (a.parent_id !== b.parent_id) {
+                return (a.parent_id as string).localeCompare(b.parent_id as string);
+              }
+              return (a.display_order as number) - (b.display_order as number);
+            });
+          return { results, success: true };
+        }
         // SELECT all top-level categories
         if (
           query.includes('forum_categories') &&
@@ -176,6 +193,42 @@ describe('Forum Categories API', () => {
       const req = new Request('http://localhost/api/v1/forums/categories?parent_id=fake_id');
       const res = await app.fetch(req, mockEnv);
       expect(res.status).toBe(404);
+    });
+
+    it('should return all categories (parents and children) when include_all=true', async () => {
+      const req = new Request('http://localhost/api/v1/forums/categories?include_all=true');
+      const res = await app.fetch(req, mockEnv);
+      
+      expect(res.status).toBe(200);
+      const data = (await res.json()) as { categories: CategoryRecord[] };
+      
+      // Should include both parents and children
+      expect(data.categories.length).toBeGreaterThan(2); // We have 2 parents + 1 child
+      
+      // Should include both null and non-null parent_ids
+      const hasParents = data.categories.some(c => c.parent_id === null);
+      const hasChildren = data.categories.some(c => c.parent_id !== null);
+      expect(hasParents).toBe(true);
+      expect(hasChildren).toBe(true);
+    });
+
+    it('should order all categories by parent_id then display_order when include_all=true', async () => {
+      const req = new Request('http://localhost/api/v1/forums/categories?include_all=true');
+      const res = await app.fetch(req, mockEnv);
+      const data = (await res.json()) as { categories: CategoryRecord[] };
+
+      // Categories should be grouped by parent_id (nulls first)
+      const parentIds = data.categories.map(c => c.parent_id);
+      let lastWasNull = true;
+      for (const pid of parentIds) {
+        if (pid !== null && lastWasNull) {
+          lastWasNull = false;
+        }
+        if (pid === null && !lastWasNull) {
+          // Found a null after non-null, this violates ordering
+          expect(true).toBe(false); // Force fail
+        }
+      }
     });
   });
 

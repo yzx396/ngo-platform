@@ -4349,10 +4349,12 @@ app.get("/api/v1/forums/threads/:id", async (c) => {
  * GET /api/v1/forums/categories - Get all top-level or child categories
  * Query params:
  *   - parent_id: (optional) Filter by parent category ID
+ *   - include_all: (optional) If "true", return all categories (parents + children)
  */
 app.get("/api/v1/forums/categories", async (c) => {
   const db = c.env.platform_db;
   const parentId = c.req.query("parent_id");
+  const includeAll = c.req.query("include_all");
 
   let query = `
     SELECT
@@ -4362,13 +4364,16 @@ app.get("/api/v1/forums/categories", async (c) => {
     LEFT JOIN forum_threads t ON c.id = t.category_id
   `;
 
-  if (parentId) {
+  // If include_all=true, return all categories (no WHERE clause)
+  if (includeAll === 'true') {
+    query += ` GROUP BY c.id ORDER BY c.parent_id NULLS FIRST, c.display_order ASC`;
+  } else if (parentId) {
     query += ` WHERE c.parent_id = ?`;
+    query += ` GROUP BY c.id ORDER BY c.display_order ASC`;
   } else {
     query += ` WHERE c.parent_id IS NULL`;
+    query += ` GROUP BY c.id ORDER BY c.display_order ASC`;
   }
-
-  query += ` GROUP BY c.id ORDER BY c.display_order ASC`;
 
   try {
     const result = parentId

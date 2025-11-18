@@ -60,6 +60,16 @@ export const forumService = {
     return this.getCategories(parentId);
   },
 
+  /**
+   * Get all categories (both parents and children)
+   */
+  async getAllCategories(): Promise<ForumCategory[]> {
+    const response = await apiGet<CategoriesResponse>(
+      `/api/v1/forums/categories?include_all=true`
+    );
+    return response.categories;
+  },
+
   // ============================================================================
   // Threads
   // ============================================================================

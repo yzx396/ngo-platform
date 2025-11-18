@@ -691,6 +691,18 @@
     "creating": "创建中...",
     "threads": "个帖子",
     "noSubcategories": "无子分类",
+    "newThread": "发布新帖",
+    "viewCategory": "查看分类",
+    "categoryNotFound": "未找到分类",
+    "loadingCategory": "加载分类中...",
+    "errorLoadingCategory": "加载分类时出错",
+    "errorPrefix": "错误：",
+    "showingThreads": "显示第 {{start}} 到 {{end}} 条，共 {{total}} 条帖子",
+    "noThreadsYet": "该分类暂无帖子",
+    "page": "页",
+    "previous": "上一页",
+    "next": "下一页",
+    "lastActivity": "最后活跃",
     "categories": {
       "career-development": {
         "name": "职业发展",
