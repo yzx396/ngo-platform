@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { forumService } from '../services/forumService';
 import { ForumCategory } from '../../types/forum';
 import CategoryCard from '../components/CategoryCard';
 import { ForumControls } from '../components/ForumControls';
+import { Button } from '../components/ui/button';
+import { ForumPointsInfoDialog } from '../components/ForumPointsInfoDialog';
 
 /**
  * ForumHomePage Component
@@ -18,6 +20,7 @@ export default function ForumHomePage() {
   const [allCategories, setAllCategories] = useState<ForumCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pointsInfoDialogOpen, setPointsInfoDialogOpen] = useState(false);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -57,6 +60,17 @@ export default function ForumHomePage() {
           <h1 className="text-3xl font-bold">{t('forums.title')}</h1>
           <p className="text-muted-foreground">{t('forums.subtitle')}</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setPointsInfoDialogOpen(true)}
+          className="mt-1"
+          title={t('points.howToEarn', 'How to Earn Points')}
+          aria-label={t('points.howToEarn', 'How to Earn Points')}
+        >
+          <HelpCircle className="w-4 h-4 mr-2" />
+          {t('points.howToEarn', 'How to Earn Points')}
+        </Button>
       </div>
 
       {/* Forum Controls: Create Thread Button */}
@@ -115,6 +129,12 @@ export default function ForumHomePage() {
           })}
         </div>
       )}
+
+      {/* Forum Points Info Dialog */}
+      <ForumPointsInfoDialog
+        open={pointsInfoDialogOpen}
+        onOpenChange={setPointsInfoDialogOpen}
+      />
     </div>
   );
 }

@@ -32,6 +32,7 @@ vi.mock('react-i18next', () => ({
         'forums.loadingForums': 'Loading forums...',
         'forums.threads': 'threads',
         'forums.noSubcategories': 'No subcategories',
+        'points.howToEarn': 'How to Earn Points',
       };
       return options?.defaultValue || translations[key] || key;
     },
@@ -193,7 +194,7 @@ describe('ForumHomePage', () => {
 
   it('should handle errors gracefully with styled error message', async () => {
     const errorMessage = 'Failed to load categories';
-    vi.mocked(forumServiceModule.forumService.getAllCategories).mockRejectedValueOnce(
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockRejectedValue(
       new Error(errorMessage)
     );
 
@@ -361,6 +362,74 @@ describe('ForumHomePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Empty Category')).toBeInTheDocument();
       expect(screen.getByText('No subcategories')).toBeInTheDocument();
+    });
+  });
+
+  it('should render How to Earn Points button', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      const button = screen.getByText('How to Earn Points');
+      expect(button).toBeInTheDocument();
+      expect(button).toHaveAttribute('aria-label', 'How to Earn Points');
+    });
+  });
+
+  it('should open points dialog when How to Earn Points button is clicked', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    const user = userEvent.setup();
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('How to Earn Points')).toBeInTheDocument();
+    });
+
+    // Verify dialog is not open initially
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    const button = screen.getByRole('button', { name: 'How to Earn Points' });
+    await user.click(button);
+
+    // Dialog should be visible after click
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('should close points dialog when close button is clicked', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    const user = userEvent.setup();
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('How to Earn Points')).toBeInTheDocument();
+    });
+
+    // Open the dialog
+    const openButton = screen.getByRole('button', { name: 'How to Earn Points' });
+    await user.click(openButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Find and click the close button
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    await user.click(closeButtons[0]);
+
+    // Dialog should be closed
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 });
