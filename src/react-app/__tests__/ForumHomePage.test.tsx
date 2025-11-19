@@ -251,7 +251,9 @@ describe('ForumHomePage', () => {
     renderWithRouter(<ForumHomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Create Thread')).toBeInTheDocument();
+      // Should have one Create Thread button per parent category (2 parents = 2 buttons)
+      const createButtons = screen.getAllByText('Create Thread');
+      expect(createButtons.length).toBe(2);
     });
   });
 
@@ -284,11 +286,13 @@ describe('ForumHomePage', () => {
     renderWithRouter(<ForumHomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Create Thread')).toBeInTheDocument();
+      const createButtons = screen.getAllByText('Create Thread');
+      expect(createButtons.length).toBeGreaterThan(0);
     });
 
-    const createButton = screen.getByText('Create Thread');
-    await user.click(createButton);
+    // Click the first Create Thread button
+    const createButtons = screen.getAllByText('Create Thread');
+    await user.click(createButtons[0]);
 
     // Check that the URL changed to /forums/create
     await waitFor(() => {
@@ -314,10 +318,12 @@ describe('ForumHomePage', () => {
     renderWithRouter(<ForumHomePage />);
 
     await waitFor(() => {
-      const createButton = screen.getByText('Create Thread');
-      expect(createButton).toBeInTheDocument();
-      // Check that it's a button element (from ForumControls)
-      expect(createButton.closest('button')).toBeInTheDocument();
+      const createButtons = screen.getAllByText('Create Thread');
+      expect(createButtons.length).toBeGreaterThan(0);
+      // Check that each button is a button element (from ForumControls)
+      createButtons.forEach(button => {
+        expect(button.closest('button')).toBeInTheDocument();
+      });
     });
   });
 
@@ -431,5 +437,97 @@ describe('ForumHomePage', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
+  });
+
+  // Mobile layout tests
+  it('should display parent category header with circle icon on mobile', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Career Development')).toBeInTheDocument();
+    });
+
+    // Parent header should contain icon and title (mobile view shows circle + name)
+    const parentHeaders = screen.getAllByText('Career Development');
+    expect(parentHeaders.length).toBeGreaterThan(0);
+  });
+
+  it('should display thread count with "threads" text on category cards', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      const threadCounts = screen.getAllByText(/threads/i);
+      expect(threadCounts.length).toBeGreaterThan(0);
+    });
+
+    // Verify thread counts are displayed for child categories
+    const jobSearchCard = screen.getByText('Job Search & Applications').closest('a');
+    expect(jobSearchCard?.textContent).toMatch(/threads/i);
+  });
+
+  it('should render category cards with name, description, and thread count', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Job Search & Applications')).toBeInTheDocument();
+    });
+
+    // Verify all child category elements are present
+    expect(screen.getByText('Job Search & Applications')).toBeInTheDocument();
+    expect(screen.getByText('Tips, resume reviews, interview prep')).toBeInTheDocument();
+
+    // Thread count should be displayed
+    const threadCounts = screen.getAllByText(/threads/i);
+    expect(threadCounts.length).toBeGreaterThan(0);
+  });
+
+  it('should have '+' button in parent category headers when authenticated', async () => {
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Career Development')).toBeInTheDocument();
+    });
+
+    // Should have Create Thread button for each parent category
+    const createButtons = screen.getAllByText('Create Thread');
+    expect(createButtons.length).toBeGreaterThan(0);
+  });
+
+  it('should not show '+' button when not authenticated', async () => {
+    vi.mocked(authContextModule.useAuth).mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      logout: vi.fn(),
+      login: vi.fn(),
+    } as ReturnType<typeof authContextModule.useAuth>);
+
+    vi.mocked(forumServiceModule.forumService.getAllCategories).mockResolvedValue(
+      mockAllCategories
+    );
+
+    renderWithRouter(<ForumHomePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Forums')).toBeInTheDocument();
+    });
+
+    // Create Thread button should not be visible
+    expect(screen.queryByText('Create Thread')).not.toBeInTheDocument();
   });
 });

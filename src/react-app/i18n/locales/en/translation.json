@@ -221,6 +221,10 @@
     "myMatches": "My Matches",
     "menteeRequests": "Mentorship requests from mentees",
     "yourRequests": "Your mentorship requests",
+    "yourMentees": "Your Mentees",
+    "yourMentors": "Your Mentors",
+    "noMentees": "You don't have any mentees yet",
+    "noMentors": "You don't have any mentors yet",
     "viewAs": "View As",
     "asMentee": "As Mentee",
     "asMentor": "As Mentor",
@@ -598,6 +602,7 @@
     },
     "values": {
       "title": "Our Core Values",
+      "subtitle": "The principles that guide everything we do",
       "growthMindset": {
         "title": "Growth Mindset",
         "description": "We believe everyone can develop leadership abilities through practice and persistence"
@@ -617,6 +622,7 @@
     },
     "founders": {
       "title": "Our Founders",
+      "subtitle": "Experienced leaders dedicated to empowering the next generation",
       "profiles": [
         {
           "name": "Claire Ding",

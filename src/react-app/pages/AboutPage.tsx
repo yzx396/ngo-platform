@@ -209,7 +209,7 @@ export function AboutPage() {
         <div className="text-center space-y-3">
           <h2 className="text-3xl sm:text-4xl font-bold">{t('about.values.title', 'Our Core Values')}</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            The principles that guide everything we do
+            {t('about.values.subtitle', 'The principles that guide everything we do')}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -249,7 +249,7 @@ export function AboutPage() {
         <div className="text-center space-y-3">
           <h2 className="text-3xl sm:text-4xl font-bold">{t('about.founders.title', 'Our Founders')}</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Experienced leaders dedicated to empowering the next generation
+            {t('about.founders.subtitle', 'Experienced leaders dedicated to empowering the next generation')}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

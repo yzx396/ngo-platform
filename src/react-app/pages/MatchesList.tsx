@@ -6,12 +6,9 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Empty, EmptyContent, EmptyTitle, EmptyDescription } from '../components/ui/empty';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Label } from '../components/ui/label';
-import { Separator } from '../components/ui/separator';
 import { getMatches, acceptMatch, rejectMatch, completeMatch } from '../services/matchService';
-import { getMentorProfileByUserId } from '../services/mentorService';
 import { getCVMetadata } from '../services/cvService';
 import { handleApiError, showSuccessToast } from '../services/apiClient';
-import { useAuth } from '../context/AuthContext';
 import type { Match } from '../../types/match';
 
 /**
@@ -21,44 +18,27 @@ import type { Match } from '../../types/match';
  */
 export function MatchesList() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [mentorMatches, setMentorMatches] = useState<Match[]>([]);
+  const [menteeMatches, setMenteeMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<'mentor' | 'mentee'>('mentee');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
 
-  // Check if user is a mentor on mount and set default role accordingly
-  useEffect(() => {
-    const checkMentorStatus = async () => {
-      if (!user) return;
-      
-      try {
-        const mentorProfile = await getMentorProfileByUserId(user.id);
-        
-        // Set default role to mentor if user has a mentor profile
-        if (mentorProfile !== null) {
-          setRole('mentor');
-        }
-      } catch (error) {
-        // If error, keep default as mentee
-        console.error('Failed to check mentor status:', error);
-      }
-    };
-
-    checkMentorStatus();
-  }, [user]);
-
+  // Fetch both mentor and mentee matches in parallel
   const fetchMatches = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getMatches({ role });
-      setMatches(data);
+      const [mentorData, menteeData] = await Promise.all([
+        getMatches({ role: 'mentor' }),
+        getMatches({ role: 'mentee' }),
+      ]);
+      setMentorMatches(mentorData);
+      setMenteeMatches(menteeData);
     } catch (error) {
       handleApiError(error);
     } finally {
       setLoading(false);
     }
-  }, [role]);
+  }, []);
 
   useEffect(() => {
     fetchMatches();
@@ -90,25 +70,33 @@ export function MatchesList() {
   };
 
   // Filter matches based on status filter
-  const filteredMatches = statusFilter === 'all'
-    ? matches
-    : matches.filter((m) => {
-        if (statusFilter === 'pending') return m.status === 'pending';
-        if (statusFilter === 'active') return m.status === 'active' || m.status === 'accepted';
-        if (statusFilter === 'completed') return m.status === 'completed' || m.status === 'rejected';
-        return true;
-      });
+  const filterMatches = (matches: Match[]) => {
+    if (statusFilter === 'all') return matches;
+    return matches.filter((m) => {
+      if (statusFilter === 'pending') return m.status === 'pending';
+      if (statusFilter === 'active') return m.status === 'active' || m.status === 'accepted';
+      if (statusFilter === 'completed') return m.status === 'completed' || m.status === 'rejected';
+      return true;
+    });
+  };
 
-  const pendingCount = matches.filter((m) => m.status === 'pending').length;
-  const activeCount = matches.filter((m) => m.status === 'active' || m.status === 'accepted').length;
-  const completedCount = matches.filter((m) => m.status === 'completed' || m.status === 'rejected').length;
+  const filteredMentorMatches = filterMatches(mentorMatches);
+  const filteredMenteeMatches = filterMatches(menteeMatches);
+  const allMatches = [...mentorMatches, ...menteeMatches];
+
+  const pendingCount = allMatches.filter((m) => m.status === 'pending').length;
+  const activeCount = allMatches.filter((m) => m.status === 'active' || m.status === 'accepted').length;
+  const completedCount = allMatches.filter((m) => m.status === 'completed' || m.status === 'rejected').length;
+
+  const hasMentorMatches = mentorMatches.length > 0;
+  const hasMenteeMatches = menteeMatches.length > 0;
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">{t('matches.myMatches')}</h1>
         <p className="text-muted-foreground">
-          {role === 'mentor' ? t('matches.menteeRequests') : t('matches.yourRequests')}
+          {t('matches.yourRequests')}
         </p>
       </div>
 
@@ -116,40 +104,6 @@ export function MatchesList() {
         {/* Filters Sidebar */}
         <div className="lg:col-span-1">
           <Card className="p-6 sticky top-4 space-y-6">
-            {/* Role Selection */}
-            <div className="space-y-3">
-              <Label>{t('matches.viewAs')}</Label>
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    setRole('mentee');
-                    setStatusFilter('all');
-                  }}
-                  className={`w-full px-3 py-2 text-left text-sm rounded-md border transition-colors ${
-                    role === 'mentee'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-input hover:bg-accent'
-                  }`}
-                >
-                  {t('matches.asMentee')}
-                </button>
-                <button
-                  onClick={() => {
-                    setRole('mentor');
-                    setStatusFilter('all');
-                  }}
-                  className={`w-full px-3 py-2 text-left text-sm rounded-md border transition-colors ${
-                    role === 'mentor'
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-input hover:bg-accent'
-                  }`}
-                >
-                  {t('matches.asMentor')}
-                </button>
-              </div>
-            </div>
-
-            <Separator />
 
             {/* Status Filter */}
             <div className="space-y-3">
@@ -157,7 +111,7 @@ export function MatchesList() {
               <div className="space-y-2">
                 <StatusFilterButton
                   label={t('matches.allStatus')}
-                  count={matches.length}
+                  count={allMatches.length}
                   isActive={statusFilter === 'all'}
                   onClick={() => setStatusFilter('all')}
                 />
@@ -194,7 +148,7 @@ export function MatchesList() {
             <div className="flex justify-center items-center py-12">
               <p className="text-muted-foreground">{t('common.loading')}</p>
             </div>
-          ) : filteredMatches.length === 0 ? (
+          ) : !hasMentorMatches && !hasMenteeMatches ? (
             <Empty>
               <EmptyContent>
                 <EmptyTitle>{t('matches.noMatches')}</EmptyTitle>
@@ -213,16 +167,50 @@ export function MatchesList() {
               </EmptyContent>
             </Empty>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMatches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  role={role}
-                  onRespond={handleRespond}
-                  onComplete={handleComplete}
-                />
-              ))}
+            <div className="space-y-8">
+              {/* Mentor Section - Mentees I'm mentoring */}
+              {hasMentorMatches && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">{t('matches.yourMentees')}</h2>
+                  {filteredMentorMatches.length === 0 ? (
+                    <p className="text-muted-foreground">{t('matches.noMentees')}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredMentorMatches.map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          role="mentor"
+                          onRespond={handleRespond}
+                          onComplete={handleComplete}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mentee Section - Mentors I have */}
+              {hasMenteeMatches && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">{t('matches.yourMentors')}</h2>
+                  {filteredMenteeMatches.length === 0 ? (
+                    <p className="text-muted-foreground">{t('matches.noMentors')}</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {filteredMenteeMatches.map((match) => (
+                        <MatchCard
+                          key={match.id}
+                          match={match}
+                          role="mentee"
+                          onRespond={handleRespond}
+                          onComplete={handleComplete}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

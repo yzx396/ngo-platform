@@ -4,15 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { MatchesList } from '../pages/MatchesList';
 import { AuthProvider } from '../context/AuthContext';
 import * as matchService from '../services/matchService';
-import * as mentorService from '../services/mentorService';
 import type { User } from '../../types/user';
 import type { Match } from '../../types/match';
-import type { MentorProfile } from '../../types/mentor';
-import { MentoringLevel, PaymentType } from '../../types/mentor';
 
 // Mock the services
 vi.mock('../services/matchService');
-vi.mock('../services/mentorService');
 
 const mockUser: User = {
   id: 'user-123',
@@ -22,59 +18,6 @@ const mockUser: User = {
   updated_at: 2000,
 };
 
-const mockMentorProfile: MentorProfile = {
-  id: 'mentor-1',
-  user_id: 'user-123',
-  nick_name: 'TestMentor',
-  bio: 'Test bio',
-  mentoring_levels: MentoringLevel.Entry | MentoringLevel.Senior,
-  hourly_rate: 100,
-  payment_types: PaymentType.Venmo | PaymentType.PayPal,
-  availability: 'Mon-Fri 9am-5pm',
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
-};
-
-const mockMatches: Match[] = [
-  {
-    id: 'match-1',
-    mentor_id: 'mentor-1',
-    mentee_id: 'mentee-1',
-    mentor_name: 'John Mentor',
-    status: 'pending',
-    introduction: 'I would like mentorship',
-    preferred_time: 'Weekends',
-    created_at: 1000,
-    updated_at: 2000,
-  },
-  {
-    id: 'match-2',
-    mentor_id: 'mentor-1',
-    mentee_id: 'mentee-2',
-    mentor_name: 'John Mentor',
-    mentor_email: 'mentor@example.com',
-    mentee_email: 'mentee2@example.com',
-    status: 'active',
-    introduction: 'Looking forward to learning',
-    preferred_time: 'Weekdays',
-    created_at: 1000,
-    updated_at: 2000,
-  },
-  {
-    id: 'match-3',
-    mentor_id: 'mentor-1',
-    mentee_id: 'mentee-3',
-    mentor_name: 'John Mentor',
-    mentor_email: 'mentor@example.com',
-    mentee_email: 'mentee3@example.com',
-    mentor_linkedin_url: 'https://www.linkedin.com/in/johnmentor',
-    status: 'completed',
-    introduction: 'Thank you for mentorship',
-    preferred_time: 'Anytime',
-    created_at: 1000,
-    updated_at: 2000,
-  },
-];
 
 // Helper to render component with AuthProvider
 function renderWithAuth(user: User | null = null) {
@@ -104,178 +47,201 @@ describe('MatchesList', () => {
     vi.clearAllMocks();
   });
 
-  describe('Role Selection Based on Mentor Status', () => {
-    it('should default to "As Mentee" when user is not a mentor', async () => {
-      // Mock: User does not have a mentor profile
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
+  describe('Auto-detect Role and Fetch Matches', () => {
+    it('should NOT render View As toggle buttons', async () => {
       vi.mocked(matchService.getMatches).mockResolvedValue([]);
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Check that "As Mentee" button is active (highlighted)
-      const menteeButton = screen.getByRole('button', { name: /as mentee/i });
-      expect(menteeButton).toHaveClass('bg-primary');
-      expect(menteeButton).toHaveClass('text-primary-foreground');
+      // Toggle buttons should NOT exist
+      expect(screen.queryByText('View As')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /as mentee/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /as mentor/i })).not.toBeInTheDocument();
+    });
 
-      // Verify the service was called with mentee role
+    it('should fetch both mentor and mentee matches on mount', async () => {
+      vi.mocked(matchService.getMatches).mockResolvedValue([]);
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Both role-specific match fetches should be called
+      expect(matchService.getMatches).toHaveBeenCalledWith({ role: 'mentor' });
       expect(matchService.getMatches).toHaveBeenCalledWith({ role: 'mentee' });
+      expect(matchService.getMatches).toHaveBeenCalledTimes(2);
     });
 
-    it('should default to "As Mentor" when user has a mentor profile', async () => {
-      // Mock: User has a mentor profile
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(mockMatches);
+    it('should display only mentee section when user has mentee matches only', async () => {
+      const menteeMatches: Match[] = [
+        {
+          id: 'match-1',
+          mentor_id: 'mentor-1',
+          mentee_id: 'user-123',
+          mentor_name: 'John Mentor',
+          status: 'pending',
+          introduction: 'I would like mentorship',
+          preferred_time: 'Weekends',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
 
-      renderWithAuth(mockUser, 'test-token');
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentee') return menteeMatches;
+        if (role === 'mentor') return [];
+        return [];
+      });
+
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for the role to be set to mentor
+      // Mentee section should be visible
       await waitFor(() => {
-        const mentorButton = screen.getByRole('button', { name: /as mentor/i });
-        expect(mentorButton).toHaveClass('bg-primary');
-        expect(mentorButton).toHaveClass('text-primary-foreground');
+        // Look for the section header specifically
+        const sectionHeaders = screen.getAllByRole('heading');
+        const hasMentorsSection = sectionHeaders.some(h => h.textContent === 'Your Mentors');
+        expect(hasMentorsSection).toBe(true);
+        expect(screen.getByText(/John Mentor/i)).toBeInTheDocument();
       });
 
-      // Verify getMentorProfileByUserId was called
-      expect(mentorService.getMentorProfileByUserId).toHaveBeenCalledWith('user-123');
-
-      // Verify the service was last called with mentor role
-      // Note: getMatches is called twice - first with default 'mentee', then with 'mentor' after status is determined
-      expect(matchService.getMatches).toHaveBeenLastCalledWith({ role: 'mentor' });
+      // Mentor section should NOT be visible
+      const allHeaderText = screen.queryAllByRole('heading').map(h => h.textContent);
+      expect(allHeaderText).not.toContain('Your Mentees');
     });
 
-    it('should handle error when checking mentor status gracefully', async () => {
-      // Mock: Error when checking mentor profile
-      vi.mocked(mentorService.getMentorProfileByUserId).mockRejectedValue(new Error('API error'));
+    it('should display only mentor section when user has mentor matches only', async () => {
+      const mentorMatches: Match[] = [
+        {
+          id: 'match-1',
+          mentor_id: 'user-123',
+          mentee_id: 'mentee-1',
+          mentee_name: 'Jane Mentee',
+          status: 'pending',
+          introduction: 'I would like mentorship',
+          preferred_time: 'Weekends',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentor') return mentorMatches;
+        if (role === 'mentee') return [];
+        return [];
+      });
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Mentor section should be visible
+      await waitFor(() => {
+        // Look for the section header specifically
+        const sectionHeaders = screen.getAllByRole('heading');
+        const hasMenteesSection = sectionHeaders.some(h => h.textContent === 'Your Mentees');
+        expect(hasMenteesSection).toBe(true);
+        expect(screen.getByText(/Jane Mentee/i)).toBeInTheDocument();
+      });
+
+      // Mentee section should NOT be visible
+      const allHeaderText = screen.queryAllByRole('heading').map(h => h.textContent);
+      expect(allHeaderText).not.toContain('Your Mentors');
+    });
+
+    it('should display both sections when user has both mentor and mentee matches (split view)', async () => {
+      const mentorMatches: Match[] = [
+        {
+          id: 'match-mentor-1',
+          mentor_id: 'user-123',
+          mentee_id: 'mentee-1',
+          mentee_name: 'Jane Mentee',
+          status: 'pending',
+          introduction: 'I would like mentorship',
+          preferred_time: 'Weekends',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      const menteeMatches: Match[] = [
+        {
+          id: 'match-mentee-1',
+          mentor_id: 'mentor-1',
+          mentee_id: 'user-123',
+          mentor_name: 'John Mentor',
+          status: 'pending',
+          introduction: 'Looking for guidance',
+          preferred_time: 'Weekdays',
+          created_at: 1000,
+          updated_at: 2000,
+        },
+      ];
+
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentor') return mentorMatches;
+        if (role === 'mentee') return menteeMatches;
+        return [];
+      });
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+      });
+
+      // Both sections should be visible
+      await waitFor(() => {
+        const sectionHeaders = screen.getAllByRole('heading');
+        const headerTexts = sectionHeaders.map(h => h.textContent);
+        expect(headerTexts).toContain('Your Mentees');
+        expect(headerTexts).toContain('Your Mentors');
+      });
+
+      // Both matches should be displayed
+      expect(screen.getByText(/Jane Mentee/i)).toBeInTheDocument();
+      expect(screen.getByText(/John Mentor/i)).toBeInTheDocument();
+    });
+
+    it('should display empty state when user has no matches at all', async () => {
       vi.mocked(matchService.getMatches).mockResolvedValue([]);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Should default to mentee when error occurs
-      const menteeButton = screen.getByRole('button', { name: /as mentee/i });
-      expect(menteeButton).toHaveClass('bg-primary');
-
-      // Error should be logged
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to check mentor status:', expect.any(Error));
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should not check mentor status if user is not available', async () => {
-      vi.mocked(matchService.getMatches).mockResolvedValue([]);
-
-      renderWithAuth(null, null); // No authenticated user
-
+      // Empty state should be shown
       await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/No matches/i)).toBeInTheDocument();
+        expect(screen.getByText(/You don't have any matches yet/i)).toBeInTheDocument();
       });
 
-      // getMentorProfileByUserId should not have been called
-      expect(mentorService.getMentorProfileByUserId).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Matches Display', () => {
-    it('should display matches for mentor', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(mockMatches);
-
-      renderWithAuth(mockUser, 'test-token');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-      });
-
-      // Wait for the role to be set to mentor and matches to be displayed
-      await waitFor(() => {
-        expect(screen.getByText(/Mentee mentee-1/i)).toBeInTheDocument();
-        expect(screen.getByText(/Mentee mentee-2/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should show empty state when no matches found', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
-      vi.mocked(matchService.getMatches).mockResolvedValue([]);
-
-      renderWithAuth(mockUser, 'test-token');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByText(/No matches/i)).toBeInTheDocument();
-      expect(screen.getByText(/You don't have any matches yet/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('Page Header', () => {
-    it('should show correct header for mentee view', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
-      vi.mocked(matchService.getMatches).mockResolvedValue([]);
-
-      renderWithAuth(mockUser, 'test-token');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByText('My Matches')).toBeInTheDocument();
-      expect(screen.getByText(/your mentorship requests/i)).toBeInTheDocument();
-    });
-
-    it('should show correct header for mentor view', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue([]);
-
-      renderWithAuth(mockUser, 'test-token');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-      });
-
-      // Wait for the role to be set to mentor and header to update
-      await waitFor(() => {
-        expect(screen.getByText(/mentorship requests from mentees/i)).toBeInTheDocument();
-      });
-
-      expect(screen.getByText('My Matches')).toBeInTheDocument();
+      // No section headers should be visible (check that only h1 exists for "My Matches" title)
+      const allHeaders = screen.queryAllByRole('heading');
+      const headerTexts = allHeaders.map(h => h.textContent);
+      expect(headerTexts).not.toContain('Your Mentees');
+      expect(headerTexts).not.toContain('Your Mentors');
     });
   });
 
   describe('Sidebar Filters', () => {
-    it('should have view as role selector', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
-      vi.mocked(matchService.getMatches).mockResolvedValue([]);
-
-      renderWithAuth(mockUser, 'test-token');
-
-      await waitFor(() => {
-        expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-      });
-
-      expect(screen.getByText('View As')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /as mentee/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /as mentor/i })).toBeInTheDocument();
-    });
-
     it('should have status filter options', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
       vi.mocked(matchService.getMatches).mockResolvedValue([]);
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -289,10 +255,9 @@ describe('MatchesList', () => {
     });
 
     it('should have refresh button', async () => {
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
       vi.mocked(matchService.getMatches).mockResolvedValue([]);
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -307,7 +272,7 @@ describe('MatchesList', () => {
       const pendingMatches: Match[] = [
         {
           id: 'match-pending',
-          mentor_id: 'mentor-1',
+          mentor_id: 'user-123',
           mentee_id: 'mentee-1',
           mentor_name: 'John Mentor',
           mentee_name: 'Jane Mentee',
@@ -319,10 +284,12 @@ describe('MatchesList', () => {
         },
       ];
 
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(pendingMatches);
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentor') return pendingMatches;
+        return [];
+      });
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -338,11 +305,11 @@ describe('MatchesList', () => {
       expect(screen.queryByText('mentee@example.com')).not.toBeInTheDocument();
     });
 
-    it('should display email addresses for active matches', async () => {
+    it('should display email addresses for active matches (mentor view)', async () => {
       const activeMatches: Match[] = [
         {
           id: 'match-active',
-          mentor_id: 'mentor-1',
+          mentor_id: 'user-123',
           mentee_id: 'mentee-2',
           mentor_name: 'John Mentor',
           mentee_name: 'Bob Mentee',
@@ -356,68 +323,72 @@ describe('MatchesList', () => {
         },
       ];
 
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(activeMatches);
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentor') return activeMatches;
+        return [];
+      });
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for matches to be displayed and role to be set to mentor
+      // Wait for matches to be displayed
       await waitFor(() => {
         expect(screen.getByText(/Bob Mentee/i)).toBeInTheDocument();
       });
 
-      // Since user is a mentor, should see mentee email
+      // Since user is viewing as mentor, should see mentee email
       await waitFor(() => {
         expect(screen.getByText('mentee2@example.com')).toBeInTheDocument();
       });
-      
+
       // Mentor email should not be visible when viewing as mentor
       expect(screen.queryByText('mentor@example.com')).not.toBeInTheDocument();
     });
 
-    it('should display email addresses for completed matches', async () => {
-      const completedMatches: Match[] = [
+    it('should display email addresses for active matches (mentee view)', async () => {
+      const activeMatches: Match[] = [
         {
-          id: 'match-completed',
+          id: 'match-active',
           mentor_id: 'mentor-1',
-          mentee_id: 'mentee-3',
+          mentee_id: 'user-123',
           mentor_name: 'John Mentor',
-          mentee_name: 'Alice Mentee',
+          mentee_name: 'Bob Mentee',
           mentor_email: 'mentor@example.com',
-          mentee_email: 'mentee3@example.com',
-          status: 'completed',
-          introduction: 'Thank you for mentorship',
-          preferred_time: 'Anytime',
+          mentee_email: 'mentee2@example.com',
+          status: 'active',
+          introduction: 'Looking forward to learning',
+          preferred_time: 'Weekdays',
           created_at: 1000,
           updated_at: 2000,
         },
       ];
 
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(completedMatches);
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentee') return activeMatches;
+        return [];
+      });
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
       });
 
-      // Wait for matches to be displayed and role to be set to mentor
+      // Wait for matches to be displayed
       await waitFor(() => {
-        expect(screen.getByText(/Alice Mentee/i)).toBeInTheDocument();
+        expect(screen.getByText(/John Mentor/i)).toBeInTheDocument();
       });
 
-      // Since user is a mentor, should see mentee email
+      // Since user is viewing as mentee, should see mentor email
       await waitFor(() => {
-        expect(screen.getByText('mentee3@example.com')).toBeInTheDocument();
+        expect(screen.getByText('mentor@example.com')).toBeInTheDocument();
       });
-      
-      // Mentor email should not be visible when viewing as mentor
-      expect(screen.queryByText('mentor@example.com')).not.toBeInTheDocument();
+
+      // Mentee email should not be visible when viewing as mentee
+      expect(screen.queryByText('mentee2@example.com')).not.toBeInTheDocument();
     });
 
     it('should display LinkedIn URL for active matches when mentor has one', async () => {
@@ -425,7 +396,7 @@ describe('MatchesList', () => {
         {
           id: 'match-linkedin',
           mentor_id: 'mentor-1',
-          mentee_id: 'mentee-2',
+          mentee_id: 'user-123',
           mentor_name: 'John Mentor',
           mentee_name: 'Bob Mentee',
           mentor_email: 'mentor@example.com',
@@ -439,11 +410,12 @@ describe('MatchesList', () => {
         },
       ];
 
-      // Don't mock mentor profile so user defaults to mentee role
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(null);
-      vi.mocked(matchService.getMatches).mockResolvedValue(activeMatchesWithLinkedIn);
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentee') return activeMatchesWithLinkedIn;
+        return [];
+      });
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
@@ -468,7 +440,7 @@ describe('MatchesList', () => {
       const pendingMatches: Match[] = [
         {
           id: 'match-pending-no-linkedin',
-          mentor_id: 'mentor-1',
+          mentor_id: 'user-123',
           mentee_id: 'mentee-1',
           mentor_name: 'John Mentor',
           mentee_name: 'Jane Mentee',
@@ -480,10 +452,12 @@ describe('MatchesList', () => {
         },
       ];
 
-      vi.mocked(mentorService.getMentorProfileByUserId).mockResolvedValue(mockMentorProfile);
-      vi.mocked(matchService.getMatches).mockResolvedValue(pendingMatches);
+      vi.mocked(matchService.getMatches).mockImplementation(async ({ role }) => {
+        if (role === 'mentor') return pendingMatches;
+        return [];
+      });
 
-      renderWithAuth(mockUser, 'test-token');
+      renderWithAuth(mockUser);
 
       await waitFor(() => {
         expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();

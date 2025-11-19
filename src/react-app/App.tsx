@@ -95,7 +95,7 @@ function AppContent() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/auth/google/callback';
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen overflow-hidden bg-background">
       {!isAuthPage && <Navbar />}
       <Suspense fallback={<LoadingFallback />}>
         {!isAuthPage && (

@@ -221,6 +221,10 @@
     "myMatches": "我的配对",
     "menteeRequests": "来自咨询者的辅导申请",
     "yourRequests": "您的申请",
+    "yourMentees": "我的咨询者",
+    "yourMentors": "我的导师",
+    "noMentees": "您还没有任何咨询者",
+    "noMentors": "您还没有任何导师",
     "viewAs": "查看身份",
     "asMentee": "作为咨询者",
     "asMentor": "作为导师",
@@ -571,7 +575,7 @@
   },
   "about": {
     "title": "Lead Forward",
-    "subtitle": "Lead Forward的创立旨在通过定期实践和社区支持，赋能个人发现和开发他们的领导潜力",
+    "subtitle": "Lead Forward的创立旨在通过定期实践和社区支持，赋能个人发现和拓展他/她们的领导潜能",
     "vision": {
       "title": "我们的愿景",
       "content": "成为你渴望成为的领导者。"
@@ -593,11 +597,12 @@
       "item4Desc": "掌握处理分歧和找到解决方案的技巧",
       "item5Title": "战略思维",
       "item5Desc": "培养看清全局并为长期成功进行规划的能力",
-      "item6Title": "情商",
+      "item6Title": "提升情商",
       "item6Desc": "建立自我认识和同理心，以更高效的方式领导"
     },
     "values": {
       "title": "我们的核心价值观",
+      "subtitle": "指引我们所有行动的原则",
       "growthMindset": {
         "title": "成长心态",
         "description": "我们相信每个人都可以通过实践和坚持来发展领导力"
@@ -617,6 +622,7 @@
     },
     "founders": {
       "title": "我们的创始人",
+      "subtitle": "经验丰富的领导者，致力于赋能下一代",
       "profiles": [
         {
           "name": "Claire Ding",

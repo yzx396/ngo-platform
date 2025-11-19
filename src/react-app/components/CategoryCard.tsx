@@ -36,7 +36,7 @@ const CategoryCard = memo(function CategoryCard({ category }: CategoryCardProps)
       to={`/forums/category/${category.id}`}
       className="block rounded-lg border overflow-hidden transition-all hover:shadow-md hover:border-primary/50"
     >
-      <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         {/* Left side: Icon, Name, Description */}
         <div className="flex-1 flex items-start gap-3">
           {category.icon && (
@@ -54,12 +54,12 @@ const CategoryCard = memo(function CategoryCard({ category }: CategoryCardProps)
           </div>
         </div>
 
-        {/* Right side: Thread count */}
-        <div className="flex-shrink-0 text-right">
-          <div className="text-2xl font-bold text-primary">
-            {category.thread_count || 0}
+        {/* Right side: Thread count - Mobile shows "X threads", Desktop shows number + text stacked */}
+        <div className="flex-shrink-0 text-right md:text-right">
+          <div className="text-sm md:text-2xl font-semibold md:font-bold text-primary">
+            {category.thread_count || 0} <span className="text-xs md:hidden text-muted-foreground">{t('forums.threads')}</span>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="hidden md:block text-xs text-muted-foreground">
             {t('forums.threads')}
           </div>
         </div>

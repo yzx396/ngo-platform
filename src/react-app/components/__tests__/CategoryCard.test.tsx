@@ -57,9 +57,11 @@ describe('CategoryCard', () => {
 
   it('should render thread count', () => {
     renderWithRouter(<CategoryCard category={mockCategory} />);
-    
+
     expect(screen.getByText('42')).toBeInTheDocument();
-    expect(screen.getByText('threads')).toBeInTheDocument();
+    // With responsive layout, "threads" appears in both mobile and desktop versions
+    const threadsElements = screen.getAllByText('threads');
+    expect(threadsElements.length).toBeGreaterThan(0);
   });
 
   it('should render as a link to the category page', () => {
@@ -96,16 +98,20 @@ describe('CategoryCard', () => {
   it('should display zero thread count when none exist', () => {
     const categoryWithNoThreads = { ...mockCategory, thread_count: 0 };
     renderWithRouter(<CategoryCard category={categoryWithNoThreads} />);
-    
+
     expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('threads')).toBeInTheDocument();
+    // With responsive layout, "threads" appears in both mobile and desktop versions
+    const threadsElements = screen.getAllByText('threads');
+    expect(threadsElements.length).toBeGreaterThan(0);
   });
 
   it('should use responsive flex layout', () => {
     const { container } = renderWithRouter(<CategoryCard category={mockCategory} />);
-    
-    const flexContainer = container.querySelector('.flex-col.md\\:flex-row');
-    expect(flexContainer).toBeInTheDocument();
+
+    // Check for responsive flex layout with mobile and desktop variants
+    const mainFlex = container.querySelector('.flex');
+    expect(mainFlex).toBeInTheDocument();
+    expect(mainFlex).toHaveClass('flex-col', 'md:flex-row');
   });
 
   it('should render with proper border and rounded styling', () => {

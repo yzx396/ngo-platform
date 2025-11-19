@@ -73,9 +73,6 @@ export default function ForumHomePage() {
         </Button>
       </div>
 
-      {/* Forum Controls: Create Thread Button */}
-      <ForumControls isAuthenticated={Boolean(user)} />
-
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -106,11 +103,20 @@ export default function ForumHomePage() {
 
             return (
               <div key={parent.id} className="space-y-4">
-                {/* Parent Category Header */}
-                <h2 className="text-2xl font-semibold flex items-center gap-3">
-                  {parent.icon && <span className="text-3xl">{parent.icon}</span>}
-                  <span>{getCategoryName(parent)}</span>
-                </h2>
+                {/* Parent Category Header with Create Thread Button */}
+                <div className="flex items-center justify-between gap-3 md:gap-4">
+                  {/* Mobile: Circle icon + Desktop: Emoji icon */}
+                  <div className="flex items-center gap-3 flex-1 md:flex-none">
+                    {/* Mobile decorative circle (hidden on desktop) */}
+                    <div className="md:hidden w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0"></div>
+                    {/* Desktop: Icon only, shown on larger screens */}
+                    <h2 className="text-xl md:text-2xl font-semibold flex items-center gap-3">
+                      {parent.icon && <span className="text-2xl md:text-3xl">{parent.icon}</span>}
+                      <span>{getCategoryName(parent)}</span>
+                    </h2>
+                  </div>
+                  <ForumControls isAuthenticated={Boolean(user)} />
+                </div>
 
                 {/* Child Categories Grid */}
                 {children.length > 0 ? (
