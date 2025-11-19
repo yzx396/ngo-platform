@@ -1,7 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { RichTextEditor } from './RichTextEditor';
 import { forumService } from '../services/forumService';
 import { ForumReplyWithAuthor } from '../../types/forum';
+import { Card } from './ui/card';
+import { Button } from './ui/button';
 
 interface ReplyFormProps {
   threadId: string;
@@ -17,6 +21,7 @@ export default function ReplyForm({
   onCancel,
 }: ReplyFormProps) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,12 +30,12 @@ export default function ReplyForm({
     e.preventDefault();
 
     if (!user) {
-      setError('You must be logged in to reply');
+      setError(t('forums.loginRequired', 'You must be logged in to reply'));
       return;
     }
 
     if (!content.trim()) {
-      setError('Reply content cannot be empty');
+      setError(t('forums.emptyReplyError', 'Reply content cannot be empty'));
       return;
     }
 
@@ -46,7 +51,7 @@ export default function ReplyForm({
       onReplyCreated(newReply);
       setContent('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post reply');
+      setError(err instanceof Error ? err.message : t('errors.unexpectedError'));
     } finally {
       setSubmitting(false);
     }
@@ -54,50 +59,52 @@ export default function ReplyForm({
 
   if (!user) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-blue-800">
-          Please <a href="/login" className="font-semibold hover:underline">sign in</a> to reply.
-        </p>
-      </div>
+      <Card className="border-primary/20 bg-primary/5">
+        <div className="p-4">
+          <p className="text-sm text-muted-foreground">
+            {t('forums.signInToReply', 'Please')} <a href="/login" className="font-semibold text-primary hover:underline">{t('common.signIn', 'sign in')}</a> {t('forums.toReply', 'to reply')}.
+          </p>
+        </div>
+      </Card>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-4">
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
-          {error}
-        </div>
-      )}
-
-      <textarea
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        placeholder={parentReplyId ? 'Reply to this comment...' : 'Write your reply...'}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-        rows={4}
-        disabled={submitting}
-      />
-
-      <div className="mt-3 flex justify-end gap-2">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={submitting}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-          >
-            Cancel
-          </button>
+    <Card className="bg-card">
+      <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        {error && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded text-sm">
+            {error}
+          </div>
         )}
-        <button
-          type="submit"
-          disabled={submitting || !content.trim()}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {submitting ? 'Posting...' : 'Post Reply'}
-        </button>
-      </div>
-    </form>
+
+        <RichTextEditor
+          content={content}
+          onChange={setContent}
+          placeholder={parentReplyId ? t('forums.replyToComment', 'Reply to this comment...') : t('forums.writeReply', 'Write your reply...')}
+          disabled={submitting}
+          minHeight="120px"
+        />
+
+        <div className="flex justify-end gap-2 pt-2">
+          {onCancel && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={submitting}
+            >
+              {t('common.cancel')}
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={submitting || !content.trim()}
+          >
+            {submitting ? t('forums.posting', 'Posting...') : t('forums.postReply', 'Post Reply')}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }

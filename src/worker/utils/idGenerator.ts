@@ -32,3 +32,19 @@ export const generateBlogLikeId = (): string => {
 export const generateBlogCommentId = (): string => {
   return generateId();
 };
+
+/**
+ * Generate a unique forum thread ID
+ * Example: "xT9m4pQ7nR"
+ */
+export const generateThreadId = (): string => {
+  return generateId();
+};
+
+/**
+ * Generate a unique forum reply ID
+ * Example: "a1B2c3D4e5"
+ */
+export const generateReplyId = (): string => {
+  return generateId();
+};

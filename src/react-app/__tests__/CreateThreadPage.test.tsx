@@ -20,6 +20,26 @@ vi.mock('../context/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
+// Mock RichTextEditor component
+vi.mock('../components/RichTextEditor', () => ({
+  RichTextEditor: ({ content, onChange, placeholder, disabled, minHeight }: {
+    content: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    disabled?: boolean;
+    minHeight?: string;
+  }) => (
+    <textarea
+      data-testid="rich-text-editor"
+      value={content}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      style={{ minHeight }}
+    />
+  ),
+}));
+
 // Mock useTranslation
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -21,6 +21,32 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
+// Mock useTranslation hook
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, defaultValue?: string) => {
+      const translations: Record<string, string> = {
+        'common.back': 'Back',
+        'common.cancel': 'Cancel',
+        'forums.replies': 'Replies',
+        'forums.views': 'views',
+        'forums.upvotes': 'upvotes',
+        'forums.downvotes': 'downvotes',
+        'forums.noRepliesYet': 'No replies yet. Be the first to reply!',
+        'forums.solution': 'Solution',
+        'errors.oopsError': 'Oops! Something went wrong',
+        'errors.unexpectedError': 'An unexpected error occurred',
+        'forums.categoryNotFound': 'Thread not found',
+      };
+      return translations[key] || defaultValue || key;
+    },
+    i18n: {
+      language: 'en',
+      changeLanguage: vi.fn(),
+    },
+  }),
+}));
+
 // Mock ReplyForm to avoid rendering issues
 vi.mock('../components/ReplyForm', () => ({
   default: () => <div data-testid="reply-form-mock">Reply Form Mock</div>,
@@ -161,8 +187,9 @@ describe('ThreadDetailPage', () => {
     renderWithRouter();
 
     await waitFor(() => {
-      expect(screen.getByText(/245 views/)).toBeInTheDocument(); // view_count
-      expect(screen.getByText(/45 upvotes/)).toBeInTheDocument(); // upvote_count
+      // Check that upvote and downvote counts are displayed
+      expect(screen.getByText('45')).toBeInTheDocument(); // upvote_count
+      expect(screen.getByText('2')).toBeInTheDocument(); // downvote_count
     });
   });
 
@@ -235,7 +262,9 @@ describe('ThreadDetailPage', () => {
 
     renderWithRouter();
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    // Check for loading spinner (Loader2 icon with animate-spin class)
+    const spinner = document.querySelector('.animate-spin');
+    expect(spinner).toBeInTheDocument();
   });
 
   it('should handle errors gracefully', async () => {
@@ -247,7 +276,9 @@ describe('ThreadDetailPage', () => {
     renderWithRouter();
 
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
+      // Check for error message with the translated text and error message
+      expect(screen.getByText(/oops! something went wrong/i)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(errorMessage, 'i'))).toBeInTheDocument();
     });
   });
 
@@ -265,7 +296,7 @@ describe('ThreadDetailPage', () => {
     });
   });
 
-  it('should display nested replies with indentation', async () => {
+  it('should display all replies in flat structure', async () => {
     vi.mocked(forumServiceModule.forumService.getThread).mockResolvedValue(mockThread);
     vi.mocked(forumServiceModule.forumService.getReplies).mockResolvedValue({
       replies: mockReplies,
@@ -275,7 +306,10 @@ describe('ThreadDetailPage', () => {
     renderWithRouter();
 
     await waitFor(() => {
+      // All replies should be displayed in a flat list, not nested
       expect(screen.getByText(/I agree with this approach/i)).toBeInTheDocument();
+      expect(screen.getByText(/Great question! Here are some tips/i)).toBeInTheDocument();
+      expect(screen.getByText(/Thanks for the feedback!/i)).toBeInTheDocument();
     });
   });
 

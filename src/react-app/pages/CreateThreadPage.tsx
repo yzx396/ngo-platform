@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { RichTextEditor } from '../components/RichTextEditor';
 import { forumService } from '../services/forumService';
 import { ForumCategory } from '../../types/forum';
 
@@ -48,6 +49,12 @@ export default function CreateThreadPage() {
     const translationKey = `forums.categories.${cat.slug}.name`;
     const translated = t(translationKey, { defaultValue: cat.name });
     return translated === translationKey ? cat.name : translated;
+  };
+
+  // Strip HTML tags for character counter (like blogs)
+  const getTextLength = (html: string) => {
+    const plainText = html.replace(/<[^>]*>/g, '');
+    return plainText.length;
   };
 
   // Group categories by parent for hierarchical display
@@ -197,20 +204,18 @@ export default function CreateThreadPage() {
 
             {/* Content */}
             <div className="space-y-2">
-              <label htmlFor="content" className="text-sm font-medium">
+              <label className="text-sm font-medium">
                 {t('forums.contentLabel')} <span className="text-red-500">*</span>
               </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+              <RichTextEditor
+                content={content}
+                onChange={setContent}
                 placeholder={t('forums.contentPlaceholder')}
-                rows={8}
                 disabled={submitting}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                minHeight="250px"
               />
               <p className="text-xs text-muted-foreground">
-                {content.length} {t('forums.characters')}
+                {getTextLength(content)} {t('forums.characters')}
               </p>
             </div>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateId, generateBlogId, generateBlogLikeId, generateBlogCommentId } from '../utils/idGenerator';
+import { generateId, generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId } from '../utils/idGenerator';
 
 describe('ID Generator', () => {
   describe('generateId', () => {
@@ -64,6 +64,52 @@ describe('ID Generator', () => {
     it('should be URL-safe', () => {
       const id = generateBlogCommentId();
       expect(id).toMatch(/^[a-zA-Z0-9_-]{10}$/);
+    });
+  });
+
+  describe('generateThreadId', () => {
+    it('should generate a thread ID', () => {
+      const id = generateThreadId();
+      expect(id).toHaveLength(10);
+    });
+
+    it('should be URL-safe', () => {
+      const id = generateThreadId();
+      expect(id).toMatch(/^[a-zA-Z0-9_-]{10}$/);
+    });
+
+    it('should generate unique thread IDs', () => {
+      const ids = new Set();
+      const count = 100;
+
+      for (let i = 0; i < count; i++) {
+        ids.add(generateThreadId());
+      }
+
+      expect(ids.size).toBe(count);
+    });
+  });
+
+  describe('generateReplyId', () => {
+    it('should generate a reply ID', () => {
+      const id = generateReplyId();
+      expect(id).toHaveLength(10);
+    });
+
+    it('should be URL-safe', () => {
+      const id = generateReplyId();
+      expect(id).toMatch(/^[a-zA-Z0-9_-]{10}$/);
+    });
+
+    it('should generate unique reply IDs', () => {
+      const ids = new Set();
+      const count = 100;
+
+      for (let i = 0; i < count; i++) {
+        ids.add(generateReplyId());
+      }
+
+      expect(ids.size).toBe(count);
     });
   });
 });

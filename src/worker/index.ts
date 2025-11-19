@@ -78,7 +78,8 @@ import {
   BLOGS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
 } from "../types/points";
-import { generateBlogId, generateBlogLikeId, generateBlogCommentId } from "./utils/idGenerator";
+import { generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId } from "./utils/idGenerator";
+import { sanitizeHtml } from "./utils/sanitize";
 
 /**
  * Environment variables and bindings for the Worker
@@ -3995,8 +3996,11 @@ app.post("/api/v1/forums/threads/:threadId/replies", async (c) => {
       }
     }
 
-    const replyId = `reply_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const replyId = generateReplyId();
     const now = Math.floor(Date.now() / 1000);
+
+    // Sanitize HTML content for security
+    const sanitizedContent = sanitizeHtml(content.trim());
 
     const result = await db
       .prepare(`
@@ -4009,7 +4013,7 @@ app.post("/api/v1/forums/threads/:threadId/replies", async (c) => {
         replyId,
         threadId,
         auth.userId,
-        content.trim(),
+        sanitizedContent,
         parent_reply_id || null,
         now,
         now
@@ -4459,8 +4463,11 @@ app.post("/api/v1/forums/threads", requireAuth, async (c) => {
     }
 
     // Generate thread ID
-    const threadId = `thread_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const threadId = generateThreadId();
     const now = Math.floor(Date.now() / 1000);
+
+    // Sanitize HTML content for security
+    const sanitizedContent = sanitizeHtml(body.content);
 
     // Insert thread
     const insertResult = await db
@@ -4476,7 +4483,7 @@ app.post("/api/v1/forums/threads", requireAuth, async (c) => {
         body.category_id,
         user.userId,
         body.title,
-        body.content,
+        sanitizedContent,
         "open",
         0,
         0,
@@ -4501,7 +4508,7 @@ app.post("/api/v1/forums/threads", requireAuth, async (c) => {
       category_id: body.category_id,
       user_id: user.userId,
       title: body.title,
-      content: body.content,
+      content: sanitizedContent,
       status: "open",
       is_pinned: 0,
       view_count: 0,

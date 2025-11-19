@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, MessageCircle, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { forumService } from '../services/forumService';
 import { ForumThreadWithAuthor, ForumReplyWithAuthor } from '../../types/forum';
 import { formatPostTime } from '../../types/post';
 import ReplyThread from '../components/ReplyThread';
 import ReplyForm from '../components/ReplyForm';
-import { getThreadStatusColor } from '../../types/forum';
+import { HtmlRenderer } from '../components/HtmlRenderer';
+import { Card, CardContent } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
 
 interface ThreadState {
   thread: ForumThreadWithAuthor | null;
@@ -15,6 +20,8 @@ interface ThreadState {
 
 export default function ThreadDetailPage() {
   const { threadId } = useParams<{ threadId: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [data, setData] = useState<ThreadState>({
     thread: null,
@@ -44,7 +51,7 @@ export default function ThreadDetailPage() {
           total: repliesData.total,
         }));
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load thread';
+        const message = err instanceof Error ? err.message : t('errors.unexpectedError');
         setError(message);
         console.error('Error loading thread:', err);
       } finally {
@@ -53,13 +60,13 @@ export default function ThreadDetailPage() {
     };
 
     loadData();
-  }, [threadId]);
+  }, [threadId, t]);
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-center py-12">
-          <p className="text-gray-600">Loading thread...</p>
+      <div className="px-4 py-8">
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </div>
     );
@@ -67,104 +74,119 @@ export default function ThreadDetailPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-600">Error: {error}</p>
-        </div>
+      <div className="px-4 py-8">
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">{t('errors.oopsError')}: {error}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   if (!data.thread) {
     return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-center py-12">
-          <p className="text-gray-500">Thread not found</p>
-        </div>
+      <div className="px-4 py-8">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">{t('forums.categoryNotFound')}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   const thread = data.thread;
-  const statusBadgeColor = getThreadStatusColor(thread.status);
   const createdTime = formatPostTime(thread.created_at);
 
-  // Build nested replies structure
-  const buildReplyTree = (replies: ForumReplyWithAuthor[]): Map<string | null, ForumReplyWithAuthor[]> => {
-    const tree = new Map<string | null, ForumReplyWithAuthor[]>();
-
-    for (const reply of replies) {
-      const parentId = reply.parent_reply_id;
-      if (!tree.has(parentId)) {
-        tree.set(parentId, []);
-      }
-      tree.get(parentId)!.push(reply);
-    }
-
-    return tree;
-  };
-
-  const replyTree = buildReplyTree(data.replies);
-  const rootReplies = replyTree.get(null) || [];
+  // Flat replies list (no nesting)
+  const flatReplies = data.replies;
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <Link to={`/forums/category/${thread.category_id}`} className="text-blue-600 hover:text-blue-700 text-sm mb-4 inline-block">
-          ← Back to Category
-        </Link>
+    <div className="px-4 py-4 space-y-6">
+      {/* Back Button */}
+      <Button
+        variant="ghost"
+        onClick={() => navigate(`/forums/category/${thread.category_id}`)}
+        className="flex items-center gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {t('common.back')}
+      </Button>
 
-        <div className="mb-4">
-          <div className="flex items-start gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-gray-900">{thread.title}</h1>
+      {/* Thread Content Card - styled like a reply */}
+      <Card className="bg-muted/30 border-muted-foreground/20">
+        <div className="p-4 space-y-3">
+          {/* Thread Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">{thread.author_name}</p>
+              <p className="text-xs text-muted-foreground">{createdTime}</p>
+            </div>
             {thread.status !== 'open' && (
-              <span className={`text-xs font-medium px-2 py-1 rounded whitespace-nowrap mt-1 ${statusBadgeColor}`}>
+              <Badge variant="outline" className="flex-shrink-0">
                 {thread.status.charAt(0).toUpperCase() + thread.status.slice(1)}
-              </span>
+              </Badge>
             )}
           </div>
 
-          <p className="text-sm text-gray-600">
-            By <span className="font-medium">{thread.author_name}</span> • {createdTime}
-          </p>
-        </div>
+          {/* Thread Title */}
+          <h1 className="text-lg font-bold">{thread.title}</h1>
 
-        <div className="bg-gray-50 rounded-lg p-6 mb-6">
-          <p className="text-gray-800 whitespace-pre-wrap">{thread.content}</p>
-        </div>
+          {/* Thread Content */}
+          <div className="text-sm text-foreground break-words">
+            <HtmlRenderer
+              content={thread.content}
+              className="text-sm"
+            />
+          </div>
 
-        {/* Engagement Metrics */}
-        <div className="flex items-center gap-6 text-sm text-gray-600 border-t border-b border-gray-200 py-4">
-          <div className="flex items-center gap-1">
-            <span>👁️</span>
-            <span>{thread.view_count.toLocaleString()} views</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>💬</span>
-            <span>{thread.reply_count} replies</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span>👍</span>
-            <span>{thread.upvote_count} upvotes</span>
-          </div>
-          {thread.downvote_count > 0 && (
-            <div className="flex items-center gap-1">
-              <span>👎</span>
-              <span>{thread.downvote_count} downvotes</span>
+          {/* Engagement Metrics */}
+          {(thread.upvote_count > 0 || thread.downvote_count > 0) && (
+            <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
+              {thread.upvote_count > 0 && (
+                <div className="flex items-center gap-1">
+                  <ThumbsUp className="w-3 h-3" />
+                  <span>{thread.upvote_count}</span>
+                </div>
+              )}
+              {thread.downvote_count > 0 && (
+                <div className="flex items-center gap-1">
+                  <ThumbsDown className="w-3 h-3" />
+                  <span>{thread.downvote_count}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
+      </Card>
+
+      {/* Replies List */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          {t('forums.replies', 'Replies')} ({data.total})
+        </h2>
+        {flatReplies.length > 0 ? (
+          <div className="space-y-4">
+            {flatReplies.map(reply => (
+              <ReplyThread key={reply.id} reply={reply} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">{t('forums.noRepliesYet', 'No replies yet. Be the first to reply!')}</p>
+          </div>
+        )}
       </div>
 
-      {/* Replies Section */}
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-6">
-          Replies <span className="text-gray-500 text-lg">({data.total + 1})</span>
-        </h2>
-
-        {/* Reply Form */}
-        <div className="mb-6">
+      {/* Reply Form Section */}
+      <Card className="bg-muted/30 border-muted-foreground/20">
+        <div className="p-4 space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <MessageCircle className="w-5 h-5" />
+            {t('forums.addReply', 'Add Your Reply')}
+          </h3>
           <ReplyForm
             threadId={threadId || ''}
             onReplyCreated={(newReply) => {
@@ -176,24 +198,7 @@ export default function ThreadDetailPage() {
             }}
           />
         </div>
-
-        {data.replies.length > 0 ? (
-          <div className="space-y-4">
-            {rootReplies.map(reply => (
-              <ReplyThread
-                key={reply.id}
-                reply={reply}
-                replies={data.replies}
-                replyTree={replyTree}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">No replies yet. Be the first to reply!</p>
-          </div>
-        )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -7,12 +7,58 @@ import * as forumService from '../services/forumService';
 // Mock the forum service
 vi.mock('../services/forumService');
 
+// Mock RichTextEditor component
+vi.mock('../components/RichTextEditor', () => ({
+  RichTextEditor: ({ content, onChange, placeholder, disabled, minHeight }: {
+    content: string;
+    onChange: (value: string) => void;
+    placeholder?: string;
+    disabled?: boolean;
+    minHeight?: string;
+  }) => (
+    <textarea
+      data-testid="rich-text-editor"
+      value={content}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      disabled={disabled}
+      style={{ minHeight }}
+    />
+  ),
+}));
+
 // Mock useAuth hook
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'user_1', name: 'Current User', email: 'user@example.com' },
     isLoading: false,
     logout: vi.fn(),
+  }),
+}));
+
+// Mock useTranslation hook
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, defaultValue?: string) => {
+      const translations: Record<string, string> = {
+        'forums.loginRequired': 'You must be logged in to reply',
+        'forums.emptyReplyError': 'Reply content cannot be empty',
+        'forums.replyToComment': 'Reply to this comment...',
+        'forums.writeReply': 'Write your reply...',
+        'forums.posting': 'Posting...',
+        'forums.postReply': 'Post Reply',
+        'forums.signInToReply': 'Please',
+        'common.signIn': 'sign in',
+        'forums.toReply': 'to reply',
+        'common.cancel': 'Cancel',
+        'errors.unexpectedError': 'An unexpected error occurred',
+      };
+      return translations[key] || defaultValue || key;
+    },
+    i18n: {
+      language: 'en',
+      changeLanguage: vi.fn(),
+    },
   }),
 }));
 

@@ -119,8 +119,8 @@ export function CreateBlogPage() {
 
       {/* Form Card */}
       <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
             <div className="space-y-2">
               <label htmlFor="title" className="text-sm font-medium">

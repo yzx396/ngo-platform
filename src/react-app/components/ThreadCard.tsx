@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ForumThreadWithAuthor } from '../../types/forum';
@@ -6,6 +6,32 @@ import { formatPostTime } from '../../types/post';
 
 interface ThreadCardProps {
   thread: ForumThreadWithAuthor;
+}
+
+/**
+ * Extract plain text from HTML content for preview
+ * Removes all HTML tags and decodes entities
+ */
+function getPlainTextPreview(content: string): string {
+  if (!content) return '';
+
+  // Remove HTML tags
+  let text = content.replace(/<[^>]*>/g, '');
+
+  // Decode common HTML entities
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#039;': "'",
+  };
+
+  Object.entries(entities).forEach(([entity, char]) => {
+    text = text.replace(new RegExp(entity, 'g'), char);
+  });
+
+  return text.trim();
 }
 
 /**
@@ -18,6 +44,12 @@ const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
   const isPinned = thread.is_pinned ? true : false;
   const timeAgo = formatPostTime(thread.created_at);
   const lastActivityTime = formatPostTime(thread.last_activity_at);
+
+  // Extract plain text preview from HTML content
+  const contentPreview = useMemo(
+    () => getPlainTextPreview(thread.content),
+    [thread.content]
+  );
 
   const statusBadgeColor = {
     open: 'bg-blue-100 text-blue-800',
@@ -53,7 +85,7 @@ const ThreadCard = memo(function ThreadCard({ thread }: ThreadCardProps) {
 
           {/* Content Preview */}
           <p className="text-sm text-gray-700 line-clamp-2">
-            {thread.content}
+            {contentPreview}
           </p>
 
           {/* Stats */}
