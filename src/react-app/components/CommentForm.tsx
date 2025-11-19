@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/button';
-import { createComment } from '../services/postService';
 import { createBlogComment } from '../services/blogService';
 import { handleApiError } from '../services/apiClient';
 import { toast } from 'sonner';
@@ -9,8 +8,7 @@ import { RichTextEditor } from './RichTextEditor';
 import { getTextLengthFromHtml, isHtmlEmpty } from '../utils/htmlUtils';
 
 interface CommentFormProps {
-  postId?: string;
-  blogId?: string;
+  blogId: string;
   parentCommentId?: string;
   onCommentCreated?: (content: string) => void;
   placeholder?: string;
@@ -21,18 +19,16 @@ const MAX_COMMENT_LENGTH = 500;
 
 /**
  * CommentForm component
- * Form for users to add comments on posts/blogs or reply to comments
+ * Form for users to add comments on blogs or reply to comments
  * Features:
  * - Character limit (500 chars)
  * - Character counter
  * - Loading state
  * - Error handling
  * - Support for nested replies via parentCommentId
- * - Support for both post and blog comments
  * - Submit button disabled when empty or > max length
  */
 export function CommentForm({
-  postId,
   blogId,
   parentCommentId,
   onCommentCreated,
@@ -52,20 +48,12 @@ export function CommentForm({
       e.preventDefault();
 
       if (!isValid || isSubmitting) return;
-      if (!postId && !blogId) {
-        setError('Either postId or blogId must be provided');
-        return;
-      }
 
       try {
         setIsSubmitting(true);
         setError(null);
 
-        if (postId) {
-          await createComment(postId, content, parentCommentId);
-        } else if (blogId) {
-          await createBlogComment(blogId, content, parentCommentId);
-        }
+        await createBlogComment(blogId, content, parentCommentId);
 
         // Clear form on success
         setContent('');
@@ -84,7 +72,7 @@ export function CommentForm({
         setIsSubmitting(false);
       }
     },
-    [postId, blogId, parentCommentId, content, isValid, isSubmitting, onCommentCreated, t]
+    [blogId, parentCommentId, content, isValid, isSubmitting, onCommentCreated, t]
   );
 
   return (

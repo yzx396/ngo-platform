@@ -91,35 +91,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-004: Community Feed & Posts
-**Status:** ✅ Implemented
-**Priority:** High | **Effort:** - | **Impact:** High
-**Description:**
-- Create/edit/delete posts with types: announcement, discussion, general
-- Like/unlike posts
-- Threaded comments with nested replies (parent_comment_id support)
-- Real-time like and comment counts
-- Post pagination
-- Filter posts by type
-- Rich text editor support
-
-**Database Tables:** `posts`, `post_likes`, `post_comments`
-**API Endpoints:**
-- `GET/POST/PUT/DELETE /api/v1/posts` - Post CRUD
-- `POST/DELETE /api/v1/posts/:id/like` - Like management
-- `GET/POST /api/v1/posts/:id/comments` - Comments (paginated)
-- `DELETE /api/v1/comments/:id` - Delete comment
-
-**Frontend Pages:**
-- `/feed` - Main community feed
-- `/posts/:id` - Post detail with comment thread
-
-**Components:** Post form, Comment thread display, Rich text editor
-**Dependencies:** F-001 (Auth)
-
----
-
-### F-005: Blog System
+### F-004: Blog System
 **Status:** ✅ Implemented
 **Priority:** High | **Effort:** - | **Impact:** High
 **Description:**
@@ -152,7 +124,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-006: Points & Gamification System
+### F-005: Points & Gamification System
 **Status:** ✅ Implemented
 **Priority:** High | **Effort:** - | **Impact:** Very High
 **Description:**
@@ -187,7 +159,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-007: Events System
+### F-006: Events System
 **Status:** ✅ Implemented (Static Data Only)
 **Priority:** Medium | **Effort:** - | **Impact:** Medium
 **Description:**
@@ -207,7 +179,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-008: Admin Features & Feature Flags
+### F-007: Admin Features & Feature Flags
 **Status:** ✅ Implemented
 **Priority:** High | **Effort:** - | **Impact:** High
 **Description:**
@@ -233,7 +205,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-009: Internationalization (i18n)
+### F-008: Internationalization (i18n)
 **Status:** ✅ Implemented
 **Priority:** Medium | **Effort:** - | **Impact:** High
 **Description:**
@@ -253,7 +225,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ## 🟡 INCOMPLETE FEATURES (F-010 to F-012)
 
-### F-010: Challenges System
+### F-009: Challenges System
 **Status:** 🟡 Incomplete
 **Priority:** High | **Effort:** - | **Impact:** High
 **Description:**
@@ -268,7 +240,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-011: Homepage
+### F-010: Homepage
 **Status:** 🟡 Incomplete
 **Priority:** Low | **Effort:** - | **Impact:** Medium
 **Description:**
@@ -285,7 +257,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ---
 
-### F-012: About Page
+### F-011: About Page
 **Status:** 🟡 Incomplete
 **Priority:** Low | **Effort:** - | **Impact:** Low
 **Description:**
@@ -302,7 +274,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 
 ## 🎯 PROPOSED FEATURES (F-020 to F-024)
 
-### F-020: Challenges System (PRIMARY DEMO RECOMMENDATION)
+### F-019: Challenges System (PRIMARY DEMO RECOMMENDATION)
 **Status:** 🎯 Proposed
 **Priority:** High | **Effort:** 4-6 hours | **Impact:** Very High
 **Demo Appeal:** ⭐⭐⭐⭐⭐
@@ -324,7 +296,7 @@ Admin-created challenges that drive user engagement and point awards:
 - 🎮 Completes gamification story (points → leaderboard → challenges → badges)
 - 🎯 Unique differentiator for NGO community building
 - 📊 Very visual and interactive
-- ♻️ Reuses existing patterns (posts/comments architecture)
+- ♻️ Reuses existing patterns (blog/comments architecture)
 - ⚡ Shows full-stack skills (database → API → React UI)
 
 **Database Tables to Create:**
@@ -414,7 +386,7 @@ In-app notification system to keep users informed without leaving the platform:
 
 **Description:**
 Unified search across all platform content:
-- Search mentors, posts, blogs, users with single query
+- Search mentors, blogs, users with single query
 - Filter by content type
 - Type-ahead suggestions (as user types)
 - Highlight matching text in results
@@ -430,7 +402,7 @@ Unified search across all platform content:
 - 📊 Analytics value for product decisions
 
 **Database Indexes to Add:**
-- Full-text search index on posts, blogs, mentor_profiles, users
+- Full-text search index on blogs, mentor_profiles, users
 
 **API Endpoints to Build:**
 - `GET /api/v1/search` - Global search with type filter
@@ -457,11 +429,11 @@ Unified search across all platform content:
 Personalized home page replacing basic homepage (Netflix/LinkedIn style):
 - Widget: Active mentorships and pending match requests
 - Widget: Your points, rank, recent point awards
-- Widget: Recent activity feed (your posts, comments, likes)
+- Widget: Recent activity feed (your blogs, comments, likes)
 - Widget: Recommended mentors based on your profile
 - Widget: Upcoming events you're interested in
-- Widget: Quick actions (create post, find mentor, join challenge)
-- Widget: Activity graph (posts/comments over time)
+- Widget: Quick actions (create blog, find mentor, join challenge)
+- Widget: Activity graph (blogs/comments over time)
 - Widget: Recent blogs you might like
 - Customizable widget layout (drag-to-reorder)
 
@@ -559,8 +531,8 @@ Private messaging between matched users (or any two users):
 **Status:** 🔮 Future
 **Priority:** Medium | **Effort:** 2-3 hours | **Impact:** Medium
 **Description:**
-- Upload images/files with posts
-- Image gallery in posts
+- Upload images/files with blogs
+- Image gallery in blogs
 - File preview and download
 - Storage in Cloudflare R2 (or similar)
 
@@ -571,7 +543,7 @@ Private messaging between matched users (or any two users):
 **Priority:** Low | **Effort:** 6-8 hours | **Impact:** Medium
 **Description:**
 - User growth metrics
-- Engagement metrics (posts, comments, likes)
+- Engagement metrics (blogs, comments, likes)
 - Match success rate
 - Most popular mentors
 - Platform health dashboard (admin only)
@@ -617,7 +589,7 @@ Private messaging between matched users (or any two users):
 **Status:** 🔮 Future
 **Priority:** Medium | **Effort:** 4-6 hours | **Impact:** High
 **Description:**
-- Flag/report inappropriate posts, comments, blogs
+- Flag/report inappropriate blogs, comments
 - Admin moderation dashboard
 - Auto-hide flagged content pending review
 - User warnings system
@@ -661,7 +633,7 @@ Private messaging between matched users (or any two users):
 ## 🎯 Recommended Next Steps
 
 ### For Tomorrow's Demo (Pick One):
-1. **F-020: Challenges System** ⭐ PRIMARY RECOMMENDATION
+1. **F-019: Challenges System** ⭐ PRIMARY RECOMMENDATION
    - High visibility (already mentioned in codebase)
    - Completes gamification story
    - 4-6 hours achievable

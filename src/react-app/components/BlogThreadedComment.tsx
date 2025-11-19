@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Trash2, MessageCircle, X } from 'lucide-react';
 import { deleteBlogComment } from '../services/blogService';
 import { handleApiError } from '../services/apiClient';
-import { formatPostTime } from '../../types/post';
+import { formatPostTime } from '../utils/timeUtils';
 import type { BlogCommentWithReplies } from '../../types/blog';
 import { CommentForm } from './CommentForm';
 import { sanitizeHtml } from '../utils/blogUtils';

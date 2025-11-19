@@ -4,7 +4,7 @@
 
 **Approach**: Phased rollout using **vertical slicing** - each slice is a complete, end-to-end, independently deployable feature.
 
-**Moderation Strategy**: Hybrid approach - some content auto-publishes (posts/blogs), other content requires admin approval (challenge submissions for point awards).
+**Moderation Strategy**: Hybrid approach - some content auto-publishes (blogs), other content requires admin approval (challenge submissions for point awards).
 
 **Vertical Slicing Philosophy**: Each slice cuts through all layers (database → backend → frontend → tests) and delivers real user value that can be deployed immediately.
 
@@ -660,9 +660,9 @@
 
 - [ ] **Frontend**: Create admin dashboard
   - Create `AdminDashboardPage.tsx`
-    - Platform overview (stats: users, posts, blogs, challenges)
+    - Platform overview (stats: users, blogs, challenges)
     - Pending challenge submissions panel
-    - Content moderation panel (delete posts/blogs)
+    - Content moderation panel (delete blogs)
     - User role management
     - Feature/unfeature blogs
   - Write tests for admin dashboard
@@ -681,7 +681,7 @@
 
 - [ ] **Backend**: Implement activity feed API
   - `GET /api/v1/users/:id/activity` - Get user's recent activity
-  - Aggregate posts, blogs, challenges, mentorships
+  - Aggregate blogs, challenges, mentorships
   - Write tests for activity endpoint
 - [ ] **Frontend**: Create activity feed UI
   - Create `UserActivityFeed` component

@@ -29,9 +29,8 @@ import type { Match } from '../../types/match';
 export function setupApiMocks(options: {
   currentUser?: User | null;
   leaderboard?: unknown[];
-  posts?: unknown[];
 } = {}) {
-  const { currentUser = null, leaderboard = [], posts = [] } = options;
+  const { currentUser = null, leaderboard = [] } = options;
 
   // Mock fetch globally
   global.fetch = vi.fn((url: string | URL | Request) => {
@@ -48,11 +47,6 @@ export function setupApiMocks(options: {
     // Leaderboard endpoint
     if (urlString.includes('/api/v1/users/leaderboard')) {
       return Promise.resolve(new Response(JSON.stringify({ leaderboard })));
-    }
-
-    // Posts endpoints
-    if (urlString.includes('/api/v1/posts')) {
-      return Promise.resolve(new Response(JSON.stringify({ posts })));
     }
 
     // Default response
@@ -138,44 +132,6 @@ export function mockMatchService() {
     respondToMatch: mockRespondToMatch,
     completeMatch: mockCompleteMatch,
     deleteMatch: mockDeleteMatch,
-  };
-}
-
-/**
- * Mocks the post service
- */
-export function mockPostService() {
-  const mockGetPosts = vi.fn();
-  const mockCreatePost = vi.fn();
-  const mockUpdatePost = vi.fn();
-  const mockDeletePost = vi.fn();
-  const mockLikePost = vi.fn();
-  const mockUnlikePost = vi.fn();
-  const mockAddComment = vi.fn();
-  const mockGetComments = vi.fn();
-
-  vi.mock('../../services/postService', () => ({
-    postService: {
-      getPosts: mockGetPosts,
-      createPost: mockCreatePost,
-      updatePost: mockUpdatePost,
-      deletePost: mockDeletePost,
-      likePost: mockLikePost,
-      unlikePost: mockUnlikePost,
-      addComment: mockAddComment,
-      getComments: mockGetComments,
-    },
-  }));
-
-  return {
-    getPosts: mockGetPosts,
-    createPost: mockCreatePost,
-    updatePost: mockUpdatePost,
-    deletePost: mockDeletePost,
-    likePost: mockLikePost,
-    unlikePost: mockUnlikePost,
-    addComment: mockAddComment,
-    getComments: mockGetComments,
   };
 }
 

@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThumbsUp, ThumbsDown, CheckCircle2 } from 'lucide-react';
 import { ForumReplyWithAuthor } from '../../types/forum';
-import { formatPostTime } from '../../types/post';
+import { formatPostTime } from '../utils/timeUtils';
 import { HtmlRenderer } from './HtmlRenderer';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';

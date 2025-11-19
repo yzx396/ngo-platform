@@ -11,13 +11,7 @@ vi.mock('react-i18next', () => ({
         'points.rulesDialog.title': 'How to Earn Points',
         'points.rulesDialog.intro': 'Earn points by creating quality content and engaging with the community.',
         'points.rulesDialog.creatingContent': 'Creating Content',
-        'points.rulesDialog.creatingContentDesc': 'You earn points when you create posts and comments:',
-        'points.rulesDialog.discussionPost': 'Discussion post',
-        'points.rulesDialog.discussionPostPoints': '15 points',
-        'points.rulesDialog.generalPost': 'General post',
-        'points.rulesDialog.generalPostPoints': '10 points',
-        'points.rulesDialog.announcementPost': 'Announcement',
-        'points.rulesDialog.announcementPostPoints': '0 points (admin only)',
+        'points.rulesDialog.creatingContentDesc': 'You earn points when you create comments:',
         'points.commonRules.comment': 'Comment',
         'points.commonRules.commentPoints': '5 points',
         'points.commonRules.receivingEngagement': 'Receiving Engagement',
@@ -74,17 +68,13 @@ describe('PointsInfoDialog', () => {
     expect(screen.getByText('Earn points by creating quality content and engaging with the community.')).toBeInTheDocument();
   });
 
-  it('should display creating content section with post point values', () => {
+  it('should display creating content section with comment point values', () => {
     render(
       <PointsInfoDialog open={true} onOpenChange={() => {}} />
     );
 
     expect(screen.getByText('Creating Content')).toBeInTheDocument();
-    expect(screen.getByText('You earn points when you create posts and comments:')).toBeInTheDocument();
-    expect(screen.getByText('Discussion post')).toBeInTheDocument();
-    expect(screen.getByText('15 points')).toBeInTheDocument();
-    expect(screen.getByText('General post')).toBeInTheDocument();
-    expect(screen.getByText('10 points')).toBeInTheDocument();
+    expect(screen.getByText('You earn points when you create comments:')).toBeInTheDocument();
     expect(screen.getByText('Comment')).toBeInTheDocument();
     expect(screen.getByText('5 points')).toBeInTheDocument();
   });
@@ -96,8 +86,8 @@ describe('PointsInfoDialog', () => {
 
     expect(screen.getByText('Receiving Engagement')).toBeInTheDocument();
     expect(screen.getByText('You earn points when others engage with your content:')).toBeInTheDocument();
-    expect(screen.getByText('Like on your post')).toBeInTheDocument();
-    expect(screen.getByText('Comment on your post')).toBeInTheDocument();
+    expect(screen.getByText(/Like on your/)).toBeInTheDocument();
+    expect(screen.getByText(/Comment on your/)).toBeInTheDocument();
   });
 
   it('should display important note about liking', () => {
@@ -106,7 +96,7 @@ describe('PointsInfoDialog', () => {
     );
 
     expect(screen.getByText('Important:')).toBeInTheDocument();
-    expect(screen.getByText("You don't earn points by liking other people's posts, but the post author does!")).toBeInTheDocument();
+    expect(screen.getByText(/You don't earn points by liking other people's/)).toBeInTheDocument();
   });
 
   it('should display anti-spam section with diminishing returns info', () => {
@@ -163,15 +153,5 @@ describe('PointsInfoDialog', () => {
     expect(screen.getByText('First 10 comments: 5 points each')).toBeInTheDocument();
     expect(screen.getByText('Next 10 comments: 2 points each (40%)')).toBeInTheDocument();
     expect(screen.getByText('Beyond 20 comments: 0 points')).toBeInTheDocument();
-  });
-
-  it('should display all diminishing returns tiers for posts', () => {
-    render(
-      <PointsInfoDialog open={true} onOpenChange={() => {}} />
-    );
-
-    expect(screen.getByText('First 3 posts: Full points (10-15 each)')).toBeInTheDocument();
-    expect(screen.getByText('Next 2 posts: 50% points (5-7.5 each)')).toBeInTheDocument();
-    expect(screen.getByText('Beyond 5 posts: 0 points')).toBeInTheDocument();
   });
 });

@@ -101,7 +101,6 @@ See [docs/NGO_PLATFORM_TRANSFORMATION.md](./NGO_PLATFORM_TRANSFORMATION.md) for 
 │                            │ - user_points            │ │
 │                            │ - mentor_profiles        │ │
 │                            │ - matches                │ │
-│                            │ - (future: posts, blogs) │ │
 │                            └──────────────────────────┘ │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
@@ -304,12 +303,9 @@ notes TEXT
 
 ### Future Tables (Planned)
 
-Phase 1-4 will introduce:
-- `posts` - Community feed posts
-- `post_likes`, `post_comments` - Engagement
+Future phases will introduce:
 - `challenges` - Challenge definitions
 - `challenge_submissions` - User submissions and approvals
-- `blogs` - Member-created blog posts
 - And more...
 
 ---
@@ -658,16 +654,7 @@ npm run test:watch -- --project=worker  # Backend tests only
 
 ## Future Phases
 
-### Phase 1: Feed & Posts System
-
-Community posts with likes and comments:
-- Slice 1.1: View Posts Feed
-- Slice 1.2: Create Posts
-- Slice 1.3: Like Posts
-- Slice 1.4: Comment on Posts
-- Slice 1.5: Post Types & Admin Announcements
-
-### Phase 2: Challenges System
+### Phase 1: Challenges System
 
 Admin-curated challenges with point rewards:
 - Slice 2.1: View Challenges
@@ -675,7 +662,7 @@ Admin-curated challenges with point rewards:
 - Slice 2.3: Submit to Challenges
 - Slice 2.4: Review Submissions & Award Points
 
-### Phase 3: Blogs System
+### Phase 2: Blogs System
 
 Member blog posts with engagement:
 - Slice 3.1: Read & Browse Blogs
@@ -683,7 +670,7 @@ Member blog posts with engagement:
 - Slice 3.3: Blog Engagement (Likes & Comments)
 - Slice 3.4: Featured Blogs & Admin Curation
 
-### Phase 4: Leaderboard & Gamification
+### Phase 3: Leaderboard & Gamification
 
 Points visualization and rankings:
 - Slice 4.1: Basic Leaderboard
@@ -691,7 +678,7 @@ Points visualization and rankings:
 - Slice 4.3: Points Display & User Badges
 - Slice 4.4: Points System Documentation
 
-### Phase 5: Mentorship Redesign
+### Phase 4: Mentorship Redesign
 
 Integrate mentorship into community platform:
 - Slice 5.1: Database & API Restructure
@@ -699,7 +686,7 @@ Integrate mentorship into community platform:
 - Slice 5.3: Simplify Mentor Profiles
 - Slice 5.4: Award Points for Mentorships
 
-### Phase 6: Final Integration & Polish
+### Phase 5: Final Integration & Polish
 
 Admin tools, performance, security:
 - Slice 6.1: Admin Dashboard

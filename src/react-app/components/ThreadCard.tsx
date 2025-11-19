@@ -2,7 +2,7 @@ import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ForumThreadWithAuthor } from '../../types/forum';
-import { formatPostTime } from '../../types/post';
+import { formatPostTime } from '../utils/timeUtils';
 
 interface ThreadCardProps {
   thread: ForumThreadWithAuthor;

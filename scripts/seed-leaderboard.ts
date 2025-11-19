@@ -76,9 +76,6 @@ function generateUserPoints(users: User[]): UserPoints[] {
 function buildSQL(users: User[], userPoints: UserPoints[]): string {
   let sql = '-- Clear existing data (idempotent)\n';
   sql += '-- Delete in reverse order of foreign key dependencies\n';
-  sql += 'DELETE FROM post_comments;\n';
-  sql += 'DELETE FROM post_likes;\n';
-  sql += 'DELETE FROM posts;\n';
   sql += 'DELETE FROM matches;\n';
   sql += 'DELETE FROM mentor_profiles;\n';
   sql += 'DELETE FROM user_roles;\n';

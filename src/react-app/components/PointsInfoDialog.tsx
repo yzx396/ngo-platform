@@ -46,24 +46,6 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
             </p>
             <div className="space-y-2 ml-4">
               <div className="flex justify-between text-sm">
-                <span>{t('points.rulesDialog.discussionPost')}</span>
-                <span className="font-medium text-blue-600">
-                  {t('points.rulesDialog.discussionPostPoints')}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>{t('points.rulesDialog.generalPost')}</span>
-                <span className="font-medium text-blue-600">
-                  {t('points.rulesDialog.generalPostPoints')}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>{t('points.rulesDialog.announcementPost')}</span>
-                <span className="font-medium text-gray-500">
-                  {t('points.rulesDialog.announcementPostPoints')}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
                 <span>{t('points.commonRules.comment')}</span>
                 <span className="font-medium text-blue-600">
                   {t('points.commonRules.commentPoints')}
@@ -143,24 +125,6 @@ export function PointsInfoDialog({ open, onOpenChange }: PointsInfoDialogProps) 
                 </div>
                 <div className="flex justify-between">
                   <span>{t('points.commonRules.beyond20Comments')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Posts Per Hour */}
-            <div className="ml-4 space-y-2">
-              <p className="text-sm font-medium">
-                {t('points.rulesDialog.postsPerHour')}
-              </p>
-              <div className="space-y-1 text-sm ml-2">
-                <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.first3Posts')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.next2Posts')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('points.rulesDialog.beyond5Posts')}</span>
                 </div>
               </div>
             </div>

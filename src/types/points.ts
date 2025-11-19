@@ -116,15 +116,12 @@ export const INITIAL_POINTS = 20;
 export const MAX_POINTS = 999999;
 
 /**
- * Point Reward Constants for Post Engagement System
+ * Point Reward Constants for Content Engagement System
  * Creation-focused: Higher points for creating content, author rewards for engagement
  */
 
 // Points awarded to content creators
-export const POINTS_FOR_CREATE_DISCUSSION_POST = 15; // Creating discussion post
-export const POINTS_FOR_CREATE_GENERAL_POST = 10; // Creating general post
-export const POINTS_FOR_CREATE_ANNOUNCEMENT_POST = 0; // Admin-only, shouldn't game system
-export const POINTS_FOR_CREATE_COMMENT = 5; // Creating comment
+export const POINTS_FOR_CREATE_COMMENT = 5; // Creating comment (blog or forum)
 export const POINTS_FOR_CREATE_BLOG = 10; // Creating blog post
 export const POINTS_FOR_BLOG_FEATURED = 50; // Bonus when admin features a blog
 
@@ -157,11 +154,6 @@ export const LIKES_RECEIVED_REDUCED_MULTIPLIER = 0.5;
 export const COMMENTS_CREATED_FULL_POINTS_THRESHOLD = 10;
 export const COMMENTS_CREATED_REDUCED_POINTS_THRESHOLD = 20; // 10 + 10
 export const COMMENTS_CREATED_REDUCED_MULTIPLIER = 0.4;
-
-// Posts created: First 3 = full points, next 2 = 50% points, then 0
-export const POSTS_CREATED_FULL_POINTS_THRESHOLD = 3;
-export const POSTS_CREATED_REDUCED_POINTS_THRESHOLD = 5; // 3 + 2
-export const POSTS_CREATED_REDUCED_MULTIPLIER = 0.5;
 
 // Blogs created: First 2 = full points, next 2 = 50% points, then 0
 export const BLOGS_CREATED_FULL_POINTS_THRESHOLD = 2;

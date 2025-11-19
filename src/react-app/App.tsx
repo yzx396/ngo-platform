@@ -11,14 +11,13 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { FeatureRoute } from './components/FeatureRoute';
 import { AuthProvider } from './context/AuthContext';
-import { FeatureProvider, useFeatures } from './context/FeatureContext';
+import { FeatureProvider } from './context/FeatureContext';
 
 // Lazy load pages for route-based code splitting
 // Each page loads only when the user navigates to that route
 // This reduces the initial bundle size significantly
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage').then(m => ({ default: m.OAuthCallbackPage })));
-const FeedPage = lazy(() => import('./pages/FeedPage').then(m => ({ default: m.FeedPage })));
 const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(m => ({ default: m.LeaderboardPage })));
@@ -33,7 +32,6 @@ const BlogsPage = lazy(() => import('./pages/BlogsPage').then(m => ({ default: m
 const BlogDetailPage = lazy(() => import('./pages/BlogDetailPage').then(m => ({ default: m.BlogDetailPage })));
 const CreateBlogPage = lazy(() => import('./pages/CreateBlogPage').then(m => ({ default: m.CreateBlogPage })));
 const MyBlogsPage = lazy(() => import('./pages/MyBlogsPage').then(m => ({ default: m.MyBlogsPage })));
-const PostDetailPage = lazy(() => import('./pages/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
 const ForumHomePage = lazy(() => import('./pages/ForumHomePage'));
 const ForumCategoryPage = lazy(() => import('./pages/ForumCategoryPage'));
 const ThreadDetailPage = lazy(() => import('./pages/ThreadDetailPage'));
@@ -53,13 +51,10 @@ function LoadingFallback() {
 }
 
 /**
- * Dynamic root redirect based on feed feature flag
- * Redirects to /feed if enabled, /forums if disabled
+ * Root redirect to forums
  */
 function RootRedirect() {
-  const { isFeatureEnabled } = useFeatures();
-  const destination = isFeatureEnabled('feed') ? '/feed' : '/forums';
-  return <Navigate to={destination} replace />;
+  return <Navigate to="/forums" replace />;
 }
 
 /**
@@ -110,19 +105,6 @@ function AppContent() {
               <Route path="/forums/category/:categoryId" element={<ForumCategoryPage />} />
               <Route path="/forums/category/:categoryId/create" element={<ProtectedRoute><CreateThreadPage /></ProtectedRoute>} />
               <Route path="/forums/threads/:threadId" element={<ThreadDetailPage />} />
-
-              {/* Feed Page - Feature-gated */}
-              <Route 
-                path="/feed" 
-                element={
-                  <FeatureRoute featureKey="feed" redirectTo="/forums">
-                    <FeedPage />
-                  </FeatureRoute>
-                } 
-              />
-
-              {/* Post Detail Page - View individual post with comments */}
-              <Route path="/posts/:id" element={<PostDetailPage />} />
 
               {/* Events Page - Upcoming community events */}
               <Route path="/events" element={<EventsPage />} />

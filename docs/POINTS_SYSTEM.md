@@ -4,7 +4,7 @@ This document details the Points System that enables gamification across the Lea
 
 ## Overview
 
-The Points System tracks user points and calculates leaderboard rankings. Points are awarded for various activities (creating posts, receiving engagement, etc.) and displayed throughout the platform.
+The Points System tracks user points and calculates leaderboard rankings. Points are awarded for various activities (creating blogs, forum participation, receiving engagement, etc.) and displayed throughout the platform.
 
 **Key Design Decisions:**
 - **No Rank Column**: Rank is calculated on-the-fly using SQL window functions, avoiding expensive updates when points change
@@ -36,8 +36,8 @@ Tracks all point awards with timestamps for audit trails and diminishing returns
 ```sql
 id TEXT PRIMARY KEY
 user_id TEXT (FOREIGN KEY to users)
-action_type TEXT (post_created|blog_created|blog_featured|like_received|comment_created|comment_received)
-reference_id TEXT (ID of post/blog/comment/like)
+action_type TEXT (blog_created|blog_featured|like_received|comment_created|comment_received)
+reference_id TEXT (ID of blog/comment/like)
 points_awarded INTEGER (actual points after diminishing returns)
 created_at INTEGER (Unix timestamp)
 ```
@@ -69,39 +69,6 @@ Updates user's total points. Requires authentication and admin role.
 **Request body:** `{ points: number }`
 
 **Returns:** Updated points with recalculated rank
-
-## Post Engagement Point System
-
-Automatically awards points for creating and engaging with community posts.
-
-### Point Values (Creation-Focused)
-
-**Content Creation:**
-- Discussion posts: 15 points
-- General posts: 10 points
-- Announcement posts: 0 points (admin-only, no gamification)
-- Comments: 5 points
-
-**Content Author Rewards (for receiving engagement):**
-- Each like on post: 2 points (to post author)
-- Each comment on post: 3 points (to post author)
-
-### Anti-Spam: Diminishing Returns
-
-All point awards use a rolling 1-hour window with diminishing returns to prevent spam:
-
-- **Likes received**: First 5/hour = full points, next 10 = 50% points, then 0 points
-- **Comments created**: First 10/hour = full points, next 10 = 40% points, then 0 points
-- **Posts created**: First 3/hour = full points, next 2 = 50% points, then 0 points
-
-### How It Works
-
-1. **Post Creation**: User creates discussion/general post → immediately receives creation points
-2. **Receiving Like**: Another user likes post → post author receives points (not liker)
-3. **Creating Comment**: User comments on post → commenter receives points AND post author receives points (unless same person)
-4. **Point Tracking**: All awards logged in `point_actions_log` table
-
-**Important:** Points awarding is handled silently - if point system fails, the post/like/comment action still succeeds. This prioritizes user experience over perfect consistency.
 
 ## Blog Point System
 

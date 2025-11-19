@@ -20,7 +20,6 @@ Replace the current feed feature with a **multi-level forum system** inspired by
 
 ### Non-Functional Requirements
 - Mobile responsive design
-- Backward compatibility (migrate existing posts)
 - Performance: hot score calculation
 - XSS protection for user content
 
@@ -2109,7 +2108,4 @@ CREATE INDEX idx_forum_thread_views_thread ON forum_thread_views(thread_id);
 - ✅ >80% code coverage on critical paths
 - ✅ Performance: category page loads <500ms
 - ✅ Mobile responsive (tested at 320px width)
-- ✅ Existing posts migrated successfully
-- ✅ Zero data loss during migration
-- ✅ All old features working (backward compatibility)
 - ✅ Documentation updated

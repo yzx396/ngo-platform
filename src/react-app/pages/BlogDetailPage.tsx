@@ -313,9 +313,9 @@ export function BlogDetailPage() {
             {id && <BlogComments blogId={id} />}
 
             {/* Comment Form */}
-            {user && (
+            {user && id && (
               <CommentForm
-                blogId={id}
+                blogId={id!}
                 onCommentCreated={handleCommentCreated}
               />
             )}

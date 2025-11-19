@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, MessageCircle, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
 import { forumService } from '../services/forumService';
 import { ForumThreadWithAuthor, ForumReplyWithAuthor } from '../../types/forum';
-import { formatPostTime } from '../../types/post';
+import { formatPostTime } from '../utils/timeUtils';
 import ReplyThread from '../components/ReplyThread';
 import ReplyForm from '../components/ReplyForm';
 import { HtmlRenderer } from '../components/HtmlRenderer';

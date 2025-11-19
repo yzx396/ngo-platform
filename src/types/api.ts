@@ -2,7 +2,6 @@ import { MentorProfile } from './mentor';
 import { Match, MatchStatus } from './match';
 import { UserRole } from './role';
 import { UserPointsWithRank } from './points';
-import { Post, PostType, PostCommentWithAuthor, PostWithLikeStatus } from './post';
 import { Blog, BlogWithAuthor, BlogWithLikeStatus, BlogCommentWithAuthor } from './blog';
 
 // User API
@@ -142,69 +141,6 @@ export interface GetLeaderboardResponse {
   total: number;
   limit: number;
   offset: number;
-}
-
-// Posts API
-export interface GetPostsRequest {
-  limit?: number; // Default: 20
-  offset?: number; // Default: 0
-  type?: PostType; // Optional: filter by post type
-}
-
-export interface GetPostsResponse {
-  posts: PostWithLikeStatus[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export type GetPostByIdResponse = Post;
-
-export interface CreatePostRequest {
-  content: string;
-  post_type?: PostType; // Optional, defaults to 'general'
-}
-
-export interface UpdatePostRequest {
-  content?: string;
-  post_type?: PostType;
-}
-
-export type CreatePostResponse = Post;
-export type UpdatePostResponse = Post;
-
-// Post Likes API
-export type LikePostRequest = Record<string, never>; // No request body needed
-
-export interface LikePostResponse {
-  post: Post;
-  user_has_liked: boolean; // Whether current user has liked the post
-}
-
-export type UnlikePostResponse = LikePostResponse;
-
-// Post Comments API
-export interface CreateCommentRequest {
-  content: string; // Comment content (required, max 500 characters)
-  parent_comment_id?: string; // Optional: for replying to another comment
-}
-
-export interface GetCommentsRequest {
-  limit?: number; // Default: 20
-  offset?: number; // Default: 0
-}
-
-export interface GetCommentsResponse {
-  comments: PostCommentWithAuthor[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export type CreateCommentResponse = PostCommentWithAuthor;
-
-export interface DeleteCommentResponse {
-  success: boolean;
 }
 
 // Blogs API
