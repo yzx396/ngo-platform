@@ -31,6 +31,8 @@ import type { Match } from "../types/match";
 import type { Blog, BlogWithLikeStatus } from "../types/blog";
 import { normalizeBlog, normalizeBlogCommentWithAuthor } from "../types/blog";
 import type { CreateThreadRequest } from "../types/forum";
+import type { CreateChallengeDTO, UpdateChallengeDTO, SubmitChallengeDTO, ReviewSubmissionDTO } from "../types/challenge";
+import { ChallengeStatus, SubmissionStatus } from "../types/challenge";
 import { authMiddleware, requireAuth } from "./auth/middleware";
 import { requireAdmin } from "./auth/roleMiddleware";
 import {
@@ -69,7 +71,7 @@ import {
   BLOGS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
 } from "../types/points";
-import { generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId } from "./utils/idGenerator";
+import { generateId, generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId, generateChallengeId, generateChallengeParticipantId, generateChallengeSubmissionId } from "./utils/idGenerator";
 import { sanitizeHtml } from "./utils/sanitize";
 
 /**
@@ -4561,6 +4563,517 @@ app.get("/api/v1/forums/tags/popular", async (c) => {
     return c.json({ tags: tags.results || [] });
   } catch (err) {
     console.error("Error fetching popular tags:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// ============================================================================
+// Challenges API Routes
+// ============================================================================
+
+// GET /api/v1/challenges - List all challenges
+app.get("/api/v1/challenges", async (c) => {
+  const db = c.env.platform_db;
+  const status = c.req.query("status");
+
+  try {
+    let query = `
+      SELECT c.*, u.name as creator_name,
+        (SELECT COUNT(*) FROM challenge_participants WHERE challenge_id = c.id) as participant_count
+      FROM challenges c
+      LEFT JOIN users u ON c.created_by_user_id = u.id
+    `;
+    const params: unknown[] = [];
+
+    if (status && (status === 'active' || status === 'completed')) {
+      query += " WHERE c.status = ?";
+      params.push(status);
+    }
+
+    query += " ORDER BY c.created_at DESC";
+
+    const result = await db.prepare(query).bind(...params).all();
+
+    return c.json({ challenges: result.results || [] });
+  } catch (err) {
+    console.error("Error fetching challenges:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/v1/challenges - Create challenge (admin only)
+app.post("/api/v1/challenges", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.var.user as AuthPayload;
+
+  try {
+    const body = await c.req.json() as CreateChallengeDTO;
+    const { title, description, requirements, point_reward, deadline } = body;
+
+    // Validate required fields
+    if (!title || !description || !requirements || !point_reward || !deadline) {
+      return c.json({ error: "Missing required fields" }, 400);
+    }
+
+    if (point_reward < 0) {
+      return c.json({ error: "Point reward must be non-negative" }, 400);
+    }
+
+    if (deadline < Date.now()) {
+      return c.json({ error: "Deadline must be in the future" }, 400);
+    }
+
+    const challengeId = generateChallengeId();
+    const now = Date.now();
+
+    await db
+      .prepare(`
+        INSERT INTO challenges (id, title, description, requirements, created_by_user_id, point_reward, deadline, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(challengeId, title, description, requirements, user.userId, point_reward, deadline, ChallengeStatus.Active, now, now)
+      .run();
+
+    const challenge = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    return c.json({ challenge }, 201);
+  } catch (err) {
+    console.error("Error creating challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// GET /api/v1/challenges/:id - Get challenge detail
+app.get("/api/v1/challenges/:id", async (c) => {
+  const db = c.env.platform_db;
+  const challengeId = c.req.param("id");
+  const user = c.var.user as AuthPayload | undefined;
+
+  try {
+    const challenge = await db
+      .prepare(`
+        SELECT c.*, u.name as creator_name,
+          (SELECT COUNT(*) FROM challenge_participants WHERE challenge_id = c.id) as participant_count
+        FROM challenges c
+        LEFT JOIN users u ON c.created_by_user_id = u.id
+        WHERE c.id = ?
+      `)
+      .bind(challengeId)
+      .first();
+
+    if (!challenge) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    // Add user participation status if authenticated
+    let userHasJoined = false;
+    let userSubmission = null;
+
+    if (user) {
+      const participant = await db
+        .prepare("SELECT * FROM challenge_participants WHERE user_id = ? AND challenge_id = ?")
+        .bind(user.userId, challengeId)
+        .first();
+
+      userHasJoined = !!participant;
+
+      if (userHasJoined) {
+        userSubmission = await db
+          .prepare("SELECT * FROM challenge_submissions WHERE user_id = ? AND challenge_id = ?")
+          .bind(user.userId, challengeId)
+          .first();
+      }
+    }
+
+    return c.json({
+      challenge: {
+        ...challenge,
+        user_has_joined: userHasJoined,
+        user_submission: userSubmission
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// PUT /api/v1/challenges/:id - Update challenge (admin only)
+app.put("/api/v1/challenges/:id", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const challengeId = c.req.param("id");
+
+  try {
+    const body = await c.req.json() as UpdateChallengeDTO;
+    const { title, description, requirements, point_reward, deadline, status } = body;
+
+    // Check if challenge exists
+    const existing = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    if (!existing) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    const now = Date.now();
+
+    await db
+      .prepare(`
+        UPDATE challenges
+        SET title = ?, description = ?, requirements = ?, point_reward = ?, deadline = ?, status = ?, updated_at = ?
+        WHERE id = ?
+      `)
+      .bind(
+        title || existing.title,
+        description || existing.description,
+        requirements || existing.requirements,
+        point_reward !== undefined ? point_reward : existing.point_reward,
+        deadline || existing.deadline,
+        status || existing.status,
+        now,
+        challengeId
+      )
+      .run();
+
+    const updated = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    return c.json({ challenge: updated });
+  } catch (err) {
+    console.error("Error updating challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// DELETE /api/v1/challenges/:id - Delete challenge (admin only)
+app.delete("/api/v1/challenges/:id", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const challengeId = c.req.param("id");
+
+  try {
+    const challenge = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    if (!challenge) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    // Delete challenge (cascades to participants and submissions)
+    await db
+      .prepare("DELETE FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .run();
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/v1/challenges/:id/join - Join challenge
+app.post("/api/v1/challenges/:id/join", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.var.user as AuthPayload;
+  const challengeId = c.req.param("id");
+
+  try {
+    // Check if challenge exists
+    const challenge = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    if (!challenge) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    if ((challenge as Record<string, unknown>).status === ChallengeStatus.Completed) {
+      return c.json({ error: "Cannot join completed challenge" }, 400);
+    }
+
+    // Check if already joined
+    const existing = await db
+      .prepare("SELECT * FROM challenge_participants WHERE user_id = ? AND challenge_id = ?")
+      .bind(user.userId, challengeId)
+      .first();
+
+    if (existing) {
+      return c.json({ error: "Already joined this challenge" }, 409);
+    }
+
+    const participantId = generateChallengeParticipantId();
+    const now = Date.now();
+
+    await db
+      .prepare(`
+        INSERT INTO challenge_participants (id, user_id, challenge_id, joined_at)
+        VALUES (?, ?, ?, ?)
+      `)
+      .bind(participantId, user.userId, challengeId, now)
+      .run();
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error joining challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// POST /api/v1/challenges/:id/submit - Submit challenge completion
+app.post("/api/v1/challenges/:id/submit", requireAuth, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.var.user as AuthPayload;
+  const challengeId = c.req.param("id");
+
+  try {
+    const body = await c.req.json() as SubmitChallengeDTO;
+    const { submission_text, submission_url } = body;
+
+    if (!submission_text || submission_text.trim() === '') {
+      return c.json({ error: "Submission text is required" }, 400);
+    }
+
+    // Check if challenge exists
+    const challenge = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(challengeId)
+      .first();
+
+    if (!challenge) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    // Check if user joined the challenge
+    const participant = await db
+      .prepare("SELECT * FROM challenge_participants WHERE user_id = ? AND challenge_id = ?")
+      .bind(user.userId, challengeId)
+      .first();
+
+    if (!participant) {
+      return c.json({ error: "Must join challenge before submitting" }, 400);
+    }
+
+    // Check if already submitted
+    const existing = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE user_id = ? AND challenge_id = ?")
+      .bind(user.userId, challengeId)
+      .first();
+
+    if (existing) {
+      return c.json({ error: "Already submitted for this challenge" }, 409);
+    }
+
+    const submissionId = generateChallengeSubmissionId();
+    const now = Date.now();
+
+    await db
+      .prepare(`
+        INSERT INTO challenge_submissions (id, user_id, challenge_id, submission_text, submission_url, status, submitted_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(submissionId, user.userId, challengeId, submission_text, submission_url || null, SubmissionStatus.Pending, now)
+      .run();
+
+    const submission = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
+
+    return c.json({ submission });
+  } catch (err) {
+    console.error("Error submitting challenge:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// GET /api/v1/challenges/:id/submissions - List submissions (admin only)
+app.get("/api/v1/challenges/:id/submissions", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const challengeId = c.req.param("id");
+
+  try {
+    const submissions = await db
+      .prepare(`
+        SELECT cs.*, u.name as user_name, u.email as user_email
+        FROM challenge_submissions cs
+        LEFT JOIN users u ON cs.user_id = u.id
+        WHERE cs.challenge_id = ?
+        ORDER BY cs.submitted_at DESC
+      `)
+      .bind(challengeId)
+      .all();
+
+    return c.json({ submissions: submissions.results || [] });
+  } catch (err) {
+    console.error("Error fetching submissions:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// PATCH /api/v1/submissions/:id/approve - Approve submission (admin only)
+app.patch("/api/v1/submissions/:id/approve", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.var.user as AuthPayload;
+  const submissionId = c.req.param("id");
+
+  try {
+    // Get submission
+    const submission = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
+
+    if (!submission) {
+      return c.json({ error: "Submission not found" }, 404);
+    }
+
+    const sub = submission as Record<string, unknown>;
+
+    if (sub.status !== SubmissionStatus.Pending) {
+      return c.json({ error: "Submission already reviewed" }, 400);
+    }
+
+    // Get challenge to get point reward
+    const challenge = await db
+      .prepare("SELECT * FROM challenges WHERE id = ?")
+      .bind(sub.challenge_id)
+      .first();
+
+    if (!challenge) {
+      return c.json({ error: "Challenge not found" }, 404);
+    }
+
+    const pointReward = (challenge as Record<string, unknown>).point_reward as number;
+    const now = Date.now();
+
+    // Update submission status
+    await db
+      .prepare(`
+        UPDATE challenge_submissions
+        SET status = ?, reviewed_at = ?, reviewed_by_user_id = ?
+        WHERE id = ?
+      `)
+      .bind(SubmissionStatus.Approved, now, user.userId, submissionId)
+      .run();
+
+    // Award points
+    try {
+      const userPoints = await db
+        .prepare("SELECT points FROM user_points WHERE user_id = ?")
+        .bind(sub.user_id)
+        .first();
+
+      const currentPoints = userPoints ? (userPoints as Record<string, unknown>).points as number : 0;
+      const newPoints = currentPoints + pointReward;
+
+      if (userPoints) {
+        await db
+          .prepare("UPDATE user_points SET points = ?, updated_at = ? WHERE user_id = ?")
+          .bind(newPoints, now, sub.user_id)
+          .run();
+      } else {
+        await db
+          .prepare("INSERT INTO user_points (id, user_id, points, updated_at) VALUES (?, ?, ?, ?)")
+          .bind(generateId(), sub.user_id, newPoints, now)
+          .run();
+      }
+    } catch (pointsErr) {
+      console.error("Error awarding points:", pointsErr);
+      // Continue even if points fail
+    }
+
+    const updated = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
+
+    return c.json({ submission: updated });
+  } catch (err) {
+    console.error("Error approving submission:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// PATCH /api/v1/submissions/:id/reject - Reject submission (admin only)
+app.patch("/api/v1/submissions/:id/reject", requireAuth, requireAdmin, async (c) => {
+  const db = c.env.platform_db;
+  const user = c.var.user as AuthPayload;
+  const submissionId = c.req.param("id");
+
+  try {
+    const body = await c.req.json() as ReviewSubmissionDTO;
+    const { feedback } = body;
+
+    // Get submission
+    const submission = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
+
+    if (!submission) {
+      return c.json({ error: "Submission not found" }, 404);
+    }
+
+    const sub = submission as Record<string, unknown>;
+
+    if (sub.status !== SubmissionStatus.Pending) {
+      return c.json({ error: "Submission already reviewed" }, 400);
+    }
+
+    const now = Date.now();
+
+    // Update submission status
+    await db
+      .prepare(`
+        UPDATE challenge_submissions
+        SET status = ?, reviewed_at = ?, reviewed_by_user_id = ?, feedback = ?
+        WHERE id = ?
+      `)
+      .bind(SubmissionStatus.Rejected, now, user.userId, feedback || null, submissionId)
+      .run();
+
+    const updated = await db
+      .prepare("SELECT * FROM challenge_submissions WHERE id = ?")
+      .bind(submissionId)
+      .first();
+
+    return c.json({ submission: updated });
+  } catch (err) {
+    console.error("Error rejecting submission:", err);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// GET /api/v1/users/:id/challenges - Get user's completed challenges
+app.get("/api/v1/users/:id/challenges", async (c) => {
+  const db = c.env.platform_db;
+  const userId = c.req.param("id");
+
+  try {
+    const completions = await db
+      .prepare(`
+        SELECT c.*, cs.submitted_at as completed_at
+        FROM challenge_submissions cs
+        JOIN challenges c ON cs.challenge_id = c.id
+        WHERE cs.user_id = ? AND cs.status = ?
+        ORDER BY cs.submitted_at DESC
+      `)
+      .bind(userId, SubmissionStatus.Approved)
+      .all();
+
+    return c.json({ challenges: completions.results || [] });
+  } catch (err) {
+    console.error("Error fetching user challenges:", err);
     return c.json({ error: "Internal server error" }, 500);
   }
 });

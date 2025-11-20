@@ -36,6 +36,10 @@ const ForumHomePage = lazy(() => import('./pages/ForumHomePage'));
 const ForumCategoryPage = lazy(() => import('./pages/ForumCategoryPage'));
 const ThreadDetailPage = lazy(() => import('./pages/ThreadDetailPage'));
 const CreateThreadPage = lazy(() => import('./pages/CreateThreadPage'));
+const ChallengesPage = lazy(() => import('./pages/ChallengesPage').then(m => ({ default: m.ChallengesPage })));
+const ChallengeDetailPage = lazy(() => import('./pages/ChallengeDetailPage').then(m => ({ default: m.ChallengeDetailPage })));
+const AdminChallengesPage = lazy(() => import('./pages/admin/AdminChallengesPage').then(m => ({ default: m.AdminChallengesPage })));
+const ChallengeSubmissionsPage = lazy(() => import('./pages/admin/ChallengeSubmissionsPage').then(m => ({ default: m.ChallengeSubmissionsPage })));
 
 /**
  * Loading fallback component for Suspense
@@ -220,9 +224,49 @@ function AppContent() {
                 }
               />
 
-              {/* TODO: Add more routes:
-                - /challenges
-              */}
+              {/* Challenges Routes */}
+              <Route
+                path="/challenges"
+                element={
+                  <FeatureRoute featureKey="challenges">
+                    <ProtectedRoute>
+                      <ChallengesPage />
+                    </ProtectedRoute>
+                  </FeatureRoute>
+                }
+              />
+              <Route
+                path="/challenges/:id"
+                element={
+                  <FeatureRoute featureKey="challenges">
+                    <ProtectedRoute>
+                      <ChallengeDetailPage />
+                    </ProtectedRoute>
+                  </FeatureRoute>
+                }
+              />
+
+              {/* Admin Challenges Routes */}
+              <Route
+                path="/admin/challenges"
+                element={
+                  <FeatureRoute featureKey="challenges">
+                    <ProtectedRoute>
+                      <AdminChallengesPage />
+                    </ProtectedRoute>
+                  </FeatureRoute>
+                }
+              />
+              <Route
+                path="/admin/challenges/:id/submissions"
+                element={
+                  <FeatureRoute featureKey="challenges">
+                    <ProtectedRoute>
+                      <ChallengeSubmissionsPage />
+                    </ProtectedRoute>
+                  </FeatureRoute>
+                }
+              />
             </Routes>
           </Layout>
         )}

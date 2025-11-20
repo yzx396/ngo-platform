@@ -275,7 +275,7 @@ Complete inventory of all platform features, organized by status with unique IDs
 ## 🎯 PROPOSED FEATURES (F-020 to F-024)
 
 ### F-019: Challenges System (PRIMARY DEMO RECOMMENDATION)
-**Status:** 🎯 Proposed
+**Status:** 🎯 Proposed → 🏗️ In Progress
 **Priority:** High | **Effort:** 4-6 hours | **Impact:** Very High
 **Demo Appeal:** ⭐⭐⭐⭐⭐
 **Estimated Complexity:** Medium
@@ -300,9 +300,9 @@ Admin-created challenges that drive user engagement and point awards:
 - ⚡ Shows full-stack skills (database → API → React UI)
 
 **Database Tables to Create:**
-- `challenges` (id, title, description, created_by_user_id, point_reward, deadline, status)
-- `challenge_submissions` (id, user_id, challenge_id, submission_text, status, submitted_at, reviewed_at)
-- `challenge_completions` (id, user_id, challenge_id, completed_at)
+- `challenges` (id, title, description, requirements, created_by_user_id, point_reward, deadline, status, created_at, updated_at)
+- `challenge_participants` (id, user_id, challenge_id, joined_at)
+- `challenge_submissions` (id, user_id, challenge_id, submission_text, submission_url, status, submitted_at, reviewed_at, reviewed_by_user_id, feedback)
 
 **API Endpoints to Build:**
 - `GET /api/v1/challenges` - List challenges (active/completed filter)
@@ -313,19 +313,247 @@ Admin-created challenges that drive user engagement and point awards:
 - `POST /api/v1/challenges/:id/join` - User joins challenge
 - `POST /api/v1/challenges/:id/submit` - Submit completion evidence
 - `GET /api/v1/challenges/:id/submissions` - List submissions (admin only)
-- `POST /api/v1/submissions/:id/approve` - Admin approves (awards points)
-- `POST /api/v1/submissions/:id/reject` - Admin rejects
+- `PATCH /api/v1/submissions/:id/approve` - Admin approves (awards points)
+- `PATCH /api/v1/submissions/:id/reject` - Admin rejects
+- `GET /api/v1/users/:id/challenges` - Get user's challenge completions
 
 **Frontend Pages/Components to Build:**
 - `/challenges` - Browse active challenges
 - `/challenges/:id` - Challenge detail and submission form
-- `/challenges/:id/admin` - Admin submission review (admin only)
+- `/admin/challenges` - Admin challenge management (create/edit/delete)
+- `/admin/challenges/:id/submissions` - Admin submission review
 - Challenge card component
 - Submission form component
 - Challenge badge component (display on profiles)
 
 **Dependencies:** F-006 (Points system), F-008 (Admin features)
 **Testing Approach:** TDD with both worker tests (API) and react tests (UI)
+
+---
+
+## 📋 F-019 DETAILED IMPLEMENTATION PLAN
+
+### Phase 1: Database Schema & Types (30 min)
+
+**Step 1.1: Create Migration**
+- File: `migrations/XXXX_create_challenges_tables.sql`
+- Tables:
+  - `challenges`: Core challenge data
+    - id, title, description, requirements, created_by_user_id, point_reward, deadline, status (active/completed), created_at, updated_at
+  - `challenge_participants`: Track who joined
+    - id, user_id, challenge_id, joined_at
+    - UNIQUE(user_id, challenge_id)
+  - `challenge_submissions`: Track completion submissions
+    - id, user_id, challenge_id, submission_text, submission_url, status (pending/approved/rejected), submitted_at, reviewed_at, reviewed_by_user_id, feedback
+    - UNIQUE(user_id, challenge_id) - one submission per user per challenge
+
+**Step 1.2: Create TypeScript Types**
+- File: `src/types/challenge.ts`
+- Types: `Challenge`, `ChallengeParticipant`, `ChallengeSubmission`
+- Enums: `ChallengeStatus`, `SubmissionStatus`
+
+### Phase 2: Backend API - Challenges CRUD (45 min)
+
+**Step 2.1: Challenge Listing (TDD)**
+- Test: `GET /api/v1/challenges` returns all challenges with participant counts
+- Test: Filter by status query param (active/completed)
+- Test: Returns 200 with array of challenges
+
+**Step 2.2: Challenge Creation (TDD - Admin Only)**
+- Test: `POST /api/v1/challenges` requires admin role
+- Test: Validates required fields (title, description, point_reward, deadline)
+- Test: Returns 201 with created challenge
+- Test: Returns 400 for invalid data
+- Test: Returns 403 for non-admin users
+
+**Step 2.3: Challenge Detail (TDD)**
+- Test: `GET /api/v1/challenges/:id` returns challenge with participant count
+- Test: Returns 404 for non-existent challenge
+- Test: Includes user's participation status if authenticated
+
+**Step 2.4: Challenge Update (TDD - Admin Only)**
+- Test: `PUT /api/v1/challenges/:id` requires admin role
+- Test: Updates challenge fields
+- Test: Returns 404 for non-existent challenge
+- Test: Returns 403 for non-admin users
+
+**Step 2.5: Challenge Delete (TDD - Admin Only)**
+- Test: `DELETE /api/v1/challenges/:id` requires admin role
+- Test: Deletes challenge and associated data (cascade)
+- Test: Returns 404 for non-existent challenge
+- Test: Returns 403 for non-admin users
+
+### Phase 3: Backend API - User Participation (45 min)
+
+**Step 3.1: Join Challenge (TDD)**
+- Test: `POST /api/v1/challenges/:id/join` requires authentication
+- Test: Creates participant record
+- Test: Returns 409 if already joined
+- Test: Returns 404 for non-existent challenge
+- Test: Returns 400 if challenge is completed
+
+**Step 3.2: Submit Challenge Completion (TDD)**
+- Test: `POST /api/v1/challenges/:id/submit` requires authentication
+- Test: Validates submission_text and optional submission_url
+- Test: Creates submission with pending status
+- Test: Returns 400 if user hasn't joined challenge
+- Test: Returns 409 if already submitted
+- Test: Returns 404 for non-existent challenge
+
+**Step 3.3: Get User's Challenges (TDD)**
+- Test: `GET /api/v1/users/:id/challenges` returns completed challenges
+- Test: Returns empty array for users with no completions
+- Test: Includes challenge details and completion date
+
+### Phase 4: Backend API - Admin Review (30 min)
+
+**Step 4.1: List Submissions (TDD - Admin Only)**
+- Test: `GET /api/v1/challenges/:id/submissions` requires admin role
+- Test: Returns all submissions for a challenge
+- Test: Includes user info and submission details
+- Test: Returns 403 for non-admin users
+
+**Step 4.2: Approve Submission (TDD - Admin Only)**
+- Test: `PATCH /api/v1/submissions/:id/approve` requires admin role
+- Test: Updates submission status to approved
+- Test: Awards points to user via points system
+- Test: Records reviewed_at and reviewed_by_user_id
+- Test: Returns 404 for non-existent submission
+- Test: Returns 400 if already reviewed
+
+**Step 4.3: Reject Submission (TDD - Admin Only)**
+- Test: `PATCH /api/v1/submissions/:id/reject` requires admin role
+- Test: Updates submission status to rejected
+- Test: Allows optional feedback message
+- Test: Records reviewed_at and reviewed_by_user_id
+- Test: Returns 404 for non-existent submission
+- Test: Returns 400 if already reviewed
+
+### Phase 5: Frontend - Browse Challenges (45 min)
+
+**Step 5.1: Challenges Service (TDD)**
+- File: `src/react-app/services/challengeService.ts`
+- Methods: listChallenges, getChallenge, joinChallenge, submitChallenge
+- Tests: Mock API calls and verify requests
+
+**Step 5.2: Challenges Browse Page (TDD)**
+- File: `src/react-app/pages/ChallengesPage.tsx`
+- Test: Renders loading state
+- Test: Fetches and displays challenges
+- Test: Shows filter tabs (Active/Completed)
+- Test: Shows empty state when no challenges
+- Layout: Similar to blogs page (grid of cards)
+
+**Step 5.3: Challenge Card Component (TDD)**
+- File: `src/react-app/components/ChallengeCard.tsx`
+- Test: Displays challenge title, description, points, deadline
+- Test: Shows participant count
+- Test: Shows status badge (active/completed)
+- Test: Links to challenge detail page
+- Style: Similar to blog cards
+
+### Phase 6: Frontend - Challenge Detail & Submission (60 min)
+
+**Step 6.1: Challenge Detail Page (TDD)**
+- File: `src/react-app/pages/ChallengeDetailPage.tsx`
+- Test: Fetches and displays challenge details
+- Test: Shows "Join Challenge" button if not joined
+- Test: Shows "Submit Completion" button if joined but not submitted
+- Test: Shows submission status if submitted (pending/approved/rejected)
+- Test: Displays feedback if submission was rejected
+- Test: Shows 404 for non-existent challenge
+- Layout: Similar to mentor detail page
+
+**Step 6.2: Submission Form Component (TDD)**
+- File: `src/react-app/components/ChallengeSubmissionForm.tsx`
+- Test: Renders text area for submission_text
+- Test: Renders input for optional submission_url
+- Test: Validates required fields
+- Test: Submits form data
+- Test: Shows success message on submission
+- Style: Similar to mentor profile setup form
+
+### Phase 7: Frontend - Admin Features (60 min)
+
+**Step 7.1: Admin Challenges Management Page (TDD)**
+- File: `src/react-app/pages/admin/AdminChallengesPage.tsx`
+- Test: Lists all challenges with edit/delete actions
+- Test: Shows "Create Challenge" button
+- Test: Opens create/edit modal
+- Test: Confirms before deleting
+- Layout: Similar to admin users page
+
+**Step 7.2: Challenge Form Component (TDD)**
+- File: `src/react-app/components/admin/ChallengeForm.tsx`
+- Test: Renders all form fields (title, description, requirements, point_reward, deadline)
+- Test: Validates required fields
+- Test: Submits create/update request
+- Test: Shows error messages
+- Style: Similar to blog edit form
+
+**Step 7.3: Admin Submission Review Page (TDD)**
+- File: `src/react-app/pages/admin/ChallengeSubmissionsPage.tsx`
+- Test: Lists all submissions for a challenge
+- Test: Shows user info, submission text/url, status
+- Test: Approve/reject buttons for pending submissions
+- Test: Shows feedback text area on reject
+- Test: Refreshes list after review action
+- Layout: Similar to admin users table
+
+### Phase 8: Integration & Polish (45 min)
+
+**Step 8.1: Add Routes**
+- Update `src/react-app/App.tsx` with challenge routes
+- Add protected routes for authenticated users
+- Add admin-only routes
+
+**Step 8.2: Update Navigation**
+- Ensure challenges link in sidebar is active
+- Add admin challenges link to admin nav
+
+**Step 8.3: Challenge Badges on Profiles**
+- File: `src/react-app/components/ChallengeBadge.tsx`
+- Test: Displays challenge completion badges
+- Add to user profile pages
+- Show count of completed challenges
+
+**Step 8.4: Add i18n Translations**
+- File: `src/react-app/locales/en/challenges.json`
+- File: `src/react-app/locales/zh/challenges.json`
+- Add all challenge-related translation keys
+- Update translation imports
+
+### Phase 9: Quality Assurance (30 min)
+
+**Step 9.1: Run Quality Check**
+- Run `npm run quality-check`
+- Fix any linting errors
+- Fix any type errors
+- Ensure all tests pass
+
+**Step 9.2: Manual Testing**
+- Test full user flow: browse → join → submit
+- Test admin flow: create → review submissions → approve
+- Test edge cases and error states
+- Verify responsive design
+
+**Step 9.3: Database Migration**
+- Run `npm run db:migrate` to apply migration
+- Verify schema with `npm run db:schema`
+
+---
+
+### Estimated Timeline
+- Phase 1: 30 min
+- Phase 2: 45 min
+- Phase 3: 45 min
+- Phase 4: 30 min
+- Phase 5: 45 min
+- Phase 6: 60 min
+- Phase 7: 60 min
+- Phase 8: 45 min
+- Phase 9: 30 min
+**Total: ~6 hours**
 
 **Demo Script:**
 1. Show challenges list (admin creates one live)
