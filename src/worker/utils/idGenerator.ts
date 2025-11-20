@@ -48,3 +48,27 @@ export const generateThreadId = (): string => {
 export const generateReplyId = (): string => {
   return generateId();
 };
+
+/**
+ * Generate a unique challenge ID
+ * Example: "xT9m4pQ7nR"
+ */
+export const generateChallengeId = (): string => {
+  return generateId();
+};
+
+/**
+ * Generate a unique challenge participant ID
+ * Example: "a1B2c3D4e5"
+ */
+export const generateChallengeParticipantId = (): string => {
+  return generateId();
+};
+
+/**
+ * Generate a unique challenge submission ID
+ * Example: "f6G7h8I9j0"
+ */
+export const generateChallengeSubmissionId = (): string => {
+  return generateId();
+};
