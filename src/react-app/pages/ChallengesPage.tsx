@@ -66,7 +66,7 @@ export function ChallengesPage() {
       </div>
 
       {/* Filter Tabs */}
-      <Tabs value={filter} onValueChange={(value) => setFilter(value as 'active' | 'completed' | 'all')}>
+      <Tabs value={filter} onValueChange={(value: string) => setFilter(value as 'active' | 'completed' | 'all')}>
         <TabsList>
           <TabsTrigger value="active">
             {t('challenges.tabs.active', 'Active')} ({activeChallenges.length})

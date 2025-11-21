@@ -347,7 +347,7 @@ export function AdminChallengesPage() {
                   <Label htmlFor="status">{t('common.status', 'Status')}</Label>
                   <Select
                     value={status}
-                    onValueChange={(value) => setStatus(value as ChallengeStatus)}
+                    onValueChange={(value: string) => setStatus(value as ChallengeStatus)}
                   >
                     <SelectTrigger>
                       <SelectValue />

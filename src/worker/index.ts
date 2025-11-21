@@ -71,7 +71,7 @@ import {
   BLOGS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
 } from "../types/points";
-import { generateId, generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId, generateChallengeId, generateChallengeParticipantId, generateChallengeSubmissionId } from "./utils/idGenerator";
+import { generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId, generateChallengeId, generateChallengeParticipantId, generateChallengeSubmissionId } from "./utils/idGenerator";
 import { sanitizeHtml } from "./utils/sanitize";
 
 /**

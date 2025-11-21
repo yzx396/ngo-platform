@@ -1,11 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from '../../types/user';
+import type { UserRole } from '../../types/role';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  role?: UserRole;
   login: (user: User) => void;
   logout: () => Promise<void>;
   getUser: () => Promise<User | null>;
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isAuthenticated: !!user,
     isLoading,
+    role: user?.role,
     login,
     logout,
     getUser,

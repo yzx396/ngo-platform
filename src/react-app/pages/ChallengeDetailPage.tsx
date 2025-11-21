@@ -172,8 +172,16 @@ export function ChallengeDetailPage() {
                   <div className="flex items-center gap-2 text-orange-600">
                     <Clock className="w-4 h-4" />
                     <span>
-                      {Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))}{' '}
-                      {t('challenges.daysLeft', 'days left')}
+                      {(() => {
+                        const daysLeft = Math.ceil(
+                          (deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                        );
+                        return daysLeft === 1
+                          ? t('challenges.lastDay', '1 day left')
+                          : t('challenges.daysLeft', `${daysLeft} days left`, {
+                              count: daysLeft,
+                            });
+                      })()}
                     </span>
                   </div>
                 )}
