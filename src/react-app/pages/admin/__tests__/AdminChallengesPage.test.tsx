@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AdminChallengesPage } from '../AdminChallengesPage';
 import * as challengeServiceModule from '../../../services/challengeService';
-import { ChallengeStatus } from '../../../../types/challenge';
 import type { Challenge } from '../../../../types/challenge';
 
 vi.mock('../../../services/challengeService');

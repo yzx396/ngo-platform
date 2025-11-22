@@ -30,13 +30,6 @@ const mockChallenge: Challenge = {
   creator_name: 'Admin',
 };
 
-const mockCompletedChallenge: Challenge = {
-  ...mockChallenge,
-  id: 'chal_456',
-  title: 'Learn TypeScript',
-  status: 'completed',
-};
-
 const renderWithRouter = (component: React.ReactElement) => {
   return render(
     <MemoryRouter initialEntries={['/challenges']}>

@@ -36,7 +36,7 @@ describe('cvService', () => {
     });
 
     it('should throw error when no file provided', async () => {
-      const mockFile = null as any;
+      const mockFile = null as unknown as File;
 
       await expect(uploadCV('user_123', mockFile)).rejects.toThrow('No file provided');
     });

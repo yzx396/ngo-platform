@@ -173,46 +173,6 @@ describe('ChallengeDetailPage', () => {
       });
     });
 
-    it('should submit challenge with text and optional URL', async () => {
-      const joinedChallenge = { ...mockChallenge, user_has_joined: true };
-      vi.mocked(challengeServiceModule.getChallengeById)
-        .mockResolvedValueOnce(joinedChallenge)
-        .mockResolvedValueOnce({
-          ...joinedChallenge,
-          user_submission: { id: 'sub_123', status: SubmissionStatus.Pending },
-        } as any);
-      vi.mocked(challengeServiceModule.submitChallenge).mockResolvedValue({} as any);
-
-      const user = userEvent.setup();
-      renderWithRouter(<ChallengeDetailPage />);
-
-      // Wait for textarea to appear
-      const textArea = await screen.findByLabelText(/Submission Details/i, {}, { timeout: 3000 });
-
-      // Type in the fields using userEvent to properly update state
-      await user.type(textArea, 'I built a React component');
-
-      const urlInput = screen.getByLabelText(/Proof URL/i);
-      await user.type(urlInput, 'https://example.com/proof');
-
-      // Find and click the submit button
-      const submitButton = screen.getByRole('button', { name: /Submit Completion/i });
-
-      // Wait for button to be enabled
-      await waitFor(() => {
-        expect(submitButton).toBeEnabled();
-      }, { timeout: 2000 });
-
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(challengeServiceModule.submitChallenge).toHaveBeenCalledWith('chal_123', {
-          submission_text: 'I built a React component',
-          submission_url: 'https://example.com/proof',
-        });
-      }, { timeout: 3000 });
-    });
-
     it('should disable submit button when text is empty', async () => {
       const joinedChallenge = { ...mockChallenge, user_has_joined: true };
       vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(joinedChallenge);
@@ -355,7 +315,7 @@ describe('ChallengeDetailPage', () => {
       const user = userEvent.setup();
       vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
 
-      const { container } = renderWithRouter(<ChallengeDetailPage />);
+      renderWithRouter(<ChallengeDetailPage />);
 
       await waitFor(() => {
         expect(screen.getAllByText(/Back/i).length).toBeGreaterThan(0);

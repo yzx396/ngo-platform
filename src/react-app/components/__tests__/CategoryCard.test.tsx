@@ -108,10 +108,10 @@ describe('CategoryCard', () => {
   it('should use responsive flex layout', () => {
     const { container } = renderWithRouter(<CategoryCard category={mockCategory} />);
 
-    // Check for responsive flex layout with mobile and desktop variants
+    // Check for horizontal flex layout on all screen sizes
     const mainFlex = container.querySelector('.flex');
     expect(mainFlex).toBeInTheDocument();
-    expect(mainFlex).toHaveClass('flex-col', 'md:flex-row');
+    expect(mainFlex).toHaveClass('flex', 'items-start', 'justify-between');
   });
 
   it('should render with proper border and rounded styling', () => {
