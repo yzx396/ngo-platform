@@ -486,6 +486,334 @@ Avoid backwards-compatibility hacks:
 - ❌ Adding `// removed` comments
 - ✅ If something is unused, delete it completely
 
+## Clean Code Standards
+
+### Core Principle
+
+**All code must be clean, readable, and maintainable.** These standards apply to:
+- **All new code** - Must follow these principles from the start
+- **Existing code when you touch it** - Opportunistic refactoring when making changes
+
+Clean code reduces bugs, improves maintainability, and makes the codebase easier to understand for all contributors.
+
+### Naming Conventions
+
+**Variables and Functions** - Use descriptive names that reveal intent:
+```typescript
+// ✅ Good: Clear intent
+const activeUsers = await getUsersByRole('member');
+const isAuthenticated = verifyToken(token);
+const totalPoints = calculateUserPoints(userId);
+
+// ❌ Bad: Unclear intent
+const users = await get('member');
+const auth = check(token);
+const pts = calc(userId);
+```
+
+**Avoid Generic Names:**
+- ❌ Bad: `data`, `info`, `temp`, `tmp`, `result`, `item`, `obj`
+- ✅ Good: `userData`, `profileInfo`, `cachedThread`, `forumThread`, `userProfile`
+
+**Boolean Variables** - Prefix with question words:
+```typescript
+// ✅ Good: Reads like a question
+const isActiveUser = user.status === 'active';
+const hasAdminRole = user.roles.includes('admin');
+const shouldRedirect = !isAuthenticated;
+const canEditThread = thread.author_id === user.id;
+
+// ❌ Bad: Doesn't read like a boolean
+const activeUser = user.status === 'active';
+const adminRole = user.roles.includes('admin');
+const redirect = !isAuthenticated;
+```
+
+**Functions** - Use verbs for actions, nouns for accessors:
+```typescript
+// ✅ Good: Clear action verbs
+async function createUser(userData: CreateUserInput) { ... }
+async function deleteThread(threadId: string) { ... }
+function validateEmail(email: string): boolean { ... }
+
+// ✅ Good: Accessor patterns
+function getUserProfile(userId: string) { ... }
+function getActiveThreads(categoryId: string) { ... }
+
+// ❌ Bad: Unclear or generic
+async function user(data: any) { ... }
+async function thread(id: string) { ... }
+function email(e: string): boolean { ... }
+```
+
+**Constants** - Use UPPER_SNAKE_CASE for true constants:
+```typescript
+const MAX_THREAD_TITLE_LENGTH = 200;
+const DEFAULT_POINTS_PER_POST = 10;
+const JWT_EXPIRY_DAYS = 7;
+```
+
+### Function Size and Complexity
+
+**Single Responsibility Principle** - Each function should do ONE thing well:
+```typescript
+// ❌ Bad: Too many responsibilities (validation + DB checks + creation + email)
+async function handleUserCreation(data: any) {
+  if (!data.email || !data.name) throw new Error('Invalid');
+  const existing = await db.prepare('SELECT * FROM users WHERE email = ?')
+    .bind(data.email).first();
+  if (existing) throw new Error('User exists');
+  const userId = generateId();
+  await db.prepare('INSERT INTO users (id, email, name) VALUES (?, ?, ?)')
+    .bind(userId, data.email, data.name).run();
+  await db.prepare('INSERT INTO user_points (id, user_id) VALUES (?, ?)')
+    .bind(generateId(), userId).run();
+  await sendWelcomeEmail(data.email);
+  return userId;
+}
+
+// ✅ Good: Single responsibility with named helper functions
+async function createUser(userData: CreateUserInput): Promise<string> {
+  validateUserData(userData);
+  await ensureUserDoesNotExist(userData.email);
+  const userId = await insertUser(userData);
+  await initializeUserProfile(userId);
+  await sendWelcomeEmail(userData.email);
+  return userId;
+}
+```
+
+**Size Guidelines:**
+- **Target**: Functions under 20-30 lines
+- **Warning**: Functions over 50 lines likely need refactoring
+- **Rule**: If you use "and" to describe what a function does, it's doing too much
+
+**Complexity Indicators to Refactor:**
+- **Deep nesting** (>3 levels) → Extract into named functions
+- **Long parameter lists** (>3-4 params) → Use object parameters
+- **Multiple early returns** → Simplify logic or use guard clauses intentionally
+- **Complex conditionals** → Extract into well-named predicate functions
+
+**Example - Extracting Complex Conditionals:**
+```typescript
+// ❌ Bad: Complex nested conditional
+if (user && user.roles && user.roles.includes('admin') ||
+    thread.author_id === user?.id && !thread.locked) {
+  // Allow edit
+}
+
+// ✅ Good: Self-documenting extracted function
+function canEditThread(thread: Thread, user: User | null): boolean {
+  if (!user) return false;
+  const isAdmin = user.roles?.includes('admin') ?? false;
+  const isAuthor = thread.author_id === user.id;
+  const isEditable = !thread.locked;
+  return isAdmin || (isAuthor && isEditable);
+}
+
+if (canEditThread(thread, user)) {
+  // Allow edit
+}
+```
+
+### DRY (Don't Repeat Yourself)
+
+**Code Duplication = Maintenance Burden** - If you copy-paste code, extract it:
+```typescript
+// ❌ Bad: Duplicated validation logic across endpoints
+app.post('/api/v1/forum/threads', async (c) => {
+  const body = await c.req.json();
+  if (!body.title || body.title.length > 200) {
+    return c.json({ error: 'Invalid title' }, 400);
+  }
+  if (!body.content || body.content.length < 10) {
+    return c.json({ error: 'Content too short' }, 400);
+  }
+  // ...
+});
+
+app.put('/api/v1/forum/threads/:id', async (c) => {
+  const body = await c.req.json();
+  if (!body.title || body.title.length > 200) {
+    return c.json({ error: 'Invalid title' }, 400);
+  }
+  if (!body.content || body.content.length < 10) {
+    return c.json({ error: 'Content too short' }, 400);
+  }
+  // ...
+});
+
+// ✅ Good: Shared validation function
+function validateThreadData(data: unknown): ValidationResult {
+  if (!data.title || data.title.length > 200) {
+    return { valid: false, error: 'Invalid title' };
+  }
+  if (!data.content || data.content.length < 10) {
+    return { valid: false, error: 'Content too short' };
+  }
+  return { valid: true };
+}
+
+app.post('/api/v1/forum/threads', async (c) => {
+  const body = await c.req.json();
+  const validation = validateThreadData(body);
+  if (!validation.valid) {
+    return c.json({ error: validation.error }, 400);
+  }
+  // ...
+});
+```
+
+**When to Extract:**
+- Logic appears **3+ times** → Definitely extract
+- Complex algorithm is repeated → Extract immediately
+- Validation/transformation is duplicated → Create shared function
+
+**When NOT to Extract:**
+- Code appears only 1-2 times (avoid premature abstraction)
+- Similar code has different intent/behavior
+- Abstraction makes code harder to understand
+- You're forcing unrelated code to share logic
+
+### Comments and Self-Documenting Code
+
+**Philosophy: Code should explain itself.** Good names > comments.
+
+**Comments Explain WHY, Not WHAT:**
+```typescript
+// ✅ Good: Explains WHY (business logic, design decisions)
+
+// Using bit flags instead of arrays for database efficiency (reduces storage by 80%)
+const mentoringLevels = MentoringLevel.Entry | MentoringLevel.Senior;
+
+// SQLite stores booleans as INTEGER (0/1), must convert to proper boolean
+const isAvailable = Boolean(dbRow.available);
+
+// Diminishing returns: prevent spam by reducing points for repeated actions
+const pointMultiplier = Math.max(0.1, 1 - (actionCount * 0.1));
+
+// Workaround: react-i18next doesn't support nested namespaces in production build
+const translationKey = `forum.${category}.${key}`.replace(/\.\./g, '.');
+```
+
+**Bad Comments (States the Obvious):**
+```typescript
+// ❌ Bad: Code already says this
+
+// Increment counter
+counter++;
+
+// Get user from database
+const user = await db.prepare('SELECT * FROM users WHERE id = ?')
+  .bind(id).first();
+
+// Check if user exists
+if (user) {
+  // Return user data
+  return user;
+}
+
+// Loop through threads
+for (const thread of threads) {
+  // Process thread
+  processThread(thread);
+}
+```
+
+**When Comments Are Needed:**
+- Complex algorithms requiring mathematical/business explanation
+- Non-obvious performance optimizations
+- Workarounds for bugs in third-party dependencies
+- Security considerations (e.g., "Must sanitize to prevent XSS")
+- Database schema decisions (e.g., bit flags, normalization choices)
+
+**Refactor Instead of Comment:**
+```typescript
+// ❌ Bad: Comment explains unclear code
+// Check if user has permission to delete this thread
+if (thread.author_id === user.id || user.roles.includes('admin') &&
+    !thread.locked || moderators.has(user.id)) {
+  // ...
+}
+
+// ✅ Good: Self-documenting extracted function
+function canDeleteThread(thread: Thread, user: User): boolean {
+  const isAuthor = thread.author_id === user.id;
+  const isAdmin = user.roles.includes('admin');
+  const isModerator = moderators.has(user.id);
+  const isNotLocked = !thread.locked;
+
+  return isAuthor || (isAdmin && isNotLocked) || isModerator;
+}
+
+if (canDeleteThread(thread, user)) {
+  // ...
+}
+```
+
+**TSDoc for Public APIs** - Use for exported functions/types:
+```typescript
+/**
+ * Creates a new forum thread with automatic point award.
+ *
+ * @param userId - ID of the thread author
+ * @param threadData - Thread title, content, and category
+ * @returns The created thread with generated ID
+ * @throws {ValidationError} If title or content is invalid
+ * @throws {AuthorizationError} If user lacks permission
+ */
+export async function createThread(
+  userId: string,
+  threadData: CreateThreadInput
+): Promise<Thread> {
+  // Implementation
+}
+```
+
+### Refactoring Guidelines
+
+**When Touching Existing Code (Opportunistic Refactoring):**
+
+1. **Fix obvious code smells** in the immediate area you're modifying
+2. **Improve names** if they're unclear or misleading
+3. **Extract complex logic** if you're already changing that function
+4. **Don't refactor unrelated code** in the same commit
+
+**Red Flags to Fix When You See Them:**
+- **Magic numbers** → Extract to named constants
+- **Unclear variable names** → Rename with descriptive names
+- **Deeply nested conditionals** → Extract into functions
+- **Copy-pasted code** → Apply DRY extraction
+- **Functions doing multiple things** → Split responsibilities
+
+**What NOT to Refactor:**
+- Code that works and is reasonably clear
+- Patterns consistent with the rest of the codebase
+- Code completely unrelated to your current change
+- "Perfect is the enemy of good" - don't over-optimize
+
+**Example - Opportunistic Refactoring:**
+```typescript
+// You're adding a new field to this function
+async function updateThread(threadId: string, title: string, content: string) {
+  // Opportunistic fixes while here:
+  // 1. Extract magic number
+  const MAX_TITLE_LENGTH = 200;
+
+  // 2. Improve validation logic clarity
+  if (!isValidTitle(title, MAX_TITLE_LENGTH)) {
+    throw new Error('Invalid title');
+  }
+
+  // 3. Your new feature
+  const updatedAt = Date.now();
+
+  await db.prepare('UPDATE threads SET title = ?, content = ?, updated_at = ? WHERE id = ?')
+    .bind(title, content, updatedAt, threadId)
+    .run();
+}
+```
+
 ## Debugging & Support
 
 ### Common Commands

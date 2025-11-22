@@ -21,9 +21,42 @@ Hooks are configured in `.claude/settings.local.json`:
 ```json
 {
   "hooks": {
-    "on_write": ["npm run lint -- --fix"],
-    "on_ts_change": ["npm run build"],
-    "on_tool_use_complete": ["npm run test"]
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run lint -- --fix",
+            "timeout": 30,
+            "statusMessage": "Running linter..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run build",
+            "timeout": 60,
+            "statusMessage": "Type-checking..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm test",
+            "timeout": 120,
+            "statusMessage": "Running tests..."
+          }
+        ]
+      }
+    ]
   }
 }
 ```
