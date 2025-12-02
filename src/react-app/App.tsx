@@ -54,12 +54,6 @@ function LoadingFallback() {
   );
 }
 
-/**
- * Root redirect to forums
- */
-function RootRedirect() {
-  return <Navigate to="/forums" replace />;
-}
 
 /**
  * Main App component with routing
@@ -100,8 +94,8 @@ function AppContent() {
         {!isAuthPage && (
           <Layout>
             <Routes>
-              {/* Root redirect - dynamic based on feed feature flag */}
-              <Route path="/" element={<RootRedirect />} />
+              {/* Root path shows About page */}
+              <Route path="/" element={<AboutPage />} />
 
               {/* Forum Pages - Main forum with categories and threads */}
               <Route path="/forums" element={<ForumHomePage />} />
