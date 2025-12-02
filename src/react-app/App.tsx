@@ -1,7 +1,7 @@
 // src/App.tsx
 
 import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { I18nextProvider, useTranslation } from 'react-i18next';
 import i18n from './i18n';
