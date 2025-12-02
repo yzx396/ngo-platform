@@ -42,10 +42,10 @@ describe('App', () => {
         render(<App />);
       });
       await waitFor(() => {
-        // Home redirects to /forums which shows ForumHomePage
-        // Check for Forums heading
+        // Home now shows AboutPage
+        // Check for Lead Forward heading (About page)
         expect(
-          screen.getByRole('heading', { name: /Forums|Lead Forward/i, level: 1 })
+          screen.getByRole('heading', { name: /Lead Forward/i, level: 1 })
         ).toBeInTheDocument();
       }, { timeout: 3000 });
     });
@@ -76,17 +76,17 @@ describe('App', () => {
       await act(async () => {
         render(<App />);
       });
-      // Wait for HomePage to load
+      // Wait for AboutPage to load
       await waitFor(() => {
-        // Feed link is hidden when feature flag is disabled (default in tests)
-        const feedLinks = screen.queryAllByRole('link', { name: /Feed/i });
-        expect(feedLinks.length).toBe(0);
-        // Note: Leaderboard is also hidden when feature flag is disabled (default in tests)
+        // Home link should point to About page (root)
+        const homeButtons = screen.getAllByRole('button', { name: /Home/i });
+        expect(homeButtons.length).toBeGreaterThan(0);
+        // Note: Leaderboard is hidden when feature flag is disabled (default in tests)
         const leaderboardLinks = screen.queryAllByRole('link', { name: /Leaderboard/i });
         expect(leaderboardLinks.length).toBe(0);
-        // Forums should always be visible
-        const forumsLinks = screen.getAllByRole('link', { name: /Forums/i });
-        expect(forumsLinks.length).toBeGreaterThan(0);
+        // Events should always be visible
+        const eventsButtons = screen.getAllByRole('button', { name: /Events/i });
+        expect(eventsButtons.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
     });
   });
@@ -134,9 +134,12 @@ describe('App', () => {
       await act(async () => {
         render(<App />);
       });
-      // Wait for home page to load - home redirects to /feed which shows FeedPage
+      // Wait for home page to load - home now shows AboutPage
       await waitFor(() => {
-        // Check for navigation links that indicate we're on the app
+        // Check for About page content - should have founders section
+        const headings = screen.getAllByRole('heading');
+        expect(headings.length).toBeGreaterThan(0);
+        // Check for navigation links
         const navElements = screen.getAllByRole('link');
         expect(navElements.length).toBeGreaterThan(0);
       }, { timeout: 3000 });
