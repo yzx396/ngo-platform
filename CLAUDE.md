@@ -30,7 +30,6 @@ npm run db:schema              # Show local database schema
 npx wrangler tail              # Monitor production logs
 ```
 
-**Note:** When working in Claude Code, linting, type-checking, and tests run automatically via hooks (see docs/HOOKS.md).
 
 ## Test-Driven Development (TDD)
 
@@ -126,7 +125,7 @@ See existing test files for examples: `src/worker/__tests__/challenges.test.ts`,
 npm run quality-check   # Ensures lint, tests, and build all pass
 ```
 
-Tests run automatically during Claude Code sessions via hooks. Always ensure they pass before committing.
+Always ensure tests pass before committing.
 
 ## Architecture
 
@@ -831,7 +830,6 @@ npx wrangler tail          # Stream production logs
 - **Points System**: docs/POINTS_SYSTEM.md
 - **RBAC**: docs/RBAC.md
 - **i18n**: docs/I18N.md
-- **Hooks**: docs/HOOKS.md
 
 ### Key Dependencies
 
@@ -845,13 +843,6 @@ npx wrangler tail          # Stream production logs
 - **Vitest**: Test framework with jsdom and node environments
 
 ## Project-Specific Notes
-
-### Claude Code Hooks
-
-Automated quality checks run during Claude Code sessions. See docs/HOOKS.md for details on:
-- Automatic linting, building, and testing
-- Hook configuration and performance
-- Troubleshooting hook failures
 
 ### TDD Reminder
 
