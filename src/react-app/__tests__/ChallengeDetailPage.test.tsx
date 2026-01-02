@@ -48,7 +48,9 @@ const renderWithRouter = (component: React.ReactElement) => {
 
 describe('ChallengeDetailPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.useRealTimers(); // Ensure real timers in case another test left fake timers active
+
     vi.mocked(authContextModule.useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -144,19 +146,19 @@ describe('ChallengeDetailPage', () => {
     });
 
     it('should call joinChallenge and reload when join button clicked', async () => {
+      vi.mocked(challengeServiceModule.joinChallenge).mockResolvedValue(undefined);
       vi.mocked(challengeServiceModule.getChallengeById)
         .mockResolvedValueOnce(mockChallenge)
         .mockResolvedValueOnce({ ...mockChallenge, user_has_joined: true });
-      vi.mocked(challengeServiceModule.joinChallenge).mockResolvedValue(undefined);
 
       renderWithRouter(<ChallengeDetailPage />);
 
-      const joinButton = await screen.findByRole('button', { name: /Join Challenge/i }, { timeout: 3000 });
+      const joinButton = await screen.findByRole('button', { name: /Join Challenge/i });
       fireEvent.click(joinButton);
 
       await waitFor(() => {
         expect(challengeServiceModule.joinChallenge).toHaveBeenCalledWith('chal_123');
-      }, { timeout: 3000 });
+      });
     });
   });
 

@@ -277,6 +277,9 @@ describe('apiFetch', () => {
 
     const promise = apiFetch('/api/v1/test', { retries: 2 });
 
+    // Prevent unhandled rejection warning during timer advancement
+    promise.catch(() => {});
+
     await vi.runAllTimersAsync();
 
     await expect(promise).rejects.toMatchObject({
@@ -336,6 +339,9 @@ describe('apiFetch', () => {
     mockFetch.mockRejectedValue(networkError);
 
     const promise = apiFetch('/api/v1/test', { retries: 1 });
+
+    // Prevent unhandled rejection warning during timer advancement
+    promise.catch(() => {});
 
     await vi.runAllTimersAsync();
 
@@ -676,6 +682,9 @@ describe('apiUpload', () => {
     mockFetch.mockRejectedValue(networkError);
 
     const promise = apiUpload('/api/v1/upload', formData, { retries: 2 });
+
+    // Prevent unhandled rejection warning during timer advancement
+    promise.catch(() => {});
 
     await vi.runAllTimersAsync();
 

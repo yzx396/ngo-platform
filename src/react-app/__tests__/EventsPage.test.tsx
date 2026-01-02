@@ -103,15 +103,15 @@ describe('EventsPage', () => {
     expect(pageText).toMatch(/PM|AM|6|18/);
   });
 
-  it('should display availability information', () => {
+  it('should NOT display spots available information', () => {
     render(
       <I18nextProvider i18n={i18n}>
         <EventsPage />
       </I18nextProvider>
     );
 
-    // Check for spots remaining
-    expect(screen.getByText(/12 spots/)).toBeInTheDocument();
+    // Spots remaining should not be displayed
+    expect(screen.queryByText(/spots/i)).not.toBeInTheDocument();
   });
 
   it('should display attendee count', () => {

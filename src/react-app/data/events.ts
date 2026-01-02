@@ -3,6 +3,38 @@ import { Event } from '../../types/event';
 export const events: Event[] = [
   // Upcoming Events
   {
+    id: 'evt-2hhqxlyt',
+    name: 'Design Your Career Forward 职业设计工作坊',
+    start_at: '2026-01-17T18:00:00.000Z',
+    end_at: '2026-01-17T20:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    location: {
+      location_type: 'offline',
+      city: 'Los Altos',
+      region: 'California',
+      country: 'United States',
+      full_address: 'Los Altos, California, USA',
+    },
+    ticket_info: {
+      price_cents: 1500,
+      currency: 'usd',
+      is_free: false,
+      spots_remaining: 25,
+      is_sold_out: false,
+    },
+    hosts: [
+      { name: 'Lily L' },
+      { name: 'Yang Zhao' },
+      { name: 'Claire Ding' },
+    ],
+    guest_count: 0,
+    ticket_count: 25,
+    luma_url: 'https://luma.com/2hhqxlyt',
+    luma_slug: '2hhqxlyt',
+  },
+
+  // Past Events
+  {
     id: 'evt-fAC8s7F5s4gCIuU',
     name: 'Claude Code 实战工作坊（现场需自办$20 Claude Monthly Plan)',
     start_at: '2025-11-15T18:00:00.000Z',
@@ -20,8 +52,8 @@ export const events: Event[] = [
       price_cents: 3000,
       currency: 'usd',
       is_free: false,
-      spots_remaining: 12,
-      is_sold_out: false,
+      spots_remaining: 0,
+      is_sold_out: true,
     },
     hosts: [
       { name: 'Yang Zhao' },
@@ -34,8 +66,6 @@ export const events: Event[] = [
     luma_url: 'https://luma.com/o4f5akc4',
     luma_slug: 'o4f5akc4',
   },
-
-  // Past Events
   {
     id: 'evt-past-001',
     name: '压力管理与情绪调适工作坊',

@@ -126,7 +126,7 @@ function EventCard({ event, isPast }: EventCardProps) {
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
             {/* Location */}
             <div>
               <div className="text-muted-foreground text-xs mb-1">
@@ -139,24 +139,6 @@ function EventCard({ event, isPast }: EventCardProps) {
                   {event.location.city}
                   {event.location.region && `, ${event.location.region}`}
                 </div>
-              )}
-            </div>
-
-            {/* Availability */}
-            <div>
-              <div className="text-muted-foreground text-xs mb-1">
-                {t('events.availability', 'Availability')}
-              </div>
-              {event.ticket_info.is_sold_out ? (
-                <div className="font-medium text-destructive">
-                  {t('events.soldOut', 'Sold Out')}
-                </div>
-              ) : event.ticket_info.spots_remaining !== undefined ? (
-                <div className="font-medium">
-                  {event.ticket_info.spots_remaining} {t('events.spotsRemaining', 'spots')}
-                </div>
-              ) : (
-                <div className="font-medium">-</div>
               )}
             </div>
 
