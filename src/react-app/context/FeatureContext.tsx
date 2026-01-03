@@ -32,7 +32,6 @@ export function FeatureProvider({ children }: { children: ReactNode }) {
       const enabledFeatures = await getEnabledFeatures();
       setFeatures(enabledFeatures);
     } catch (err) {
-      console.error('Failed to fetch feature flags:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch features');
       // Set empty features on error to fail closed (all features disabled)
       setFeatures({});

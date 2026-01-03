@@ -35,7 +35,6 @@ export default function CreateThreadPage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : t('forums.loadError');
         setError(message);
-        console.error('Error loading categories:', err);
       } finally {
         setLoadingCategories(false);
       }
@@ -111,7 +110,6 @@ export default function CreateThreadPage() {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create thread';
       setError(message);
-      console.error('Error creating thread:', err);
     } finally {
       setSubmitting(false);
     }

@@ -25,9 +25,16 @@ vi.mock('sonner', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Mock console methods to avoid noise in test output
-const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+// Console warn spy for testing retry behavior
+let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  consoleWarnSpy = vi.spyOn(console, 'warn');
+});
+
+afterEach(() => {
+  consoleWarnSpy.mockRestore();
+});
 
 describe('ApiError', () => {
   it('should create an ApiError with message and default values', () => {
@@ -745,7 +752,6 @@ describe('Error Handling Helpers', () => {
       const message = handleApiError(error);
 
       expect(toast.error).toHaveBeenCalledWith('API error occurred');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('API Error:', error);
       expect(message).toBe('API error occurred');
     });
 
@@ -755,7 +761,6 @@ describe('Error Handling Helpers', () => {
       const message = handleApiError(error);
 
       expect(toast.error).toHaveBeenCalledWith('An error occurred');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('API Error:', error);
       expect(message).toBe('An error occurred');
     });
 

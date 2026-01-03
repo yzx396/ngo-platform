@@ -261,7 +261,6 @@ export async function apiUpload<T>(
 export function handleApiError(error: unknown): string {
   const message = error instanceof ApiError ? error.message : 'An error occurred';
   toast.error(message);
-  console.error('API Error:', error);
   return message;
 }
 

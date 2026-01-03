@@ -107,9 +107,8 @@ export function MentorProfileSetup() {
             linkedin_url: profile.linkedin_url || '',
           });
         }
-      } catch (error) {
+      } catch {
         // If profile doesn't exist, that's fine - user is creating a new one
-        console.error('Error loading mentor profile:', error);
       } finally {
         setIsLoading(false);
       }

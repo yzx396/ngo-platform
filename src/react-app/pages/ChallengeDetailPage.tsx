@@ -50,8 +50,7 @@ export function ChallengeDetailPage() {
         setError(null);
         const data = await getChallengeById(id);
         setChallenge(data);
-      } catch (err) {
-        console.error('Error loading challenge:', err);
+      } catch {
         setError(t('challenges.loadError', 'Failed to load challenge'));
       } finally {
         setLoading(false);
@@ -70,8 +69,7 @@ export function ChallengeDetailPage() {
       // Reload challenge to update status
       const updated = await getChallengeById(id);
       setChallenge(updated);
-    } catch (err) {
-      console.error('Error joining challenge:', err);
+    } catch {
       setError(t('challenges.joinError', 'Failed to join challenge'));
     } finally {
       setJoining(false);
@@ -93,8 +91,7 @@ export function ChallengeDetailPage() {
       setChallenge(updated);
       setSubmissionText('');
       setSubmissionUrl('');
-    } catch (err) {
-      console.error('Error submitting challenge:', err);
+    } catch {
       setError(t('challenges.submitError', 'Failed to submit challenge'));
     } finally {
       setSubmitting(false);

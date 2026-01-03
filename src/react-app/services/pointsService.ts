@@ -61,8 +61,6 @@ export async function awardPointsForAction(
   pointsToAward: number,
   action?: string
 ): Promise<GetUserPointsResponse> {
-  // In a more complete system, this could log the action
-  console.log(`Awarding ${pointsToAward} points to ${userId} for: ${action || 'unspecified action'}`);
   return addPointsToUser(userId, pointsToAward);
 }
 

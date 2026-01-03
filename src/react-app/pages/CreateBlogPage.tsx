@@ -39,8 +39,7 @@ export function CreateBlogPage() {
         ? blog.content
         : `<p>${blog.content.replace(/\n/g, '</p><p>')}</p>`;
       setContent(blogContent);
-    } catch (err) {
-      console.error('Error loading blog:', err);
+    } catch {
       setError(t('blogs.loadError'));
     } finally {
       setLoading(false);
@@ -77,8 +76,7 @@ export function CreateBlogPage() {
         const newBlog = await createBlog(title, content, requiresAuth);
         navigate(`/blogs/${newBlog.id}`);
       }
-    } catch (err) {
-      console.error('Error saving blog:', err);
+    } catch {
       setError(isEditing ? t('blogs.updateError') : t('blogs.createError'));
     } finally {
       setSubmitting(false);

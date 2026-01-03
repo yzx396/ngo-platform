@@ -24,8 +24,7 @@ export function ChallengesPage() {
       const statusFilter = filter === 'all' ? undefined : filter;
       const data = await getChallenges(statusFilter);
       setChallenges(data);
-    } catch (err) {
-      console.error('Error loading challenges:', err);
+    } catch {
       setError(t('challenges.loadError', 'Failed to load challenges'));
     } finally {
       setLoading(false);

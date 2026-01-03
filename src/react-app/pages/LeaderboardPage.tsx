@@ -40,7 +40,6 @@ export function LeaderboardPage() {
         const message = err instanceof ApiError ? err.message : 'Failed to load leaderboard';
         setError(message);
         toast.error(message);
-        console.error('Error loading leaderboard:', err);
       } finally {
         setLoading(false);
       }

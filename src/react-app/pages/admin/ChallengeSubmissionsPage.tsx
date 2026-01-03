@@ -51,8 +51,7 @@ export function ChallengeSubmissionsPage() {
         ]);
         setChallenge(challengeData);
         setSubmissions(submissionsData);
-      } catch (err) {
-        console.error('Error loading data:', err);
+      } catch {
         setError(t('admin.submissions.loadError', 'Failed to load submissions'));
       } finally {
         setLoading(false);
@@ -71,8 +70,7 @@ export function ChallengeSubmissionsPage() {
         const updated = await getChallengeSubmissions(id);
         setSubmissions(updated);
       }
-    } catch (err) {
-      console.error('Error approving submission:', err);
+    } catch {
       setError(t('admin.submissions.approveError', 'Failed to approve submission'));
     } finally {
       setProcessing(null);
@@ -99,8 +97,7 @@ export function ChallengeSubmissionsPage() {
         const updated = await getChallengeSubmissions(id);
         setSubmissions(updated);
       }
-    } catch (err) {
-      console.error('Error rejecting submission:', err);
+    } catch {
       setError(t('admin.submissions.rejectError', 'Failed to reject submission'));
     } finally {
       setProcessing(null);

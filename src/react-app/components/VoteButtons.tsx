@@ -40,8 +40,8 @@ export default function VoteButtons({
             ? await forumService.getThreadVote(votableId)
             : await forumService.getReplyVote(votableId);
         setUserVote((result.user_vote as 'upvote' | 'downvote' | null) || null);
-      } catch (err) {
-        console.error('Error loading user vote:', err);
+      } catch {
+        // Error loading vote state - leave as null
       }
     };
 
@@ -67,8 +67,7 @@ export default function VoteButtons({
       setUpvoteCount(result.upvote_count);
       setDownvoteCount(result.downvote_count);
       setUserVote((result.user_vote as 'upvote' | 'downvote' | null) || null);
-    } catch (err) {
-      console.error('Error voting:', err);
+    } catch {
       alert('Failed to vote. Please try again.');
     } finally {
       setLoading(false);

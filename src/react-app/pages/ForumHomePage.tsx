@@ -33,7 +33,6 @@ export default function ForumHomePage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : t('forums.loadError');
         setError(message);
-        console.error('Error loading categories:', err);
       } finally {
         setLoading(false);
       }

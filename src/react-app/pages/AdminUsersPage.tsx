@@ -39,7 +39,6 @@ export function AdminUsersPage() {
         const message = err instanceof ApiError ? err.message : 'Failed to load users';
         setError(message);
         toast.error(message);
-        console.error('Error loading users:', err);
       } finally {
         setLoading(false);
       }
@@ -62,7 +61,6 @@ export function AdminUsersPage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to update role';
       toast.error(message);
-      console.error('Error updating role:', err);
     } finally {
       setUpdatingUserId(null);
     }

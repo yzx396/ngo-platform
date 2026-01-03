@@ -48,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         if (isMounted && error instanceof Error && error.name !== 'AbortError') {
-          console.error('Failed to restore session:', error);
           setUser(null);
         }
       } finally {
@@ -82,8 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         credentials: 'include',
       });
-    } catch (error) {
-      console.error('Logout request failed:', error);
+    } catch {
+      // Logout request failed, but we still clear local state
     } finally {
       setUser(null);
     }
@@ -108,8 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userData = await response.json();
       setUser(userData);
       return userData;
-    } catch (error) {
-      console.error('Failed to get user:', error);
+    } catch {
       return null;
     }
   };

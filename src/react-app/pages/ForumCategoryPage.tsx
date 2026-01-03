@@ -46,7 +46,6 @@ export default function ForumCategoryPage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : t('forums.errorLoadingCategory');
         setError(message);
-        console.error('Error loading category data:', err);
       } finally {
         setLoading(false);
       }

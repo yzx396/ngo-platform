@@ -39,9 +39,8 @@ export function UserProfileEdit() {
           setCVFilename(metadata.cv_filename);
           setCVUploadedAt(metadata.cv_uploaded_at);
         }
-      } catch (error) {
+      } catch {
         // Silently fail - CV may not exist
-        console.error('Failed to load CV metadata:', error);
       } finally {
         setIsLoading(false);
       }

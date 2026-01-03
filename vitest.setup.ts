@@ -3,8 +3,8 @@ import i18n from './src/react-app/i18n';
 import { vi } from 'vitest';
 
 // Initialize i18n for tests
-i18n.init().catch((err) => {
-  console.warn('i18n initialization in tests:', err);
+i18n.init().catch(() => {
+  // Silently handle i18n initialization errors during tests
 });
 
 // Set language to English for consistent test behavior

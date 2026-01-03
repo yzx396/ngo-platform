@@ -38,8 +38,7 @@ export function BlogDetailPage() {
       const data = await getBlogById(id);
       setBlog(data);
       setUserHasLiked(false); // Will be set properly when loading with user context
-    } catch (err) {
-      console.error('Error loading blog:', err);
+    } catch {
       setError(t('blogs.loadError'));
     } finally {
       setLoading(false);
@@ -65,8 +64,8 @@ export function BlogDetailPage() {
       const updated = await likeBlog(id);
       setBlog({ ...blog, likes_count: updated.likes_count });
       setUserHasLiked(true);
-    } catch (err) {
-      console.error('Error liking blog:', err);
+    } catch {
+      // Error handled silently - UI already reflects attempt
     }
   };
 
@@ -76,8 +75,8 @@ export function BlogDetailPage() {
       const updated = await unlikeBlog(id);
       setBlog({ ...blog, likes_count: updated.likes_count });
       setUserHasLiked(false);
-    } catch (err) {
-      console.error('Error unliking blog:', err);
+    } catch {
+      // Error handled silently - UI already reflects attempt
     }
   };
 
@@ -92,8 +91,8 @@ export function BlogDetailPage() {
     try {
       await deleteBlog(id);
       navigate('/blogs');
-    } catch (err) {
-      console.error('Error deleting blog:', err);
+    } catch {
+      // Error handled silently
     }
   };
 
@@ -102,8 +101,8 @@ export function BlogDetailPage() {
     try {
       const response = await featureBlog(id, !blog.featured);
       setBlog({ ...blog, featured: response.blog.featured });
-    } catch (err) {
-      console.error('Error featuring blog:', err);
+    } catch {
+      // Error handled silently
     }
   };
 

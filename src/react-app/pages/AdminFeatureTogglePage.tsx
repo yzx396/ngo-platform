@@ -47,7 +47,6 @@ export function AdminFeatureTogglePage() {
       const message = err instanceof ApiError ? err.message : 'Failed to load features';
       setError(message);
       toast.error(message);
-      console.error('Error loading features:', err);
     } finally {
       setLoading(false);
     }
@@ -76,7 +75,6 @@ export function AdminFeatureTogglePage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to toggle feature';
       toast.error(message);
-      console.error('Error toggling feature:', err);
     } finally {
       setUpdatingFeatureId(null);
     }
@@ -101,7 +99,6 @@ export function AdminFeatureTogglePage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to delete feature';
       toast.error(message);
-      console.error('Error deleting feature:', err);
     } finally {
       setDeletingFeatureId(null);
     }
@@ -134,7 +131,6 @@ export function AdminFeatureTogglePage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Failed to create feature';
       toast.error(message);
-      console.error('Error creating feature:', err);
     }
   };
 

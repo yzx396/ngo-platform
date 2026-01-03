@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, beforeEach, vi, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import ForumHomePage from '../pages/ForumHomePage';
 import * as forumServiceModule from '../services/forumService';
@@ -42,16 +42,6 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }));
-
-const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-
-afterEach(() => {
-  consoleErrorSpy.mockClear();
-});
-
-afterAll(() => {
-  consoleErrorSpy.mockRestore();
-});
 
 // Mock data includes both parents and children
 const mockAllCategories = [

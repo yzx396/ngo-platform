@@ -65,7 +65,6 @@ export function OAuthCallbackPage() {
         // Redirect to return URL or home page
         navigate(returnUrl || '/', { replace: true });
       } catch (err) {
-        console.error('OAuth callback error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       }
     };

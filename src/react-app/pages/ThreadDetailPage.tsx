@@ -53,7 +53,6 @@ export default function ThreadDetailPage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : t('errors.unexpectedError');
         setError(message);
-        console.error('Error loading thread:', err);
       } finally {
         setLoading(false);
       }

@@ -46,9 +46,8 @@ export function MentorDetailPage() {
         try {
           const matchResult = await checkExistingMatch(data.user_id);
           setHasExistingMatch(matchResult?.exists ?? false);
-        } catch (error) {
+        } catch {
           // Silently fail - don't show error for this background operation
-          console.error('Failed to check existing match:', error);
         }
       } catch (err) {
         setError('Failed to load mentor profile');

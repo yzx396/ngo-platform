@@ -69,9 +69,8 @@ export function MentorBrowse() {
           );
           setRequestedMentorIds(mentorIds);
         }
-      } catch (error) {
+      } catch {
         // Silently fail - don't show error for this background operation
-        console.error('Failed to load existing matches:', error);
       }
     };
 

@@ -62,8 +62,7 @@ export function AdminChallengesPage() {
       setError(null);
       const data = await getChallenges();
       setChallenges(data);
-    } catch (err) {
-      console.error('Error loading challenges:', err);
+    } catch {
       setError('Failed to load challenges');
     } finally {
       setLoading(false);
@@ -127,8 +126,7 @@ export function AdminChallengesPage() {
 
       setDialogOpen(false);
       loadChallenges();
-    } catch (err) {
-      console.error('Error saving challenge:', err);
+    } catch {
       setError('Failed to save challenge');
     } finally {
       setSaving(false);
@@ -149,8 +147,7 @@ export function AdminChallengesPage() {
       setDeleteConfirmOpen(false);
       setDeletingId(null);
       loadChallenges();
-    } catch (err) {
-      console.error('Error deleting challenge:', err);
+    } catch {
       setError('Failed to delete challenge');
     } finally {
       setDeleting(false);

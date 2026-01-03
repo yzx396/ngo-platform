@@ -29,8 +29,7 @@ export function BlogsPage() {
         filter === 'featured' ? true : undefined
       );
       setBlogs(response.blogs);
-    } catch (err) {
-      console.error('Error loading blogs:', err);
+    } catch {
       setError(t('blogs.loadError'));
     } finally {
       setLoading(false);
@@ -51,8 +50,8 @@ export function BlogsPage() {
             : blog
         )
       );
-    } catch (err) {
-      console.error('Error liking blog:', err);
+    } catch {
+      // Error handled silently
     }
   };
 
@@ -66,8 +65,8 @@ export function BlogsPage() {
             : blog
         )
       );
-    } catch (err) {
-      console.error('Error unliking blog:', err);
+    } catch {
+      // Error handled silently
     }
   };
 
