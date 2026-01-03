@@ -218,14 +218,12 @@ function AppContent() {
                 }
               />
 
-              {/* Challenges Routes */}
+              {/* Challenges Routes - Public viewing, auth required for join/submit */}
               <Route
                 path="/challenges"
                 element={
                   <FeatureRoute featureKey="challenges">
-                    <ProtectedRoute>
-                      <ChallengesPage />
-                    </ProtectedRoute>
+                    <ChallengesPage />
                   </FeatureRoute>
                 }
               />
@@ -233,9 +231,7 @@ function AppContent() {
                 path="/challenges/:id"
                 element={
                   <FeatureRoute featureKey="challenges">
-                    <ProtectedRoute>
-                      <ChallengeDetailPage />
-                    </ProtectedRoute>
+                    <ChallengeDetailPage />
                   </FeatureRoute>
                 }
               />

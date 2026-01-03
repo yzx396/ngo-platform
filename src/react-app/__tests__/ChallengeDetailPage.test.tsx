@@ -272,8 +272,8 @@ describe('ChallengeDetailPage', () => {
     });
   });
 
-  describe('Authentication', () => {
-    it('should show login prompt for unauthenticated users', async () => {
+  describe('Public Access (Unauthenticated Users)', () => {
+    beforeEach(() => {
       vi.mocked(authContextModule.useAuth).mockReturnValue({
         isAuthenticated: false,
         isLoading: false,
@@ -283,31 +283,74 @@ describe('ChallengeDetailPage', () => {
         login: vi.fn(),
         getUser: vi.fn(),
       });
+    });
+
+    it('should display challenge details for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
+
+      renderWithRouter(<ChallengeDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Learn React')).toBeInTheDocument();
+        expect(screen.getByText('Master React basics')).toBeInTheDocument();
+        expect(screen.getByText('Build a React component')).toBeInTheDocument();
+      });
+    });
+
+    it('should display challenge metadata for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
+
+      renderWithRouter(<ChallengeDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/100 points/i)).toBeInTheDocument();
+        expect(screen.getByText(/5 participants/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should show login prompt for unauthenticated users', async () => {
       vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
 
       renderWithRouter(<ChallengeDetailPage />);
 
       await waitFor(() => {
         expect(screen.getByText(/login/i)).toBeInTheDocument();
+        expect(screen.getByText(/to join this challenge/i)).toBeInTheDocument();
       });
     });
 
-    it('should not show user actions for unauthenticated users', async () => {
-      vi.mocked(authContextModule.useAuth).mockReturnValue({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        role: undefined,
-        logout: vi.fn(),
-        login: vi.fn(),
-        getUser: vi.fn(),
-      });
+    it('should not show join button for unauthenticated users', async () => {
       vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
 
       renderWithRouter(<ChallengeDetailPage />);
 
       await waitFor(() => {
-        expect(screen.queryByText(/Join Challenge/i)).not.toBeInTheDocument();
+        expect(screen.getByText('Learn React')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/Join Challenge/i)).not.toBeInTheDocument();
+    });
+
+    it('should not show submission form for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
+
+      renderWithRouter(<ChallengeDetailPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Learn React')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByLabelText(/Submission Details/i)).not.toBeInTheDocument();
+    });
+
+    it('should have login link that navigates to login page', async () => {
+      vi.mocked(challengeServiceModule.getChallengeById).mockResolvedValue(mockChallenge);
+
+      renderWithRouter(<ChallengeDetailPage />);
+
+      await waitFor(() => {
+        const loginLink = screen.getByRole('link', { name: /login/i });
+        expect(loginLink).toHaveAttribute('href', '/login');
       });
     });
   });

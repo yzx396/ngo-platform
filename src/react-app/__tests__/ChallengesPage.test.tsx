@@ -208,4 +208,65 @@ describe('ChallengesPage', () => {
       });
     });
   });
+
+  describe('Public Access (Unauthenticated Users)', () => {
+    beforeEach(() => {
+      vi.mocked(authContextModule.useAuth).mockReturnValue({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null,
+        role: undefined,
+        logout: vi.fn(),
+        login: vi.fn(),
+        getUser: vi.fn(),
+      });
+    });
+
+    it('should display challenges list for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([mockChallenge]);
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Learn React')).toBeInTheDocument();
+        expect(screen.getByText('Master React fundamentals')).toBeInTheDocument();
+      });
+    });
+
+    it('should load challenges without authentication', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([mockChallenge]);
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        expect(challengeServiceModule.getChallenges).toHaveBeenCalledWith('active');
+      });
+    });
+
+    it('should display page header for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([]);
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Challenges')).toBeInTheDocument();
+        expect(
+          screen.getByText(/Complete challenges to earn points/i)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should not show admin create button for unauthenticated users', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([]);
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/No active challenges/i)).toBeInTheDocument();
+      });
+
+      // Admin-only "Create the first challenge" button should not be visible
+      expect(screen.queryByText(/Create the first challenge/i)).not.toBeInTheDocument();
+    });
+  });
 });
