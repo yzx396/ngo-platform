@@ -2,13 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Route, Routes, MemoryRouter } from 'react-router-dom';
 import { MentorDetailPage } from '../pages/MentorDetailPage';
-import { AuthProvider } from '../context/AuthContext';
+import * as AuthContext from '../context/AuthContext';
 import * as mentorService from '../services/mentorService';
 import type { MentorProfile } from '../../types/mentor';
 import { MentoringLevel, PaymentType, ExpertiseDomain, ExpertiseTopic } from '../../types/mentor';
 
 // Mock the mentor service
 vi.mock('../services/mentorService');
+
+// Mock the AuthContext to avoid async operations
+vi.mock('../context/AuthContext', async () => {
+  const actual = await vi.importActual('../context/AuthContext');
+  return {
+    ...actual,
+    useAuth: vi.fn(),
+  };
+});
 
 const mockMentor: MentorProfile = {
   id: '1',
@@ -30,10 +39,16 @@ const mockMentor: MentorProfile = {
 describe('MentorDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock fetch for AuthProvider
-    global.fetch = vi.fn(() =>
-      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
-    );
+    // Mock useAuth to avoid async operations
+    vi.mocked(AuthContext.useAuth).mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      role: undefined,
+      login: vi.fn(),
+      logout: vi.fn(),
+      getUser: vi.fn(),
+    });
   });
 
   it('should display mentor full information', async () => {
@@ -41,11 +56,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -65,11 +78,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -88,11 +99,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -110,11 +119,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -130,11 +137,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -148,11 +153,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -166,11 +169,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 
@@ -188,11 +189,9 @@ describe('MentorDetailPage', () => {
 
     render(
       <MemoryRouter initialEntries={['/mentors/1']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/mentors/:id" element={<MentorDetailPage />} />
-          </Routes>
-        </AuthProvider>
+        <Routes>
+          <Route path="/mentors/:id" element={<MentorDetailPage />} />
+        </Routes>
       </MemoryRouter>
     );
 

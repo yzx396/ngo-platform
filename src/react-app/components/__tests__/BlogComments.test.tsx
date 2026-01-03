@@ -192,7 +192,7 @@ describe('BlogComments', () => {
     // This tests that the component can handle external deletions
   });
 
-  it('should accept initial comments prop', () => {
+  it('should accept initial comments prop', async () => {
     vi.mocked(blogService.getBlogComments).mockResolvedValue({
       comments: [],
       total: 0,
@@ -203,6 +203,11 @@ describe('BlogComments', () => {
     // Should display initial comments immediately
     expect(screen.getByText('Great blog post!')).toBeInTheDocument();
     expect(screen.getByText('I agree!')).toBeInTheDocument();
+
+    // Wait for async fetch to complete to avoid act() warning
+    await waitFor(() => {
+      expect(blogService.getBlogComments).toHaveBeenCalled();
+    });
   });
 
   it('should build hierarchical comment tree', async () => {

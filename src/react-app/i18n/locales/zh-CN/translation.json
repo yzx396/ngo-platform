@@ -436,6 +436,27 @@
       "first5Upvotes": "前 5 个点赞：全额积分（每个 2-3）",
       "next10Upvotes": "接下来 10 个点赞：50% 积分（每个 1-1.5）",
       "beyond15Upvotes": "超过 15 个点赞：0 积分"
+    },
+    "challengeRulesDialog": {
+      "title": "如何在挑战中赚取积分",
+      "intro": "通过参与挑战、提交作品和获得批准来赚取积分。了解我们的积分系统。",
+      "participation": "参与活动",
+      "participationDesc": "当你参与挑战时，你会获得积分：",
+      "joinChallenge": "加入挑战",
+      "joinChallengePoints": "5 积分",
+      "submitCompletion": "提交完成",
+      "submitCompletionPoints": "10 积分",
+      "rewards": "挑战奖励",
+      "rewardsDesc": "当你的提交被批准时：",
+      "approvedSubmission": "提交被批准",
+      "approvedSubmissionPoints": "可变（由挑战创建者设定）",
+      "antiSpamDesc": "为防止滥用，积分以1小时滚动窗口为限：",
+      "joinsPerHour": "每小时加入挑战数",
+      "first5Joins": "前 5 次加入：全额积分（每次 5）",
+      "beyond5Joins": "超过 5 次加入：0 积分",
+      "submissionsPerHour": "每小时提交数",
+      "first3Submissions": "前 3 次提交：全额积分（每次 10）",
+      "beyond3Submissions": "超过 3 次提交：0 积分"
     }
   },
   "cv": {

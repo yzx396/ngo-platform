@@ -25,11 +25,11 @@ vi.mock('sonner', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Console warn spy for testing retry behavior
+// Console warn spy for testing retry behavior (mocked to suppress output)
 let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  consoleWarnSpy = vi.spyOn(console, 'warn');
+  consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Trophy, Plus } from 'lucide-react';
+import { Loader2, Trophy, Plus, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChallengeCard } from '../components/ChallengeCard';
 import { useAuth } from '../context/AuthContext';
 import { getChallenges } from '../services/challengeService';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { ChallengePointsInfoDialog } from '../components/ChallengePointsInfoDialog';
 import type { Challenge } from '../../types/challenge';
 
 export function ChallengesPage() {
@@ -16,6 +17,7 @@ export function ChallengesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'active' | 'completed' | 'all'>('active');
+  const [pointsInfoDialogOpen, setPointsInfoDialogOpen] = useState(false);
 
   const loadChallenges = useCallback(async () => {
     try {
@@ -39,7 +41,7 @@ export function ChallengesPage() {
   const completedChallenges = challenges.filter((c) => c.status === 'completed');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 flex-1">
@@ -54,14 +56,27 @@ export function ChallengesPage() {
             )}
           </p>
         </div>
-        {role === 'admin' && (
-          <Link to="/admin/challenges">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('challenges.create', 'Create Challenge')}
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPointsInfoDialogOpen(true)}
+            className="mt-1"
+            title={t('points.howToEarn', 'How to Earn Points')}
+            aria-label={t('points.howToEarn', 'How to Earn Points')}
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            {t('points.howToEarn', 'How to Earn Points')}
+          </Button>
+          {role === 'admin' && (
+            <Link to="/admin/challenges">
+              <Button className="mt-1">
+                <Plus className="w-4 h-4 mr-2" />
+                {t('challenges.create', 'Create Challenge')}
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -168,6 +183,12 @@ export function ChallengesPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Challenge Points Info Dialog */}
+      <ChallengePointsInfoDialog
+        open={pointsInfoDialogOpen}
+        onOpenChange={setPointsInfoDialogOpen}
+      />
     </div>
   );
 }

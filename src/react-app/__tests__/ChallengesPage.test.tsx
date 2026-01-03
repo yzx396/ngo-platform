@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ChallengesPage } from '../pages/ChallengesPage';
 import * as challengeServiceModule from '../services/challengeService';
@@ -10,7 +11,12 @@ vi.mock('../services/challengeService');
 vi.mock('../context/AuthContext');
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => defaultValue || key,
+    t: (key: string, defaultValue?: string) => {
+      const translations: Record<string, string> = {
+        'points.howToEarn': 'How to Earn Points',
+      };
+      return translations[key] || defaultValue || key;
+    },
     i18n: { language: 'en' },
   }),
 }));
@@ -267,6 +273,51 @@ describe('ChallengesPage', () => {
 
       // Admin-only "Create the first challenge" button should not be visible
       expect(screen.queryByText(/Create the first challenge/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('How to Earn Points Button', () => {
+    it('should display "How to Earn Points" button in header', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([]);
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        const pointsButton = screen.getByRole('button', { name: /How to Earn Points/i });
+        expect(pointsButton).toBeInTheDocument();
+      });
+    });
+
+    it('should open points info dialog when button is clicked', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([]);
+      const user = userEvent.setup();
+
+      renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /How to Earn Points/i })).toBeInTheDocument();
+      });
+
+      const pointsButton = screen.getByRole('button', { name: /How to Earn Points/i });
+      await user.click(pointsButton);
+
+      // Dialog should be opened
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Layout', () => {
+    it('should use space-y-8 layout matching forum page', async () => {
+      vi.mocked(challengeServiceModule.getChallenges).mockResolvedValue([]);
+
+      const { container } = renderWithRouter(<ChallengesPage />);
+
+      await waitFor(() => {
+        const mainDiv = container.querySelector('.space-y-8');
+        expect(mainDiv).toBeInTheDocument();
+      });
     });
   });
 });

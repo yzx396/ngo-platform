@@ -436,6 +436,27 @@
       "first5Upvotes": "First 5 upvotes: Full points (2-3 each)",
       "next10Upvotes": "Next 10 upvotes: 50% points (1-1.5 each)",
       "beyond15Upvotes": "Beyond 15 upvotes: 0 points"
+    },
+    "challengeRulesDialog": {
+      "title": "How to Earn Points in Challenges",
+      "intro": "Earn points by participating in challenges, submitting your work, and getting approved. Learn about our point system below.",
+      "participation": "Participation",
+      "participationDesc": "You earn points when you engage with challenges:",
+      "joinChallenge": "Join a challenge",
+      "joinChallengePoints": "5 points",
+      "submitCompletion": "Submit completion",
+      "submitCompletionPoints": "10 points",
+      "rewards": "Challenge Rewards",
+      "rewardsDesc": "When your submission is approved:",
+      "approvedSubmission": "Approved submission",
+      "approvedSubmissionPoints": "Variable (set by challenge creator)",
+      "antiSpamDesc": "To prevent gaming the system, points are capped with a 1-hour rolling window:",
+      "joinsPerHour": "Challenge joins per hour",
+      "first5Joins": "First 5 joins: Full points (5 each)",
+      "beyond5Joins": "Beyond 5 joins: 0 points",
+      "submissionsPerHour": "Submissions per hour",
+      "first3Submissions": "First 3 submissions: Full points (10 each)",
+      "beyond3Submissions": "Beyond 3 submissions: 0 points"
     }
   },
   "cv": {

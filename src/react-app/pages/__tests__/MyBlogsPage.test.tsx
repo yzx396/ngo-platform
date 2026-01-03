@@ -66,6 +66,11 @@ describe('MyBlogsPage', () => {
 
     expect(screen.getByText('My Blogs')).toBeInTheDocument();
     expect(screen.getByText('Manage your blog posts')).toBeInTheDocument();
+
+    // Wait for async fetch to complete to avoid act() warning
+    await waitFor(() => {
+      expect(mockGetMyBlogs).toHaveBeenCalled();
+    });
   });
 
   it('should call getMyBlogs service on mount', async () => {

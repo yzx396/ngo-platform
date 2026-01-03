@@ -1,39 +1,59 @@
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import i18n from '../../i18n';
-import { AuthProvider } from '../../context/AuthContext';
-import { FeatureProvider } from '../../context/FeatureContext';
 import { Layout } from '../Layout';
+import * as AuthContext from '../../context/AuthContext';
+import * as FeatureContext from '../../context/FeatureContext';
 
-// Mock the feature service
-vi.mock('../../services/featureService', () => ({
-  getEnabledFeatures: vi.fn().mockResolvedValue({}),
-}));
+// Mock the context hooks to avoid async operations
+vi.mock('../../context/AuthContext', async () => {
+  const actual = await vi.importActual('../../context/AuthContext');
+  return {
+    ...actual,
+    useAuth: vi.fn(),
+  };
+});
+
+vi.mock('../../context/FeatureContext', async () => {
+  const actual = await vi.importActual('../../context/FeatureContext');
+  return {
+    ...actual,
+    useFeatures: vi.fn(),
+  };
+});
 
 /**
  * Test suite for Layout component
  */
 describe('Layout', () => {
-  beforeEach(() => {
-    // Mock fetch for AuthProvider
-    global.fetch = vi.fn(() =>
-      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
-    );
+  // Setup default mock return values before each test
+  vi.mocked(AuthContext.useAuth).mockReturnValue({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    role: undefined,
+    login: vi.fn(),
+    logout: vi.fn(),
+    getUser: vi.fn(),
+  });
+
+  vi.mocked(FeatureContext.useFeatures).mockReturnValue({
+    features: {},
+    isFeatureEnabled: () => false,
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
   });
 
   const renderLayout = (children = 'Test Content') => {
     return render(
-      <AuthProvider>
-        <FeatureProvider>
-          <I18nextProvider i18n={i18n}>
-            <Router>
-              <Layout>{children}</Layout>
-            </Router>
-          </I18nextProvider>
-        </FeatureProvider>
-      </AuthProvider>
+      <I18nextProvider i18n={i18n}>
+        <Router>
+          <Layout>{children}</Layout>
+        </Router>
+      </I18nextProvider>
     );
   };
 

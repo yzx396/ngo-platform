@@ -4,10 +4,19 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '../i18n';
 import { LeaderboardPage } from '../pages/LeaderboardPage';
 import * as pointsService from '../services/pointsService';
-import { AuthProvider } from '../context/AuthContext';
+import * as AuthContext from '../context/AuthContext';
 
 // Mock the pointsService
 vi.mock('../services/pointsService');
+
+// Mock the AuthContext to avoid async operations
+vi.mock('../context/AuthContext', async () => {
+  const actual = await vi.importActual('../context/AuthContext');
+  return {
+    ...actual,
+    useAuth: vi.fn(),
+  };
+});
 
 // Mock sonner toast
 vi.mock('sonner', () => ({
@@ -33,10 +42,16 @@ const mockLeaderboardData: Record<string, unknown> = {
 describe('LeaderboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock fetch for AuthProvider
-    global.fetch = vi.fn(() =>
-      Promise.resolve(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }))
-    );
+    // Mock useAuth to avoid async operations
+    vi.mocked(AuthContext.useAuth).mockReturnValue({
+      user: { id: 'user1', name: 'Test User', email: 'test@example.com', role: 'member', points: 100 },
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'member',
+      login: vi.fn(),
+      logout: vi.fn(),
+      getUser: vi.fn(),
+    });
     const mock = pointsService.getLeaderboard as unknown as ReturnType<typeof vi.fn>;
     mock.mockResolvedValue(mockLeaderboardData);
   });
@@ -44,9 +59,7 @@ describe('LeaderboardPage', () => {
   it('should render leaderboard title', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -65,9 +78,7 @@ describe('LeaderboardPage', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -77,9 +88,7 @@ describe('LeaderboardPage', () => {
   it('should render users in leaderboard', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -93,9 +102,7 @@ describe('LeaderboardPage', () => {
   it('should display points for each user', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -108,9 +115,7 @@ describe('LeaderboardPage', () => {
   it('should display rank medals for top 3', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -126,9 +131,7 @@ describe('LeaderboardPage', () => {
   it('should display rank numbers for positions > 3', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -141,9 +144,7 @@ describe('LeaderboardPage', () => {
   it('should call getLeaderboard with correct parameters', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -163,9 +164,7 @@ describe('LeaderboardPage', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -181,9 +180,7 @@ describe('LeaderboardPage', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -195,9 +192,7 @@ describe('LeaderboardPage', () => {
   it('should not show pagination when total less than limit', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -225,9 +220,7 @@ describe('LeaderboardPage', () => {
 
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
@@ -239,9 +232,7 @@ describe('LeaderboardPage', () => {
   it('should be accessible with semantic table structure', async () => {
     render(
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <LeaderboardPage />
-        </AuthProvider>
+        <LeaderboardPage />
       </I18nextProvider>
     );
 
