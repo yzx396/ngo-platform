@@ -158,7 +158,7 @@ function EventCard({ event, isPast }: EventCardProps) {
           {/* Attendees and Open Button */}
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
-              {t('events.attendees', '{{count}} attendees', { count: event.guest_count })}
+              {t('events.attendees', '{{count}} attendees', { count: event.ticket_count })}
             </div>
             <div className="flex items-center gap-2 text-primary hover:gap-3 transition-all">
               <span className="text-sm font-medium">{t('events.viewEvent', 'View Event')}</span>
