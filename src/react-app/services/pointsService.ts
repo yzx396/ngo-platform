@@ -59,7 +59,7 @@ export async function addPointsToUser(
 export async function awardPointsForAction(
   userId: string,
   pointsToAward: number,
-  action?: string
+  _action?: string
 ): Promise<GetUserPointsResponse> {
   return addPointsToUser(userId, pointsToAward);
 }
