@@ -10,12 +10,16 @@ import type { ChallengeWithStatus } from '../../types/challenge';
 
 vi.mock('../services/challengeService');
 vi.mock('../context/AuthContext');
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => defaultValue || key,
-    i18n: { language: 'en' },
-  }),
-}));
+vi.mock('react-i18next', () => {
+  const stableT = (key: string, defaultValue?: string) => defaultValue || key;
+  const stableI18n = { language: 'en' };
+  return {
+    useTranslation: () => ({
+      t: stableT,
+      i18n: stableI18n,
+    }),
+  };
+});
 
 const mockChallenge: ChallengeWithStatus = {
   id: 'chal_123',
@@ -146,6 +150,7 @@ describe('ChallengeDetailPage', () => {
     });
 
     it('should call joinChallenge and reload when join button clicked', async () => {
+      const user = userEvent.setup();
       vi.mocked(challengeServiceModule.joinChallenge).mockResolvedValue(undefined);
       vi.mocked(challengeServiceModule.getChallengeById)
         .mockResolvedValueOnce(mockChallenge)
@@ -154,7 +159,7 @@ describe('ChallengeDetailPage', () => {
       renderWithRouter(<ChallengeDetailPage />);
 
       const joinButton = await screen.findByRole('button', { name: /Join Challenge/i });
-      fireEvent.click(joinButton);
+      await user.click(joinButton);
 
       await waitFor(() => {
         expect(challengeServiceModule.joinChallenge).toHaveBeenCalledWith('chal_123');
