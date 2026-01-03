@@ -162,3 +162,11 @@ export const BLOGS_CREATED_REDUCED_MULTIPLIER = 0.5;
 
 // Time window for diminishing returns (in seconds): 1 hour
 export const DIMINISHING_RETURNS_WINDOW_SECONDS = 3600;
+
+// Challenge points
+export const POINTS_FOR_JOIN_CHALLENGE = 5;
+export const POINTS_FOR_SUBMIT_CHALLENGE = 10;
+
+// Challenge anti-abuse thresholds (24h window)
+export const CHALLENGE_JOINS_FULL_POINTS_THRESHOLD = 5;
+export const CHALLENGE_SUBMISSIONS_FULL_POINTS_THRESHOLD = 3;

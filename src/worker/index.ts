@@ -70,6 +70,11 @@ import {
   BLOGS_CREATED_REDUCED_POINTS_THRESHOLD,
   BLOGS_CREATED_REDUCED_MULTIPLIER,
   DIMINISHING_RETURNS_WINDOW_SECONDS,
+  // Challenge points
+  POINTS_FOR_JOIN_CHALLENGE,
+  POINTS_FOR_SUBMIT_CHALLENGE,
+  CHALLENGE_JOINS_FULL_POINTS_THRESHOLD,
+  CHALLENGE_SUBMISSIONS_FULL_POINTS_THRESHOLD,
 } from "../types/points";
 import { generateBlogId, generateBlogLikeId, generateBlogCommentId, generateThreadId, generateReplyId, generateChallengeId, generateChallengeParticipantId, generateChallengeSubmissionId } from "./utils/idGenerator";
 import { sanitizeHtml } from "./utils/sanitize";
@@ -797,6 +802,16 @@ async function awardPointsForAction(
         adjustedPoints = 0; // Over threshold, no points
       } else if (recentActionCount >= BLOGS_CREATED_FULL_POINTS_THRESHOLD) {
         adjustedPoints = Math.floor(basePoints * BLOGS_CREATED_REDUCED_MULTIPLIER);
+      }
+    } else if (actionType === 'challenge_joined') {
+      // Anti-abuse: max 5 challenge joins per day get points
+      if (recentActionCount >= CHALLENGE_JOINS_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = 0;
+      }
+    } else if (actionType === 'challenge_submitted') {
+      // Anti-abuse: max 3 challenge submissions per day get points
+      if (recentActionCount >= CHALLENGE_SUBMISSIONS_FULL_POINTS_THRESHOLD) {
+        adjustedPoints = 0;
       }
     }
 
@@ -4822,6 +4837,15 @@ app.post("/api/v1/challenges/:id/join", requireAuth, async (c) => {
       .bind(participantId, user.userId, challengeId, now)
       .run();
 
+    // Award points for joining (with anti-abuse limits)
+    await awardPointsForAction(
+      db,
+      user.userId,
+      "challenge_joined",
+      challengeId,
+      POINTS_FOR_JOIN_CHALLENGE
+    );
+
     return c.json({ success: true });
   } catch (err) {
     console.error("Error joining challenge:", err);
@@ -4883,6 +4907,15 @@ app.post("/api/v1/challenges/:id/submit", requireAuth, async (c) => {
       `)
       .bind(submissionId, user.userId, challengeId, submission_text, submission_url || null, SubmissionStatus.Pending, now)
       .run();
+
+    // Award points for submitting (with anti-abuse limits)
+    await awardPointsForAction(
+      db,
+      user.userId,
+      "challenge_submitted",
+      challengeId,
+      POINTS_FOR_SUBMIT_CHALLENGE
+    );
 
     const submission = await db
       .prepare("SELECT * FROM challenge_submissions WHERE id = ?")

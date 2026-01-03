@@ -34,6 +34,7 @@ function createMockDb() {
   const mockParticipants = new Map<string, Record<string, unknown>>();
   const mockSubmissions = new Map<string, Record<string, unknown>>();
   const mockPoints = new Map<string, Record<string, unknown>>();
+  const mockPointActionsLog = new Map<string, Record<string, unknown>>();
 
   // Add test user
   mockUsers.set('user123', { id: 'user123', email: 'user@test.com', name: 'Test User' });
@@ -150,6 +151,21 @@ function createMockDb() {
             return { results: [points] };
           }
 
+          // SELECT point_actions_log (for diminishing returns check)
+          if (query.includes('SELECT COUNT') && query.includes('point_actions_log')) {
+            const userId = params[0];
+            const actionType = params[1];
+            const timeWindow = params[2];
+            // Count recent actions of this type for this user
+            const count = Array.from(mockPointActionsLog.values())
+              .filter(log =>
+                log.user_id === userId &&
+                log.action_type === actionType &&
+                (log.created_at as number) >= timeWindow
+              ).length;
+            return { results: [{ count }] };
+          }
+
           return { results: [] };
         }),
 
@@ -175,6 +191,27 @@ function createMockDb() {
           if (query.includes('SELECT') && query.includes('user_roles') && query.includes('WHERE user_id = ?')) {
             const userId = params[0];
             return mockRoles.get(userId) || null;
+          }
+
+          // Get user points (for awardPointsForAction and approval)
+          if (query.includes('SELECT') && query.includes('user_points') && query.includes('WHERE user_id = ?')) {
+            const userId = params[0];
+            return mockPoints.get(userId) || null;
+          }
+
+          // Get point actions count (for diminishing returns)
+          if (query.includes('SELECT COUNT') && query.includes('point_actions_log')) {
+            const userId = params[0];
+            const actionType = params[1];
+            const timeWindow = params[2];
+            // Count recent actions of this type for this user
+            const count = Array.from(mockPointActionsLog.values())
+              .filter(log =>
+                log.user_id === userId &&
+                log.action_type === actionType &&
+                (log.created_at as number) >= timeWindow
+              ).length;
+            return { count };
           }
 
           // Get participant
@@ -289,11 +326,28 @@ function createMockDb() {
           }
 
           // UPDATE user points
-          if (query.includes('UPDATE user_points') || query.includes('INSERT INTO user_points')) {
+          if (query.includes('UPDATE user_points') && query.includes('SET points')) {
+            const newPoints = params[0];
             const userId = params[params.length - 1];
             const currentPoints = mockPoints.get(userId) || { user_id: userId, points: 0 };
-            const newPoints = params[0];
             mockPoints.set(userId, { ...currentPoints, points: newPoints });
+            return { success: true };
+          }
+
+          // INSERT user points
+          if (query.includes('INSERT INTO user_points')) {
+            const [id, userId, points] = params;
+            mockPoints.set(userId as string, { id, user_id: userId, points });
+            return { success: true };
+          }
+
+          // INSERT point_actions_log
+          if (query.includes('INSERT INTO point_actions_log')) {
+            const [id, userId, actionType, referenceId, pointsAwarded, createdAt] = params;
+            mockPointActionsLog.set(id as string, {
+              id, user_id: userId, action_type: actionType,
+              reference_id: referenceId, points_awarded: pointsAwarded, created_at: createdAt
+            });
             return { success: true };
           }
 
@@ -303,7 +357,7 @@ function createMockDb() {
     }))
   } as unknown as D1Database;
 
-  return { db, mockUsers, mockRoles, mockChallenges, mockParticipants, mockSubmissions, mockPoints };
+  return { db, mockUsers, mockRoles, mockChallenges, mockParticipants, mockSubmissions, mockPoints, mockPointActionsLog };
 }
 
 // ============================================================================
@@ -315,6 +369,8 @@ describe('Challenges API', () => {
   let mockChallenges: Map<string, Record<string, unknown>>;
   let mockSubmissions: Map<string, Record<string, unknown>>;
   let mockParticipants: Map<string, Record<string, unknown>>;
+  let mockPoints: Map<string, Record<string, unknown>>;
+  let mockPointActionsLog: Map<string, Record<string, unknown>>;
   let env: TestEnv;
 
   beforeEach(() => {
@@ -323,6 +379,8 @@ describe('Challenges API', () => {
     mockChallenges = mocks.mockChallenges;
     mockSubmissions = mocks.mockSubmissions;
     mockParticipants = mocks.mockParticipants;
+    mockPoints = mocks.mockPoints;
+    mockPointActionsLog = mocks.mockPointActionsLog;
     env = {
       platform_db: mockDb,
       JWT_SECRET
@@ -698,6 +756,280 @@ describe('Challenges API', () => {
 
       const res = await app.fetch(req, env);
       expect(res.status).toBe(403);
+    });
+  });
+
+  // ============================================================================
+  // Challenge Points System Tests (TDD - RED phase)
+  // ============================================================================
+
+  describe('Challenge Points System', () => {
+    describe('Join Challenge Points', () => {
+      it('should award 5 points when joining a challenge', async () => {
+        // Initialize user with 0 points
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 0 });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge1/join', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const res = await app.fetch(req, env);
+        expect(res.status).toBe(200);
+
+        // Verify points were awarded
+        const userPoints = mockPoints.get('user123');
+        expect(userPoints?.points).toBe(5);
+      });
+
+      it('should log challenge_joined action in point_actions_log', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 0 });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge1/join', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        await app.fetch(req, env);
+
+        // Verify action was logged
+        const actionLogs = Array.from(mockPointActionsLog.values());
+        const joinLog = actionLogs.find(log =>
+          log.user_id === 'user123' &&
+          log.action_type === 'challenge_joined' &&
+          log.reference_id === 'challenge1'
+        );
+        expect(joinLog).toBeDefined();
+        expect(joinLog?.points_awarded).toBe(5);
+      });
+
+      it('should award 0 points for 6th join in 24 hours (anti-abuse)', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 25 }); // Already have 25 points from 5 joins
+
+        // Simulate 5 previous joins in the last hour (use seconds, not milliseconds)
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        for (let i = 0; i < 5; i++) {
+          mockPointActionsLog.set(`log${i}`, {
+            id: `log${i}`,
+            user_id: 'user123',
+            action_type: 'challenge_joined',
+            reference_id: `challenge${i}`,
+            points_awarded: 5,
+            created_at: nowSeconds - 100 // Recent (100 seconds ago)
+          });
+        }
+
+        // Create a new challenge for the 6th join
+        mockChallenges.set('challenge6', {
+          id: 'challenge6',
+          title: 'Challenge 6',
+          description: 'Desc',
+          requirements: 'Req',
+          created_by_user_id: 'admin123',
+          point_reward: 100,
+          deadline: Date.now() + 86400000,
+          status: ChallengeStatus.Active,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge6/join', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        await app.fetch(req, env);
+
+        // Verify no additional points were awarded (still 25)
+        const userPoints = mockPoints.get('user123');
+        expect(userPoints?.points).toBe(25);
+
+        // Verify the action was logged with 0 points
+        const actionLogs = Array.from(mockPointActionsLog.values());
+        const sixthJoinLog = actionLogs.find(log =>
+          log.user_id === 'user123' &&
+          log.action_type === 'challenge_joined' &&
+          log.reference_id === 'challenge6'
+        );
+        expect(sixthJoinLog).toBeDefined();
+        expect(sixthJoinLog?.points_awarded).toBe(0);
+      });
+    });
+
+    describe('Submit Challenge Points', () => {
+      it('should award 10 points when submitting a challenge', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 5 }); // Already have 5 from join
+        mockParticipants.set('user123:challenge1', {
+          id: 'part1',
+          user_id: 'user123',
+          challenge_id: 'challenge1',
+          joined_at: Date.now()
+        });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge1/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            submission_text: 'I completed the challenge!'
+          })
+        });
+
+        const res = await app.fetch(req, env);
+        expect(res.status).toBe(200);
+
+        // Verify points were awarded (5 from join + 10 from submit = 15)
+        const userPoints = mockPoints.get('user123');
+        expect(userPoints?.points).toBe(15);
+      });
+
+      it('should log challenge_submitted action in point_actions_log', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 5 });
+        mockParticipants.set('user123:challenge1', {
+          id: 'part1',
+          user_id: 'user123',
+          challenge_id: 'challenge1',
+          joined_at: Date.now()
+        });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge1/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            submission_text: 'I completed the challenge!'
+          })
+        });
+
+        await app.fetch(req, env);
+
+        // Verify action was logged
+        const actionLogs = Array.from(mockPointActionsLog.values());
+        const submitLog = actionLogs.find(log =>
+          log.user_id === 'user123' &&
+          log.action_type === 'challenge_submitted' &&
+          log.reference_id === 'challenge1'
+        );
+        expect(submitLog).toBeDefined();
+        expect(submitLog?.points_awarded).toBe(10);
+      });
+
+      it('should award 0 points for 4th submission in 24 hours (anti-abuse)', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 35 }); // 5 + 30 from 3 submissions
+
+        // Simulate 3 previous submissions in the last hour (use seconds, not milliseconds)
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        for (let i = 0; i < 3; i++) {
+          mockPointActionsLog.set(`sublog${i}`, {
+            id: `sublog${i}`,
+            user_id: 'user123',
+            action_type: 'challenge_submitted',
+            reference_id: `challenge${i}`,
+            points_awarded: 10,
+            created_at: nowSeconds - 100 // Recent (100 seconds ago)
+          });
+        }
+
+        // Create a new challenge for the 4th submission
+        mockChallenges.set('challenge4', {
+          id: 'challenge4',
+          title: 'Challenge 4',
+          description: 'Desc',
+          requirements: 'Req',
+          created_by_user_id: 'admin123',
+          point_reward: 100,
+          deadline: Date.now() + 86400000,
+          status: ChallengeStatus.Active,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        });
+
+        // User has joined this challenge
+        mockParticipants.set('user123:challenge4', {
+          id: 'part4',
+          user_id: 'user123',
+          challenge_id: 'challenge4',
+          joined_at: Date.now()
+        });
+
+        const token = await createTestToken('user123', 'user@test.com', 'Test User');
+        const req = new Request('http://localhost/api/v1/challenges/challenge4/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            submission_text: 'I completed challenge 4!'
+          })
+        });
+
+        await app.fetch(req, env);
+
+        // Verify no additional points were awarded (still 35)
+        const userPoints = mockPoints.get('user123');
+        expect(userPoints?.points).toBe(35);
+
+        // Verify the action was logged with 0 points
+        const actionLogs = Array.from(mockPointActionsLog.values());
+        const fourthSubmitLog = actionLogs.find(log =>
+          log.user_id === 'user123' &&
+          log.action_type === 'challenge_submitted' &&
+          log.reference_id === 'challenge4'
+        );
+        expect(fourthSubmitLog).toBeDefined();
+        expect(fourthSubmitLog?.points_awarded).toBe(0);
+      });
+    });
+
+    describe('Approval Points', () => {
+      it('should still award challenge.point_reward on approval', async () => {
+        mockPoints.set('user123', { id: 'points1', user_id: 'user123', points: 15 }); // 5 join + 10 submit
+
+        // Add a test submission
+        mockSubmissions.set('sub_points', {
+          id: 'sub_points',
+          user_id: 'user123',
+          challenge_id: 'challenge1',
+          submission_text: 'Done!',
+          submission_url: null,
+          status: SubmissionStatus.Pending,
+          submitted_at: Date.now(),
+          reviewed_at: null,
+          reviewed_by_user_id: null,
+          feedback: null
+        });
+
+        const token = await createTestToken('admin123', 'admin@test.com', 'Admin User', 'admin');
+        const req = new Request('http://localhost/api/v1/submissions/sub_points/approve', {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const res = await app.fetch(req, env);
+        expect(res.status).toBe(200);
+
+        // Verify points were awarded (15 + 100 challenge reward = 115)
+        const userPoints = mockPoints.get('user123');
+        expect(userPoints?.points).toBe(115);
+      });
     });
   });
 });

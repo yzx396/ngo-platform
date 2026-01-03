@@ -237,6 +237,52 @@ addPointsToUser(userId: string, pointsToAdd: number): Promise<UserPoints>
 awardPointsForAction(userId: string, pointsToAward: number, action: string): Promise<UserPoints>
 ```
 
+## Challenge Points System
+
+Points are awarded for participating in challenges to incentivize engagement.
+
+### Point Values
+
+| Action | Points | Notes |
+|--------|--------|-------|
+| Join challenge | 5 | Awarded when user joins a challenge |
+| Submit completion | 10 | Awarded when user submits their work |
+| Submission approved | `challenge.point_reward` | Variable, set by admin when creating challenge |
+
+### Anti-Abuse Limits
+
+To prevent gaming the system, points are capped with a 1-hour rolling window:
+
+| Action | Threshold | Behavior |
+|--------|-----------|----------|
+| Joins per hour | 5 | Full points for first 5, then 0 |
+| Submissions per hour | 3 | Full points for first 3, then 0 |
+
+### Action Types for Logging
+
+The following action types are logged in `point_actions_log`:
+
+- `challenge_joined` - User joins a challenge
+- `challenge_submitted` - User submits challenge completion
+
+### Constants
+
+Located in `src/types/points.ts`:
+
+```typescript
+POINTS_FOR_JOIN_CHALLENGE = 5
+POINTS_FOR_SUBMIT_CHALLENGE = 10
+CHALLENGE_JOINS_FULL_POINTS_THRESHOLD = 5
+CHALLENGE_SUBMISSIONS_FULL_POINTS_THRESHOLD = 3
+```
+
+### Example Flow
+
+1. **User joins challenge**: +5 points
+2. **User submits completion**: +10 points
+3. **Admin approves (challenge reward = 100)**: +100 points
+4. **Total**: 115 points
+
 ## Helper Functions
 
 Located in `src/types/points.ts`:
@@ -252,6 +298,7 @@ Points are integrated with:
 - User types and API response types in `src/types/`
 - Post creation and engagement endpoints (`/api/v1/posts/*`)
 - Blog creation and engagement endpoints (`/api/v1/blogs/*`)
+- Challenge participation endpoints (`/api/v1/challenges/*`)
 - User profile endpoints
 - Frontend UI components throughout the app
 
