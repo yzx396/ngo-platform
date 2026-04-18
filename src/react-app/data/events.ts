@@ -1,7 +1,37 @@
 import { Event } from '../../types/event';
 
 export const events: Event[] = [
-  // Upcoming Events (Today - Mar 22, 2026)
+  // Upcoming Events
+  {
+    id: 'evt-eDQoA7lGWJxoUek',
+    name: 'OpenClaw 介绍和实操',
+    start_at: '2026-04-18T21:00:00.000Z',
+    end_at: '2026-04-18T23:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    location: {
+      location_type: 'offline',
+      address: '25 Metro Dr suite 300',
+      city: 'San Jose',
+      region: 'California',
+      country: 'United States',
+      full_address: '25 Metro Dr suite 300, San Jose, CA 95110, USA',
+    },
+    ticket_info: {
+      price_cents: 1500,
+      currency: 'usd',
+      is_free: false,
+      spots_remaining: 0,
+      is_sold_out: false,
+    },
+    hosts: [{ name: 'Lead Forward' }],
+    guest_count: 34,
+    ticket_count: 34,
+    cover_image_url: 'https://images.lumacdn.com/cdn-cgi/image/format=auto,fit=cover,dpr=2,background=white,quality=75,width=400,height=400/gallery-images/9q/b4220b16-8c45-40a8-bb89-5a63d11523b5',
+    luma_url: 'https://luma.com/j33ucueb',
+    luma_slug: 'j33ucueb',
+  },
+
+  // Past Events
   {
     id: 'evt-ut5eQpyIaY6jjj9',
     name: '职场人的副业探索',
@@ -25,8 +55,6 @@ export const events: Event[] = [
     luma_url: 'https://luma.com/qlzwm3f2',
     luma_slug: 'qlzwm3f2',
   },
-
-  // Past Events
   {
     id: 'evt-h1pGxD5JuE5wg0O',
     name: 'Question Only Peer Coaching Session',
