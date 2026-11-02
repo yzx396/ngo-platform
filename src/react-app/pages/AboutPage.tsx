@@ -63,7 +63,7 @@ export function AboutPage() {
     {
       id: 2,
       name: t('about.founders.profiles.1.name', 'Elaine Xiao'),
-      title: t('about.founders.profiles.1.title', 'Manager @ Apple'),
+      title: t('about.founders.profiles.1.title', 'Senior Manager @ Apple'),
       photoUrl: '/images/founders/elaine-xiao.png',
     },
     {
