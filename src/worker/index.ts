@@ -926,7 +926,7 @@ app.get("/api/v1/users/:id/points", async (c) => {
  */
 app.patch("/api/v1/users/:id/points", requireAuth, requireAdmin, async (c) => {
   try {
-    const userId = c.req.param("id");
+    const userId = c.req.param("id")!;
     const body = await c.req.json<UpdateUserPointsRequest>();
 
     // Validation: points field required
@@ -1063,7 +1063,7 @@ app.get("/api/v1/leaderboard", async (c) => {
  */
 app.post("/api/v1/users/:userId/cv", requireAuth, async (c) => {
   try {
-    const userId = c.req.param("userId");
+    const userId = c.req.param("userId")!;
     const formData = await c.req.formData();
     const file = formData.get("file");
 
@@ -1357,7 +1357,7 @@ app.get("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
  */
 app.put("/api/v1/mentors/profiles/:id", requireAuth, async (c) => {
   try {
-    const id = c.req.param("id");
+    const id = c.req.param("id")!;
     const body = await c.req.json<UpdateMentorProfileRequest>();
 
     // Get authenticated user
@@ -2993,7 +2993,7 @@ app.delete("/api/v1/blog-comments/:id", requireAuth, async (c) => {
  */
 app.patch("/api/v1/blogs/:id/feature", requireAuth, requireAdmin, async (c) => {
   try {
-    const blogId = c.req.param("id");
+    const blogId = c.req.param("id")!;
 
     // Parse request body
     const body = await c.req.json<FeatureBlogRequest>();
@@ -4799,7 +4799,7 @@ app.delete("/api/v1/challenges/:id", requireAuth, requireAdmin, async (c) => {
 app.post("/api/v1/challenges/:id/join", requireAuth, async (c) => {
   const db = c.env.platform_db;
   const user = c.var.user as AuthPayload;
-  const challengeId = c.req.param("id");
+  const challengeId = c.req.param("id")!;
 
   try {
     // Check if challenge exists
@@ -4857,7 +4857,7 @@ app.post("/api/v1/challenges/:id/join", requireAuth, async (c) => {
 app.post("/api/v1/challenges/:id/submit", requireAuth, async (c) => {
   const db = c.env.platform_db;
   const user = c.var.user as AuthPayload;
-  const challengeId = c.req.param("id");
+  const challengeId = c.req.param("id")!;
 
   try {
     const body = await c.req.json() as SubmitChallengeDTO;
