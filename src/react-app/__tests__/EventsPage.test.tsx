@@ -217,7 +217,7 @@ describe('EventsPage', () => {
 
     // Check for some past event titles
     expect(screen.getByText(/压力管理与情绪调适工作坊/)).toBeInTheDocument();
-    expect(screen.getByText(/Speed Mentoring 快速导师面对面/)).toBeInTheDocument();
+    expect(screen.getByText(/Speed Mentoring快速导师面对面/)).toBeInTheDocument();
   });
 
   it('should display event cards', () => {
